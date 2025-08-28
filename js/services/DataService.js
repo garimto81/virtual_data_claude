@@ -34,14 +34,14 @@ export class DataService {
             // 1. 일반 fetch 시도
             try {
                 data = await this.fetchWithRetry(
-                    `${this.config.appsScriptUrl}?action=getInitialData`,
+                    `${this.config.appsScriptUrl}?action=getLatest&limit=10`,
                     { method: 'GET', mode: 'cors' }
                 );
             } catch (fetchError) {
                 console.warn('Standard fetch failed, trying JSONP...', fetchError);
                 
                 // 2. JSONP 폴백
-                data = await this.fetchViaJSONP('getInitialData');
+                data = await this.fetchViaJSONP('getLatest', { limit: 10 });
             }
 
             // 데이터 검증

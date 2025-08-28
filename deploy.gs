@@ -5,8 +5,8 @@
  */
 
 // 스프레드시트 ID 설정
-var SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID_HERE';
-var SHEET_NAME = 'PokerHands';
+var SPREADSHEET_ID = '1J-lf8bYTLPbpdhieUNdb8ckW_uwdQ3MtSBLmyRIwH7U';
+var SHEET_NAME = 'Hand';
 
 /**
  * GET 요청 처리
