@@ -3,172 +3,595 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="description" content="포커 핸드 로거 - 온라인 포커 게임 기록 및 분석 도구">
-    <title>포커 핸드 로거 v35</title>
-    
-    <!-- Tailwind CSS -->
+    <title>포커 핸드 로거 v32</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Custom Styles -->
-    <link rel="stylesheet" href="css/styles.css">
-    
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="manifest.json">
-    
-    <!-- Theme Color -->
-    <meta name="theme-color" content="#1F2937">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+        body { font-family: 'Noto Sans KR', sans-serif; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        .section-title { border-bottom: 2px solid #4B5563; padding-bottom: 8px; margin-bottom: 16px; }
+        .btn { transition: all 0.2s ease-in-out; }
+        .btn:active { transform: scale(0.95); }
+        .btn-selected { background-color: #FBBF24 !important; color: #111827 !important; font-weight: bold; }
+        .card-placeholder { border: 2px dashed #4B5563; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 2px; background-color: rgba(255,255,255,0.05); }
+        .card-display { font-family: 'Roboto', sans-serif; background-color: white; border-radius: 4px; padding: 2px; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .modal { transition: opacity 0.3s ease; backdrop-filter: blur(4px); }
+        .action-log-entry .player-winner { color: #FBBF24; font-weight: bold; }
+        .action-log-entry .player-loser { color: #60A5FA; font-weight: bold; }
+        .action-log-entry .player-neutral { color: #9CA3AF; font-weight: bold; }
+        .card-selector-btn { font-family: 'Roboto', sans-serif; font-size: 1.25rem; font-weight: bold; }
+        .card-selector-btn.card-red { color: #DC2626; }
+        .card-selector-btn.card-black { color: #111827; }
+        .card-selector-btn.selected { border: 3px solid #FBBF24; transform: scale(0.95); }
+        .keypad-btn:active { background-color: #FBBF24; color: #111827; }
+        .player-card { border: 2px solid #374151; }
+        .player-card.is-winner { border-color: #FBBF24; box-shadow: 0 0 10px #FBBF24; }
+        .player-card.is-loser { border-color: #60A5FA; box-shadow: 0 0 10px #60A5FA; }
+        .input-with-keypad { display: flex; align-items: center; gap: 4px; }
+        .input-with-keypad input { height: 42px; flex-grow: 1; min-width: 50px; }
+        .keypad-icon-btn { flex-shrink: 0; height: 42px; width: 48px; }
+    </style>
 </head>
-<body class="bg-gray-900 text-white antialiased">
-    <!-- Loading Screen -->
-    <div id="loading-screen" class="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center">
-        <div class="text-center">
-            <div class="spinner mb-4"></div>
-            <h2 class="text-xl font-bold text-amber-400">포커 핸드 로거 로딩중...</h2>
-            <p class="text-gray-400 text-sm mt-2">v35 - Enhanced Edition</p>
-        </div>
-    </div>
+<body class="bg-gray-900 text-white p-2 sm:p-4 antialiased">
 
-    <!-- Main App Container -->
-    <div id="app" class="max-w-6xl mx-auto p-4 hidden">
-        <!-- Header -->
-        <header class="mb-6">
-            <div class="flex justify-between items-center">
-                <div>
-                    <h1 class="text-3xl font-bold text-amber-400">포커 핸드 로거</h1>
-                    <p class="text-gray-400">v35 - 모듈화 및 성능 최적화</p>
-                </div>
-                <div class="flex gap-2">
-                    <button id="settings-btn" class="btn btn-secondary" title="설정">⚙️</button>
-                    <button id="help-btn" class="btn btn-secondary" title="도움말">❓</button>
-                    <button id="fullscreen-btn" class="btn btn-secondary" title="전체화면">⛶</button>
-                </div>
-            </div>
+    <div id="app" class="max-w-4xl mx-auto">
+        <header class="text-center mb-4">
+            <h1 class="text-3xl font-bold text-amber-400">포커 핸드 로거</h1>
+            <p class="text-gray-400">v32: UI/UX 개선 및 오류 수정</p>
         </header>
 
-        <!-- Progress Bar -->
-        <div id="progress-bar" class="mb-4 hidden">
-            <div class="bg-gray-700 rounded-full h-2">
-                <div class="bg-amber-400 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+        <!-- Hand Info Section -->
+        <div class="bg-gray-800 p-4 rounded-lg mb-4">
+            <h2 class="text-xl font-bold section-title flex justify-between items-center">
+                <span>1. 핸드 정보 기록</span>
+                <button id="refresh-data" class="text-2xl" title="데이터 새로고침">🔄</button>
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">참여 플레이어 선택:</label>
+                    <div id="player-selection-buttons" class="flex flex-wrap gap-2"></div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">보드 카드:</label>
+                    <div id="board-card-placeholders" class="flex flex-wrap gap-2"></div>
+                </div>
             </div>
         </div>
+        
+        <!-- Player Details Section -->
+        <div class="bg-gray-800 p-4 rounded-lg mb-4">
+             <h2 class="text-xl font-bold section-title">2. 플레이어 상세 정보</h2>
+             <div id="player-details-section" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </div>
 
-        <!-- Main Content Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <!-- Left Column - Hand Info & Players -->
-            <div class="lg:col-span-2 space-y-4">
-                <!-- Hand Information Section -->
-                <section id="hand-info-section" class="card">
-                    <h2 class="card-title">
-                        <span>1. 핸드 정보</span>
-                        <button id="refresh-data" class="btn-icon" title="데이터 새로고침">🔄</button>
-                    </h2>
-                    <div class="card-content">
-                        <!-- Content will be loaded by JavaScript -->
-                    </div>
-                </section>
-
-                <!-- Player Details Section -->
-                <section id="player-details-section" class="card">
-                    <h2 class="card-title">2. 플레이어 정보</h2>
-                    <div class="card-content">
-                        <div id="player-cards-container" class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                            <!-- Player cards will be loaded here -->
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Action Logger Section -->
-                <section id="action-logger-section" class="card">
-                    <h2 class="card-title">3. 액션 기록</h2>
-                    <div class="card-content">
-                        <div id="street-tabs" class="tabs mb-4">
-                            <button class="tab active" data-street="preflop">Preflop</button>
-                            <button class="tab" data-street="flop">Flop</button>
-                            <button class="tab" data-street="turn">Turn</button>
-                            <button class="tab" data-street="river">River</button>
-                        </div>
-                        <div id="action-content">
-                            <!-- Action content will be loaded here -->
-                        </div>
-                    </div>
-                </section>
-            </div>
-
-            <!-- Right Column - Controls & Stats -->
+        <!-- Action Logger Section -->
+        <div id="action-logger-section" class="bg-gray-800 p-4 rounded-lg mt-4">
+            <h2 class="text-xl font-bold mb-4 section-title">3. 액션 기록</h2>
             <div class="space-y-4">
-                <!-- Quick Stats -->
-                <section id="quick-stats" class="card">
-                    <h3 class="card-title">통계</h3>
-                    <div class="card-content">
-                        <div class="stat-item">
-                            <span class="stat-label">총 핸드:</span>
-                            <span class="stat-value" id="total-hands">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">현재 팟:</span>
-                            <span class="stat-value" id="current-pot">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">플레이어:</span>
-                            <span class="stat-value" id="player-count">0</span>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                         <h3 class="text-lg font-semibold mb-2">핸드 번호</h3>
+                         <div class="input-with-keypad">
+                            <input type="text" id="hand-number-input" placeholder="Hand #" class="number-input w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2">
+                            <button class="keypad-icon-btn btn bg-gray-600 p-2 rounded-md">⌨️</button>
+                         </div>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">블라인드</h3>
+                        <div class="flex items-end gap-2">
+                             <div class="flex-1"><label class="text-sm text-gray-400">SB</label><div class="input-with-keypad"><input type="text" id="small-blind-input" class="number-input w-full bg-gray-700 p-2 rounded-md text-lg"><button class="keypad-icon-btn btn bg-gray-600 p-2 rounded-md">⌨️</button></div></div>
+                             <div class="flex-1"><label class="text-sm text-gray-400">BB</label><div class="input-with-keypad"><input type="text" id="big-blind-input" class="number-input w-full bg-gray-700 p-2 rounded-md text-lg"><button class="keypad-icon-btn btn bg-gray-600 p-2 rounded-md">⌨️</button></div></div>
+                             <div class="flex items-center pb-1"><input id="bb-ante-checkbox" type="checkbox" class="h-5 w-5 bg-gray-700 border-gray-600 rounded text-amber-500 focus:ring-amber-600"><label for="bb-ante-checkbox" class="ml-2 text-sm text-gray-300">BB Ante</label></div>
                         </div>
                     </div>
-                </section>
-
-                <!-- Control Panel -->
-                <section id="control-panel" class="card">
-                    <h3 class="card-title">컨트롤</h3>
-                    <div class="card-content space-y-3">
-                        <button id="send-to-sheet" class="btn btn-primary w-full">
-                            📤 시트에 전송
-                        </button>
-                        <button id="save-local" class="btn btn-secondary w-full">
-                            💾 로컬 저장
-                        </button>
-                        <button id="reset-hand" class="btn btn-danger w-full">
-                            🔄 새 핸드
-                        </button>
-                    </div>
-                </section>
-
-                <!-- Recent Actions -->
-                <section id="recent-actions" class="card">
-                    <h3 class="card-title">최근 액션</h3>
-                    <div class="card-content">
-                        <div id="recent-actions-list" class="space-y-2 max-h-48 overflow-y-auto">
-                            <!-- Recent actions will be displayed here -->
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Log Display -->
-                <section id="log-section" class="card">
-                    <h3 class="card-title">시스템 로그</h3>
-                    <div class="card-content">
-                        <div id="log-display" class="log-display">
-                            <!-- System logs will appear here -->
-                        </div>
-                    </div>
-                </section>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="street-logs-container"></div>
             </div>
         </div>
 
-        <!-- Footer -->
-        <footer class="mt-8 py-4 text-center text-gray-500 text-sm">
-            <p>포커 핸드 로거 v35 © 2025 | 
-                <a href="#" id="privacy-link" class="hover:text-amber-400">개인정보처리방침</a> | 
-                <a href="#" id="terms-link" class="hover:text-amber-400">이용약관</a>
-            </p>
-        </footer>
+        <!-- Finalize & Output Section -->
+        <div class="bg-gray-800 p-4 rounded-lg mt-4">
+            <h2 class="text-xl font-bold mb-4 section-title">4. 전송 및 초기화</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                 <button id="send-to-sheet-btn" class="w-full btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md text-lg">시트에 자동 입력</button>
+                 <button id="reset-all" class="w-full btn bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-md text-lg">새 핸드 기록</button>
+            </div>
+             <p id="feedback-message" class="text-center mt-2 h-5 font-semibold"></p>
+        </div>
     </div>
 
-    <!-- Modals Container -->
-    <div id="modals-container"></div>
+    <!-- Modals -->
+    <div id="card-selector-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden opacity-0"></div>
+    <div id="action-pad-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden opacity-0"></div>
+    <div id="keypad-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden opacity-0"></div>
 
-    <!-- Toast Notifications Container -->
-    <div id="toast-container" class="fixed bottom-4 right-4 z-40 space-y-2"></div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const state = {
+                dataSheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSDY_i4330JANAjIz4sMncdJdRHsOkfUCjQusHTGQk2tykrhA4d09LeIp3XRbLd8hkN6SgSB47k_nux/pub?gid=998576925&single=true&output=csv', 
+                allPlayers: [],
+                playersInHand: [],
+                board: [],
+                actionState: {
+                    handNumber: '', 
+                    smallBlind: '', bigBlind: '', hasBBAnte: false,
+                    preflop: [], flop: [], turn: [], river: [],
+                },
+                appsScriptUrl: 'https://script.google.com/macros/s/AKfycbxM-Dbz1wX6Gbo73lxjrMdztlcRaY2oUFYaJCkZx26RgXceYiK7icdH7W407GVL365t/exec',
+                modalState: {
+                    cardTarget: null,
+                    actionPadStreet: null, actionPadPlayer: null, actionPadCurrentAction: null,
+                    keypadTarget: null,
+                }
+            };
 
-    <!-- Scripts -->
-    <script type="module" src="js/app.js"></script>
+            const SUITS = { s: '♠', h: '♥', d: '♦', c: '♣' };
+            const RANKS = ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2'];
+
+            const el = {
+                refreshDataBtn: document.getElementById('refresh-data'),
+                playerSelectionButtons: document.getElementById('player-selection-buttons'),
+                boardCardPlaceholders: document.getElementById('board-card-placeholders'),
+                playerDetailsSection: document.getElementById('player-details-section'),
+                handNumberInput: document.getElementById('hand-number-input'),
+                smallBlindInput: document.getElementById('small-blind-input'),
+                bigBlindInput: document.getElementById('big-blind-input'),
+                bbAnteCheckbox: document.getElementById('bb-ante-checkbox'),
+                streetLogsContainer: document.getElementById('street-logs-container'),
+                sendToSheetBtn: document.getElementById('send-to-sheet-btn'),
+                resetBtn: document.getElementById('reset-all'),
+                feedbackMessage: document.getElementById('feedback-message'),
+                cardSelectorModal: document.getElementById('card-selector-modal'),
+                actionPadModal: document.getElementById('action-pad-modal'),
+                keypadModal: document.getElementById('keypad-modal'),
+            };
+
+            async function loadDataFromGoogleSheet() {
+                try {
+                    const response = await fetch(`${state.dataSheetUrl}&_=${new Date().getTime()}`, { cache: 'no-store' });
+                    if (!response.ok) throw new Error(`Network response was not ok`);
+                    const csvText = await response.text();
+                    const lines = csvText.trim().split(/\r?\n/).slice(1);
+                    const players = lines.map(line => line.split(',')[1]?.trim()).filter(Boolean);
+                    state.allPlayers = [...new Set(players)];
+                } catch (error) { console.error('Failed to load player data:', error); showFeedback('플레이어 데이터 로딩 실패.', true); }
+            }
+
+            function renderPlayerSelection() {
+                el.playerSelectionButtons.innerHTML = state.allPlayers.map(p => {
+                    const isSelected = state.playersInHand.some(player => player.name === p);
+                    return `<button class="btn ${isSelected ? 'btn-selected' : 'bg-gray-600 hover:bg-gray-500'} px-3 py-1 rounded-md" data-player-name="${p}">${p}</button>`;
+                }).join('');
+            }
+
+            function renderPlayerDetails() {
+                el.playerDetailsSection.innerHTML = state.playersInHand.map(p => {
+                    let roleClass = '';
+                    if (p.role === 'winner') roleClass = 'is-winner';
+                    if (p.role === 'loser') roleClass = 'is-loser';
+                    
+                    return `<div class="player-card bg-gray-700 p-3 rounded-lg ${roleClass}" data-player-name="${p.name}">
+                        <h3 class="text-lg font-bold mb-2">${p.name}</h3>
+                        <div class="input-with-keypad mb-2">
+                           <input type="text" class="number-input player-chip-input w-full bg-gray-600 border border-gray-500 rounded-md p-1" placeholder="시작 칩" value="${formatNumber(p.chips)}">
+                           <button class="keypad-icon-btn btn bg-gray-600 p-2 rounded-md">⌨️</button>
+                        </div>
+                        <div class="card-placeholder h-16 flex justify-center items-center gap-2 mb-2" data-player-name="${p.name}" data-count="2">
+                            ${p.hand.length > 0 ? p.hand.map(formatCardDisplay).join('') : '<span class="text-gray-400 text-2xl">+</span>'}
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <button class="btn ${p.role === 'winner' ? 'btn-selected' : 'bg-amber-600 hover:bg-amber-500'} p-1 rounded-md set-role-btn" data-role="winner">승자</button>
+                            <button class="btn ${p.role === 'loser' ? 'btn-selected' : 'bg-blue-600 hover:bg-blue-500'} p-1 rounded-md set-role-btn" data-role="loser">패자</button>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+
+            function renderBoard() {
+                const flopHTML = `<div class="card-placeholder h-16 flex-grow" data-target="board" data-index="0" data-count="3">${[0, 1, 2].map(i => state.board[i] ? formatCardDisplay(state.board[i]) : '<span class="text-gray-400 text-2xl">+</span>').join('')}</div>`;
+                const turnHTML = `<div class="card-placeholder h-16 w-12" data-target="board" data-index="3" data-count="1">${state.board[3] ? formatCardDisplay(state.board[3]) : '<span class="text-gray-400 text-2xl">+</span>'}</div>`;
+                const riverHTML = `<div class="card-placeholder h-16 w-12" data-target="board" data-index="4" data-count="1">${state.board[4] ? formatCardDisplay(state.board[4]) : '<span class="text-gray-400 text-2xl">+</span>'}</div>`;
+                el.boardCardPlaceholders.innerHTML = flopHTML + turnHTML + riverHTML;
+            }
+
+            function renderActionStreets() {
+                el.streetLogsContainer.innerHTML = ['preflop', 'flop', 'turn', 'river'].map(street => `
+                    <div class="street-container">
+                        <h3 class="text-lg font-semibold mb-2">${street.charAt(0).toUpperCase() + street.slice(1)}</h3>
+                        <div id="${street}-log" class="action-log-display bg-gray-900/50 p-3 rounded-md min-h-[80px] mb-2"></div>
+                        <div class="flex gap-2">
+                            <button class="add-action-btn btn flex-grow bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md" data-street="${street}">액션 추가</button>
+                            <button class="undo-action-btn btn bg-gray-600 hover:bg-gray-500 py-2 px-3 rounded-md" data-street="${street}">↩</button>
+                        </div>
+                    </div>`).join('');
+                renderActionLogs();
+            }
+
+            function renderActionLogs() {
+                ['preflop', 'flop', 'turn', 'river'].forEach(street => {
+                    const logContainer = document.getElementById(`${street}-log`);
+                    if (!logContainer) return;
+                    logContainer.innerHTML = state.actionState[street].map(log => {
+                        const player = state.playersInHand.find(p => p.name === log.player);
+                        let playerClass = 'player-neutral';
+                        if (player?.role === 'winner') playerClass = 'player-winner';
+                        if (player?.role === 'loser') playerClass = 'player-loser';
+                        const amountText = log.amount ? ` <span class="font-mono">${formatNumber(log.amount)}</span>` : '';
+                        return `<div class="action-log-entry"><span class="${playerClass}">${log.player}</span> ${log.action}${amountText}</div>`;
+                    }).join('');
+                });
+            }
+
+            function formatCardDisplay(cardId) {
+                const rank = cardId.slice(0, -1);
+                const suitKey = cardId.slice(-1);
+                const colorClass = (suitKey === 'h' || suitKey === 'd') ? 'text-red-400' : 'text-black';
+                return `<div class="card-display h-full w-12 ${colorClass}"><div class="font-bold text-xl">${rank}</div><div>${SUITS[suitKey]}</div></div>`;
+            }
+
+            function renderAll() {
+                renderPlayerSelection();
+                renderPlayerDetails();
+                renderBoard();
+                renderActionStreets();
+            }
+
+            function openModal(modalElement, content) {
+                modalElement.innerHTML = content;
+                modalElement.classList.remove('hidden');
+                setTimeout(() => modalElement.classList.remove('opacity-0'), 10);
+            }
+
+            function closeModal(modalElement) {
+                modalElement.classList.add('opacity-0');
+                setTimeout(() => modalElement.classList.add('hidden'), 300);
+            }
+
+            function openCardSelector() {
+                const { target, index, count, player } = state.modalState.cardTarget;
+                const allHands = state.playersInHand.flatMap(p => p.hand);
+                const usedCards = [...allHands, ...state.board].filter(Boolean);
+                let selectedCards = [];
+                let deckHTML = '';
+                Object.keys(SUITS).forEach(suitKey => {
+                    deckHTML += '<div class="flex justify-between items-center space-x-1">';
+                    RANKS.forEach(rank => {
+                        const cardId = `${rank}${suitKey}`;
+                        const isUsed = usedCards.includes(cardId);
+                        const colorClass = (suitKey === 'h' || suitKey === 'd') ? 'card-red' : 'card-black';
+                        deckHTML += `<button class="btn card-selector-btn flex-grow h-14 rounded-md ${isUsed ? 'bg-gray-600 text-gray-500 cursor-not-allowed' : 'bg-white hover:bg-amber-300'} ${colorClass}" data-card-id="${cardId}" ${isUsed ? 'disabled' : ''}>${rank}${SUITS[suitKey]}</button>`;
+                    });
+                    deckHTML += '</div>';
+                });
+
+                const content = `<div class="bg-gray-800 rounded-lg p-6 w-full max-w-lg"><h2 class="text-2xl font-bold text-amber-400 mb-4 text-center">카드 선택 (${count}장)</h2><div class="space-y-2" id="card-deck">${deckHTML}</div><button id="close-card-modal" class="btn mt-4 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md">닫기</button></div>`;
+                openModal(el.cardSelectorModal, content);
+                
+                el.cardSelectorModal.querySelector('#card-deck').onclick = e => {
+                    const btn = e.target.closest('.card-selector-btn');
+                    if(!btn) return;
+                    const cardId = btn.dataset.cardId;
+                    const selectedIndex = selectedCards.indexOf(cardId);
+                    if (selectedIndex > -1) {
+                        selectedCards.splice(selectedIndex, 1);
+                        btn.classList.remove('selected');
+                    } else if (selectedCards.length < count) {
+                        selectedCards.push(cardId);
+                        btn.classList.add('selected');
+                    }
+                    if (selectedCards.length === count) {
+                        assignCard(selectedCards);
+                    }
+                };
+            }
+            
+            function openActionPad(street) {
+                if (state.playersInHand.length < 1) { showFeedback('먼저 플레이어를 선택해주세요.', true); return; }
+                state.modalState.actionPadStreet = street;
+                const playersHTML = state.playersInHand.map(p => `<button class="btn bg-gray-700 hover:bg-gray-600 p-3 rounded-md" data-player-name="${p.name}">${p.name}</button>`).join('');
+                const content = `<div class="bg-gray-800 rounded-lg p-6 w-full max-w-md"><h2 class="text-2xl font-bold text-amber-400 mb-4 text-center">${street.toUpperCase()} 액션</h2><div id="action-pad-players" class="grid grid-cols-2 gap-3 mb-4">${playersHTML}</div><div id="action-pad-actions" class="grid grid-cols-3 gap-3 mb-4 hidden"><button class="btn bg-red-600 hover:bg-red-700 p-3 rounded-md" data-action="Folds">Fold</button><button class="btn bg-gray-600 hover:bg-gray-500 p-3 rounded-md" data-action="Checks">Check</button><button class="btn bg-blue-600 hover:bg-blue-700 p-3 rounded-md" data-action="Calls">Call</button><button class="btn bg-amber-500 hover:bg-amber-600 p-3 rounded-md col-span-2" data-action="Bets">Bet</button><button class="btn bg-emerald-500 hover:bg-emerald-600 p-3 rounded-md" data-action="Raises">Raise</button></div><div id="action-pad-bet-sizing" class="space-y-3 hidden"><div class="input-with-keypad"><input type="text" id="action-pad-amount" placeholder="금액 입력" class="number-input w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-lg"><button class="keypad-icon-btn btn bg-gray-600 p-2 rounded-md">⌨️</button></div></div><button id="close-action-pad" class="btn mt-4 w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md">닫기</button></div>`;
+                openModal(el.actionPadModal, content);
+            }
+            
+            function openKeypad(targetInput) {
+                state.modalState.keypadTarget = targetInput;
+                const content = `<div class="bg-gray-800 rounded-lg p-4 w-full max-w-xs"><div id="keypad-display" class="bg-gray-900 text-right text-2xl font-mono p-2 rounded-md mb-4 h-12">${targetInput.value}</div><div class="grid grid-cols-4 gap-2 text-xl font-bold">${['1','2','3','C','4','5','6','←','7','8','9','0','00','000'].map(k => `<button class="keypad-btn btn bg-gray-700 hover:bg-gray-600 rounded-md p-3">${k}</button>`).join('')}</div><div class="grid grid-cols-2 gap-2 mt-2"><button id="keypad-cancel" class="btn bg-red-600 hover:bg-red-700 p-3 rounded-md">취소</button><button id="keypad-confirm" class="btn bg-green-600 hover:bg-green-700 p-3 rounded-md">확인</button></div></div>`;
+                openModal(el.keypadModal, content);
+            }
+
+            function togglePlayerInHand(playerName) {
+                const playerIndex = state.playersInHand.findIndex(p => p.name === playerName);
+                if (playerIndex > -1) {
+                    state.playersInHand.splice(playerIndex, 1);
+                } else {
+                    state.playersInHand.push({ name: playerName, hand: [], chips: '', role: null });
+                }
+                renderAll();
+            }
+
+            function setPlayerRole(playerName, role) {
+                const targetPlayer = state.playersInHand.find(p => p.name === playerName);
+                if (!targetPlayer) return;
+                state.playersInHand.forEach(p => {
+                    if (p.role === role) p.role = null;
+                });
+                targetPlayer.role = role;
+                renderPlayerDetails();
+                renderActionLogs();
+            }
+
+            function assignCard(cards) {
+                const { target, player, index } = state.modalState.cardTarget;
+                if(target === 'board') {
+                    cards.forEach((card, i) => state.board[index + i] = card);
+                    renderBoard();
+                } else {
+                    const targetPlayer = state.playersInHand.find(p => p.name === player);
+                    if(targetPlayer) {
+                        targetPlayer.hand = cards;
+                        renderPlayerDetails();
+                    }
+                }
+                closeModal(el.cardSelectorModal);
+            }
+
+            function addActionToLog(action, amount = null) {
+                const { actionPadStreet, actionPadPlayer } = state.modalState;
+                state.actionState[actionPadStreet].push({ player: actionPadPlayer, action, amount });
+                saveActionState();
+                renderActionLogs();
+                closeModal(el.actionPadModal);
+            }
+
+            function undoLastAction(street) {
+                if (state.actionState[street].length > 0) {
+                    state.actionState[street].pop();
+                    saveActionState();
+                    renderActionLogs();
+                }
+            }
+            
+            function saveActionState() { localStorage.setItem('pokerActionState_v32', JSON.stringify(state.actionState)); }
+            function loadActionState() {
+                const savedState = localStorage.getItem('pokerActionState_v32');
+                if (savedState) state.actionState = { ...state.actionState, ...JSON.parse(savedState) };
+            }
+            
+            function generateGfxLogRows() {
+                const logRows = [];
+                const playersWithSeats = state.playersInHand.map((p, i) => ({ ...p, seat: i + 1 }));
+
+                logRows.push(['GAME', 'PokerGFX 3.111', 'FEATURE_TABLE']);
+                logRows.push(['PAYOUTS']);
+
+                const handLine = [
+                    'HAND',
+                    unformatNumber(state.actionState.handNumber) || 'N/A',
+                    Date.now(),
+                    'HOLDEM',
+                    state.actionState.hasBBAnte ? 'BB_ANTE' : 'NO_ANTE',
+                    unformatNumber(state.actionState.bigBlind) || 0,
+                    0, // Ante amount, assuming 0 for now
+                    unformatNumber(state.actionState.smallBlind) || 0,
+                    unformatNumber(state.actionState.bigBlind) || 0,
+                    0,
+                    ...playersWithSeats.map(p => p.seat)
+                ];
+                logRows.push(handLine);
+
+                playersWithSeats.forEach(p => {
+                    const playerLine = [
+                        'PLAYER',
+                        p.seat,
+                        p.name,
+                        0, // Position?
+                        unformatNumber(p.chips) || 0,
+                        unformatNumber(p.chips) || 0, // End chips placeholder
+                        p.hand.length > 0 ? p.hand.map(c => c.toLowerCase()).join(' ') : ''
+                    ];
+                    logRows.push(playerLine);
+                });
+
+                const mapActionToEvent = (actionLog) => {
+                    const player = playersWithSeats.find(p => p.name === actionLog.player);
+                    if (!player) return null;
+                    const eventLine = ['EVENT', actionLog.action.toUpperCase().replace('S', '')];
+                    eventLine.push(player.seat);
+                    if (actionLog.amount) {
+                        eventLine.push(unformatNumber(actionLog.amount));
+                    }
+                    return eventLine;
+                };
+
+                state.actionState.preflop.forEach(a => logRows.push(mapActionToEvent(a)));
+                state.board.slice(0, 3).forEach(c => logRows.push(['EVENT', 'BOARD', 1, c.toLowerCase()]));
+                state.actionState.flop.forEach(a => logRows.push(mapActionToEvent(a)));
+                state.board.slice(3, 4).forEach(c => logRows.push(['EVENT', 'BOARD', 1, c.toLowerCase()]));
+                state.actionState.turn.forEach(a => logRows.push(mapActionToEvent(a)));
+                state.board.slice(4, 5).forEach(c => logRows.push(['EVENT', 'BOARD', 1, c.toLowerCase()]));
+                state.actionState.river.forEach(a => logRows.push(mapActionToEvent(a)));
+
+                return logRows.filter(Boolean);
+            }
+
+            async function sendDataToGoogleSheet() {
+                const winner = state.playersInHand.find(p => p.role === 'winner');
+                const loser = state.playersInHand.find(p => p.role === 'loser');
+                if (!winner || !loser) { showFeedback('승자와 패자를 모두 지정해야 합니다.', true); return; }
+                
+                el.sendToSheetBtn.textContent = '전송 중...';
+                el.sendToSheetBtn.disabled = true;
+
+                const gfxLogRows = generateGfxLogRows();
+                const payload = { rows: gfxLogRows };
+
+                try {
+                    await fetch(state.appsScriptUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+                    showFeedback('✅ 데이터가 시트로 전송되었습니다!');
+                    el.sendToSheetBtn.textContent = '전송 완료!';
+                } catch (error) {
+                    showFeedback('❌ 전송 실패. 인터넷 연결을 확인하세요.', true);
+                } finally {
+                    setTimeout(() => { el.sendToSheetBtn.textContent = '시트에 자동 입력'; el.sendToSheetBtn.disabled = false; }, 2000);
+                }
+            }
+
+            function resetApp() {
+                const currentHandNum = parseInt(unformatNumber(state.actionState.handNumber), 10);
+                const nextHandNum = isNaN(currentHandNum) ? '' : currentHandNum + 1;
+                state.playersInHand = [];
+                state.board = [];
+                state.actionState = { ...state.actionState, handNumber: nextHandNum.toString(), preflop: [], flop: [], turn: [], river: [] };
+                renderAll();
+                saveActionState();
+                el.handNumberInput.value = formatNumber(state.actionState.handNumber);
+            }
+
+            function showFeedback(message, isError = false) {
+                el.feedbackMessage.textContent = message;
+                el.feedbackMessage.className = `text-center mt-2 h-5 font-semibold ${isError ? 'text-red-400' : 'text-green-400'}`;
+                setTimeout(() => el.feedbackMessage.textContent = '', 3000);
+            }
+            
+            const formatNumber = (val) => val ? new Intl.NumberFormat('en-US').format(unformatNumber(val)) : '';
+            const unformatNumber = (val) => val.toString().replace(/,/g, '');
+
+            function setupEventListeners() {
+                el.refreshDataBtn.onclick = initializeApp;
+                el.resetBtn.onclick = resetApp;
+                el.sendToSheetBtn.onclick = sendDataToGoogleSheet;
+                
+                el.playerSelectionButtons.addEventListener('click', e => e.target.closest('button')?.dataset.playerName && togglePlayerInHand(e.target.closest('button').dataset.playerName));
+                
+                el.playerDetailsSection.addEventListener('click', e => {
+                    const placeholder = e.target.closest('.card-placeholder');
+                    const roleBtn = e.target.closest('.set-role-btn');
+                    if (placeholder) {
+                        state.modalState.cardTarget = { target: 'playerHand', player: placeholder.dataset.playerName, count: parseInt(placeholder.dataset.count) };
+                        openCardSelector();
+                    }
+                    if (roleBtn) {
+                        const playerName = roleBtn.closest('.player-card').dataset.playerName;
+                        setPlayerRole(playerName, roleBtn.dataset.role);
+                    }
+                });
+                
+                el.playerDetailsSection.addEventListener('input', e => {
+                    if (e.target.classList.contains('player-chip-input')) {
+                        const player = state.playersInHand.find(p => p.name === e.target.closest('.player-card').dataset.playerName);
+                        if(player) player.chips = unformatNumber(e.target.value);
+                        e.target.value = formatNumber(e.target.value);
+                    }
+                });
+
+                el.boardCardPlaceholders.addEventListener('click', e => {
+                    const placeholder = e.target.closest('.card-placeholder');
+                    if (placeholder) {
+                        state.modalState.cardTarget = { target: 'board', index: parseInt(placeholder.dataset.index), count: parseInt(placeholder.dataset.count) };
+                        openCardSelector();
+                    }
+                });
+
+                el.cardSelectorModal.addEventListener('click', e => {
+                    if (e.target.id === 'close-card-modal') closeModal(el.cardSelectorModal);
+                });
+                
+                el.streetLogsContainer.addEventListener('click', e => {
+                    const addBtn = e.target.closest('.add-action-btn');
+                    const undoBtn = e.target.closest('.undo-action-btn');
+                    if(addBtn) openActionPad(addBtn.dataset.street);
+                    if(undoBtn) undoLastAction(undoBtn.dataset.street);
+                });
+
+                el.actionPadModal.addEventListener('click', e => {
+                    const target = e.target.closest('button');
+                    if (!target) return;
+                    if (target.id === 'close-action-pad') { closeModal(el.actionPadModal); return; }
+                    const modal = el.actionPadModal;
+                    if (target.parentElement.id === 'action-pad-players') {
+                        state.modalState.actionPadPlayer = target.dataset.playerName;
+                        modal.querySelector('#action-pad-players').classList.add('hidden');
+                        modal.querySelector('#action-pad-actions').classList.remove('hidden');
+                    } else if (target.parentElement.id === 'action-pad-actions') {
+                        const action = target.dataset.action;
+                        state.modalState.actionPadCurrentAction = action;
+                        if (action === 'Bets' || action === 'Raises') {
+                            modal.querySelector('#action-pad-actions').classList.add('hidden');
+                            modal.querySelector('#action-pad-bet-sizing').classList.remove('hidden');
+                            const amountInput = modal.querySelector('#action-pad-amount');
+                            amountInput.focus();
+                        } else { addActionToLog(action); }
+                    }
+                });
+                
+                document.body.addEventListener('click', e => {
+                    if(e.target.classList.contains('keypad-icon-btn')) {
+                        openKeypad(e.target.previousElementSibling);
+                    }
+                });
+
+                el.keypadModal.addEventListener('click', e => {
+                    const btn = e.target.closest('button');
+                    if(!btn) return;
+                    const display = el.keypadModal.querySelector('#keypad-display');
+                    const key = btn.textContent;
+
+                    if (btn.id === 'keypad-confirm') {
+                        state.modalState.keypadTarget.value = display.textContent;
+                        state.modalState.keypadTarget.dispatchEvent(new Event('input', { bubbles: true }));
+                        
+                        if(state.modalState.keypadTarget.id === 'action-pad-amount') {
+                             const amount = unformatNumber(display.textContent);
+                             if(amount) addActionToLog(state.modalState.actionPadCurrentAction, amount);
+                        }
+                        
+                        closeModal(el.keypadModal);
+                    } else if (btn.id === 'keypad-cancel') {
+                        closeModal(el.keypadModal);
+                    } else if (key === 'C') {
+                        display.textContent = '';
+                    } else if (key === '←') {
+                        display.textContent = formatNumber(unformatNumber(display.textContent).slice(0, -1));
+                    } else {
+                        display.textContent = formatNumber(unformatNumber(display.textContent) + key);
+                    }
+                });
+
+                document.querySelectorAll('.number-input').forEach(input => {
+                    input.addEventListener('input', e => {
+                        const unformatted = unformatNumber(e.target.value);
+                        const formatted = formatNumber(unformatted);
+                        if (e.target.value !== formatted) {
+                           e.target.value = formatted;
+                        }
+                        const stateKey = e.target.id.replace('-input', '');
+                        if(state.actionState.hasOwnProperty(stateKey)) {
+                            state.actionState[stateKey] = unformatted;
+                        }
+                        saveActionState();
+                    });
+                });
+                
+                el.bbAnteCheckbox.onchange = (e) => {
+                    state.actionState.hasBBAnte = e.target.checked;
+                    saveActionState();
+                };
+            }
+
+            async function initializeApp() {
+                showFeedback('데이터 로딩 중...');
+                loadActionState();
+                await loadDataFromGoogleSheet();
+                renderAll();
+                setupEventListeners();
+                el.handNumberInput.value = formatNumber(state.actionState.handNumber);
+                el.smallBlindInput.value = formatNumber(state.actionState.smallBlind);
+                el.bigBlindInput.value = formatNumber(state.actionState.bigBlind);
+                el.bbAnteCheckbox.checked = state.actionState.hasBBAnte;
+                showFeedback('준비 완료!', false);
+            }
+
+            initializeApp();
+        });
+    </script>
 </body>
 </html>
