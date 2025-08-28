@@ -20,6 +20,12 @@
 - **시트 이름**: `Hand`
 - [스프레드시트 링크](https://docs.google.com/spreadsheets/d/1J-lf8bYTLPbpdhieUNdb8ckW_uwdQ3MtSBLmyRIwH7U/edit)
 
+### Google Apps Script 설정
+
+현재 배포된 Apps Script:
+- **배포 URL**: `https://script.google.com/macros/s/AKfycbwWfm4L72PgwtZTD8ur-vyAi4JJsHaQ5REhGhFdp5OYSrQbQacgkoUZRhvzZanrE6in/exec`
+- 이미 `js/config/config.js`에 설정되어 있습니다
+
 ## 📁 프로젝트 구조
 
 ```

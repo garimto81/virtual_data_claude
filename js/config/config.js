@@ -8,7 +8,7 @@ export class Config {
         // 기본 설정
         const defaultConfig = {
             // Google Apps Script 설정
-            appsScriptUrl: '', // 여기에 실제 URL 입력
+            appsScriptUrl: 'https://script.google.com/macros/s/AKfycbwWfm4L72PgwtZTD8ur-vyAi4JJsHaQ5REhGhFdp5OYSrQbQacgkoUZRhvzZanrE6in/exec',
             
             // 애플리케이션 설정
             appVersion: '35',
