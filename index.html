@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>포커 핸드 로거 v36</title>
+    <title>포커 핸드 로거 v35</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
@@ -36,7 +36,7 @@
     <div id="app" class="max-w-4xl mx-auto">
         <header class="text-center mb-4">
             <h1 class="text-3xl font-bold text-amber-400">포커 핸드 로거</h1>
-            <p id="version-display" class="text-gray-400">v36: JSONP 제거 / fetch(JSON) 적용</p>
+            <p id="version-display" class="text-gray-400">v35: 핸드 관리 기능 개선</p>
         </header>
 
         <!-- Hand Info Section -->
@@ -69,7 +69,9 @@
                  <div>
                     <label for="timezone-selector" class="block text-sm font-medium text-gray-300 mb-2">표준 시간대:</label>
                     <div class="flex items-center gap-2">
-                        <select id="timezone-selector" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2"></select>
+                        <select id="timezone-selector" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2">
+                            <!-- Timezones will be populated by JavaScript -->
+                        </select>
                         <div id="time-display" class="bg-gray-900/50 p-2 rounded-md font-mono text-lg"></div>
                     </div>
                 </div>
@@ -109,16 +111,10 @@
             <h2 class="text-xl font-bold section-title">4. 승자 선택 (Split Pot 가능)</h2>
             <div id="winner-buttons" class="flex flex-wrap gap-2"></div>
         </div>
-        
-        <!-- Memo Section -->
-        <div class="bg-gray-800 p-4 rounded-lg mt-4">
-            <h2 class="text-xl font-bold section-title">5. 메모</h2>
-            <textarea id="hand-memo-input" rows="3" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2" placeholder="이 핸드에 대한 메모를 남기세요..."></textarea>
-        </div>
 
         <!-- Finalize & Output Section -->
         <div class="bg-gray-800 p-4 rounded-lg mt-4">
-            <h2 class="text-xl font-bold mb-4 section-title">6. 전송 및 초기화</h2>
+            <h2 class="text-xl font-bold mb-4 section-title">5. 전송 및 초기화</h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                  <button id="send-to-sheet-btn" class="w-full btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md text-lg">시트에 자동 입력</button>
                  <button id="reset-all" class="w-full btn bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-md text-lg">새 핸드 기록</button>
@@ -156,14 +152,13 @@
                     handNumber: '', 
                     smallBlind: '', bigBlind: '', hasBBAnte: false,
                     preflop: [], flop: [], turn: [], river: [],
-                    memo: '',
                 },
-                appsScriptUrl: 'https://script.google.com/macros/s/AKfycbynAda_fBy5HJY3pW2-fx1FE19C9kYB3SAuf8otZdsoVckDR-6jnE4G1ceFdTzViZoL/exec',
+                appsScriptUrl: 'https://script.google.com/macros/s/AKfycbyDmO5nnjx30Cy5bfJJFK94yI3OxALpkUIH4UGtX9cOV0VmIALb0WrpeFrDLfYLPlgF/exec',
                 modalState: {
                     cardTarget: null,
                     actionPadStreet: null, actionPadPlayer: null, actionPadCurrentAction: null,
                     keypadTarget: null,
-                    keypadPurpose: null,
+                    keypadPurpose: null, // 'bet', 'pot', or 'input'
                 },
                 selectedTimezone: 'Asia/Seoul'
             };
@@ -184,7 +179,6 @@
                 bbAnteCheckbox: document.getElementById('bb-ante-checkbox'),
                 streetLogsContainer: document.getElementById('street-logs-container'),
                 winnerButtons: document.getElementById('winner-buttons'),
-                handMemoInput: document.getElementById('hand-memo-input'),
                 sendToSheetBtn: document.getElementById('send-to-sheet-btn'),
                 resetBtn: document.getElementById('reset-all'),
                 feedbackMessage: document.getElementById('feedback-message'),
@@ -224,6 +218,7 @@
                     });
                     return `${timeParts.hour}${timeParts.minute}${timeParts.second}`;
                 } catch (e) {
+                    console.error("Invalid timezone:", timezone);
                     const pad = (num) => num.toString().padStart(2, '0');
                     return `${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
                 }
@@ -249,49 +244,49 @@
                 el.timeDisplay.textContent = getFormattedTimeInTimezone(new Date(), state.selectedTimezone);
             }
 
-            // === JSON fetch 기반 초기 데이터 로드 ===
             async function loadDataFromGoogleSheet() {
                 logMessage('초기 데이터 로딩 시작...');
-                const url = `${state.appsScriptUrl}?action=getInitialData&_=${Date.now()}`;
-                logMessage(`요청 URL: ${url}`);
-
+                logMessage(`요청 URL: ${state.appsScriptUrl}?action=getInitialData`);
                 try {
-                    const res = await fetch(url, {
-                        method: 'GET',
-                        headers: { 'Accept': 'application/json' },
-                    });
+                    const response = await fetch(`${state.appsScriptUrl}?action=getInitialData`);
+                    logMessage('구글 시트로부터 응답 수신 중...');
+                    
+                    if (!response.ok) {
+                        logMessage(`서버 응답 오류: 상태 코드 ${response.status}`, true);
+                        throw new Error(`서버 응답 오류: ${response.status}`);
+                    }
+                    logMessage('서버 응답 성공 (상태 코드 200).');
 
-                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-                    const data = await res.json();
-                    if (!data || typeof data !== 'object') throw new Error('응답 파싱 실패');
-
-                    logMessage('데이터 수신 및 파싱 성공.');
-
-                    state.playerDataByTable = data.playerData || {};
-                    state.allTables = Object.keys(state.playerDataByTable).sort();
-
-                    state.allHandData = data.handData || {};
-                    state.allHandNumbers = Object.keys(state.allHandData)
-                        .map(n => parseInt(n, 10))
-                        .filter(n => !Number.isNaN(n))
-                        .sort((a, b) => a - b);
-
+                    let data;
+                    try {
+                        data = await response.json();
+                        logMessage('JSON 데이터 파싱 성공.');
+                    } catch (jsonError) {
+                        logMessage('JSON 파싱 실패. 응답이 비어있거나 형식이 잘못되었을 수 있습니다.', true);
+                        throw new Error('JSON 파싱 실패');
+                    }
+                    
+                    if(data.error) {
+                        logMessage(`Apps Script 에러: ${data.error}`, true);
+                        throw new Error(data.error);
+                    }
+                    
+                    state.playerDataByTable = data.playerData;
+                    state.allTables = Object.keys(data.playerData).sort();
+                    state.allHandData = data.handData;
+                    state.allHandNumbers = Object.keys(data.handData).map(n => parseInt(n, 10)).sort((a, b) => a - b);
+                    
                     logMessage(`테이블 ${state.allTables.length}개, 핸드 ${state.allHandNumbers.length}개 로딩 완료.`);
 
-                    renderTableSelection();
-                    const lastHand = state.allHandNumbers.length > 0 ? Math.max(...state.allHandNumbers) : 0;
-                    state.actionState.handNumber = (lastHand + 1).toString();
-                    el.handNumberDisplay.textContent = `새 핸드 (#${state.actionState.handNumber})`;
-
-                } catch (err) {
-                    console.error(err);
-                    logMessage(`초기 데이터 로딩 실패: ${err.message}`, true);
-                    showFeedback(`초기 로드 실패: ${err.message}`, true);
-                    // 실패해도 앱은 뜨도록 진행
+                } catch (error) { 
+                    console.error('Failed to load initial data:', error); 
+                    logMessage(`초기 데이터 로딩 실패: ${error.message}`, true);
+                    if (error.message.includes('Failed to fetch')) {
+                        logMessage('팁: 이 오류는 보통 Apps Script 배포 설정 문제(CORS)로 발생합니다. 배포 설정을 확인해주세요.', true);
+                    }
                 }
             }
-
+            
             function renderTableSelection() {
                 const selector = el.tableSelector;
                 selector.innerHTML = '<option value="">-- 테이블을 선택하세요 --</option>';
@@ -517,6 +512,7 @@
                     `;
                 }
 
+
                 const content = `<div class="bg-gray-800 rounded-lg p-4 w-full max-w-xs">
                     <div id="keypad-display" class="bg-gray-900 text-right text-2xl font-mono p-2 rounded-md mb-4 h-12">${targetInput ? targetInput.value : ''}</div>
                     <div class="grid grid-cols-4 gap-2 text-xl font-bold">
@@ -550,7 +546,11 @@
                 const targetPlayer = state.playersInHand.find(p => p.name === playerName);
                 if (!targetPlayer) return;
                 
-                targetPlayer.role = (targetPlayer.role === 'winner') ? null : 'winner';
+                if (targetPlayer.role === 'winner') {
+                    targetPlayer.role = null;
+                } else {
+                    targetPlayer.role = 'winner';
+                }
                 renderPlayerDetails();
                 renderWinnerSelection();
             }
@@ -705,7 +705,7 @@
                      currentTime.setTime(currentTime.getTime() + delay);
                      const timecode = getFormattedTimeInTimezone(currentTime, state.selectedTimezone);
                      cards.forEach(card => {
-                         addRow(['EVENT', 'BOARD', 1, formatCardForGfx(card), timecode]);
+                        addRow(['EVENT', 'BOARD', 1, formatCardForGfx(card), timecode]);
                      });
                 };
 
@@ -726,10 +726,6 @@
                     state.actionState.river.forEach(addActionEvent);
                 }
                 
-                if (state.actionState.memo) {
-                    addRow(['EVENT', 'MEMO', state.actionState.memo]);
-                }
-
                 finalRows.push([rowCounter]); 
 
                 return finalRows;
@@ -747,18 +743,24 @@
                 showFeedback('시트로 데이터 전송을 시작합니다...');
 
                 const gfxLogRows = generateGfxLogRows();
+                console.log("Sending data:", gfxLogRows);
                 const payload = { rows: gfxLogRows };
 
                 try {
                     const response = await fetch(state.appsScriptUrl, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        headers: {
+                            'Content-Type': 'text/plain;charset=utf-8',
+                        },
                         body: JSON.stringify(payload)
                     });
 
-                    if (!response.ok) throw new Error(`서버 응답 에러: ${response.status}`);
+                    if (!response.ok) {
+                        throw new Error(`서버 응답 에러: ${response.status}`);
+                    }
 
                     const result = await response.json(); 
+
                     if (result.status === 'success') {
                         showFeedback('✅ 데이터가 시트에 성공적으로 입력되었습니다!');
                         el.sendToSheetBtn.textContent = '전송 완료!';
@@ -786,13 +788,11 @@
                     smallBlind: state.actionState.smallBlind,
                     bigBlind: state.actionState.bigBlind,
                     hasBBAnte: state.actionState.hasBBAnte,
-                    preflop: [], flop: [], turn: [], river: [],
-                    memo: ''
+                    preflop: [], flop: [], turn: [], river: []
                 };
                 renderAll();
                 saveActionState();
                 el.handNumberDisplay.textContent = `새 핸드 (#${state.actionState.handNumber})`;
-                el.handMemoInput.value = '';
             }
 
             function showFeedback(message, isError = false) {
@@ -805,143 +805,11 @@
             const unformatNumber = (val) => val.toString().replace(/,/g, '');
 
             const toCamelCase = (str) => str.replace(/-([a-z])/g, g => g[1].toUpperCase());
-            
-            function openRegistrationModal() {
-                const content = `
-                    <div class="bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] flex flex-col">
-                        <h2 class="text-2xl font-bold text-amber-400 mb-4 text-center">테이블 및 플레이어 관리</h2>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            <div>
-                                <label for="manage-table-selector" class="block text-sm font-medium text-gray-300 mb-2">테이블 선택:</label>
-                                <div class="flex gap-2">
-                                    <select id="manage-table-selector" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2"></select>
-                                    <button id="add-new-table-btn" class="btn bg-green-600 p-2 rounded-md text-sm">새 테이블</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="player-management-list" class="flex-grow overflow-y-auto bg-gray-900/50 p-2 rounded-md mb-4 min-h-[200px]"></div>
-
-                        <div id="add-edit-player-form" class="grid grid-cols-1 sm:grid-cols-3 gap-2 p-2 bg-gray-700 rounded-md">
-                            <input type="text" id="edit-player-name" placeholder="플레이어 이름" class="bg-gray-600 border border-gray-500 rounded-md p-2">
-                            <input type="text" id="edit-player-chips" placeholder="칩" class="number-input bg-gray-600 border border-gray-500 rounded-md p-2">
-                            <button id="save-player-btn" class="btn bg-blue-600 p-2 rounded-md">플레이어 추가/수정</button>
-                        </div>
-
-                        <div class="flex gap-2 mt-4">
-                            <button id="close-registration-modal" class="btn w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md">닫기</button>
-                            <button id="save-management-changes" class="btn w-full bg-green-700 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-md">변경사항 저장</button>
-                        </div>
-                    </div>
-                `;
-                openModal(el.registrationModal, content);
-                
-                const tableSelector = document.getElementById('manage-table-selector');
-                tableSelector.innerHTML = state.allTables.map(t => `<option value="${t}">${t}</option>`).join('');
-                if (state.selectedTable) tableSelector.value = state.selectedTable;
-                
-                renderManagementPlayerList(tableSelector.value);
-                tableSelector.onchange = (e) => renderManagementPlayerList(e.target.value);
-                el.registrationModal.addEventListener('click', handleManagementAction);
-            }
-            
-            function renderManagementPlayerList(tableName) {
-                const listContainer = document.getElementById('player-management-list');
-                if (!tableName) {
-                    listContainer.innerHTML = '<p class="text-gray-400 text-center p-4">테이블을 선택하세요.</p>';
-                    return;
-                }
-                const players = state.playerDataByTable[tableName] || [];
-                listContainer.innerHTML = players.map((player, index) => `
-                    <div class="flex items-center justify-between p-2 bg-gray-800 rounded-md mb-1">
-                        <div class="flex-grow">
-                            <span class="font-bold">${player.name}</span>
-                            <span class="text-sm text-gray-400 ml-2">(${formatNumber(player.chips)} chips)</span>
-                        </div>
-                        <div class="flex gap-2">
-                            <button class="edit-player-btn btn bg-gray-600 p-1 text-xs rounded-md" data-table="${tableName}" data-index="${index}">수정</button>
-                            <button class="delete-player-btn btn bg-red-700 p-1 text-xs rounded-md" data-table="${tableName}" data-index="${index}">삭제</button>
-                        </div>
-                    </div>
-                `).join('');
-            }
-
-            function handleManagementAction(e) {
-                 const nameInput = document.getElementById('edit-player-name');
-                 const chipsInput = document.getElementById('edit-player-chips');
-                 const tableSelector = document.getElementById('manage-table-selector');
-                 const selectedTable = tableSelector.value;
-
-                if (e.target.id === 'add-new-table-btn') {
-                    const newTableName = prompt('새 테이블 이름을 입력하세요:');
-                    if (newTableName && !state.allTables.includes(newTableName)) {
-                        state.allTables.push(newTableName);
-                        state.playerDataByTable[newTableName] = [];
-                        tableSelector.innerHTML = state.allTables.map(t => `<option value="${t}">${t}</option>`).join('');
-                        tableSelector.value = newTableName;
-                        renderManagementPlayerList(newTableName);
-                    }
-                } else if (e.target.classList.contains('edit-player-btn')) {
-                    const { table, index } = e.target.dataset;
-                    const player = state.playerDataByTable[table][index];
-                    nameInput.value = player.name;
-                    chipsInput.value = player.chips;
-                } else if (e.target.classList.contains('delete-player-btn')) {
-                    const { table, index } = e.target.dataset;
-                    state.playerDataByTable[table].splice(index, 1);
-                    renderManagementPlayerList(table);
-                } else if (e.target.id === 'save-player-btn') {
-                    const playerName = nameInput.value.trim();
-                    const playerChips = unformatNumber(chipsInput.value.trim());
-                    if (!selectedTable || !playerName) {
-                        alert('테이블과 플레이어 이름을 모두 입력해야 합니다.');
-                        return;
-                    }
-                    const existingPlayerIndex = state.playerDataByTable[selectedTable].findIndex(p => p.name === playerName);
-                    if (existingPlayerIndex > -1) {
-                        state.playerDataByTable[selectedTable][existingPlayerIndex].chips = playerChips;
-                    } else {
-                        state.playerDataByTable[selectedTable].push({ name: playerName, chips: playerChips });
-                    }
-                    renderManagementPlayerList(selectedTable);
-                    nameInput.value = '';
-                    chipsInput.value = '';
-                } else if (e.target.id === 'save-management-changes') {
-                    savePlayerAndTableData();
-                } else if (e.target.id === 'close-registration-modal') {
-                    closeModal(el.registrationModal);
-                }
-            }
-
-            async function savePlayerAndTableData() {
-                showFeedback('플레이어 정보 저장 중...');
-                const payload = { action: 'updatePlayers', data: state.playerDataByTable };
-                
-                try {
-                    const response = await fetch(state.appsScriptUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify(payload)
-                    });
-                    if (!response.ok) throw new Error(`Server error: ${response.status}`);
-                    const result = await response.json();
-                    if (result.status !== 'success') throw new Error(result.message);
-                    
-                    showFeedback('✅ 플레이어 정보가 성공적으로 저장되었습니다!');
-                    closeModal(el.registrationModal);
-                    initializeApp(); // 데이터 재로드
-                } catch (error) {
-                    console.error('Failed to save player data:', error);
-                    showFeedback(`❌ 저장 실패: ${error.message}`, true);
-                }
-            }
 
             function setupEventListeners() {
                 el.refreshDataBtn.onclick = initializeApp;
                 el.resetBtn.onclick = resetApp;
                 el.sendToSheetBtn.onclick = sendDataToGoogleSheet;
-                el.managePlayersBtn.onclick = openRegistrationModal;
                 
                 el.tableSelector.onchange = (e) => {
                     state.selectedTable = e.target.value;
@@ -970,7 +838,9 @@
 
                 el.winnerButtons.addEventListener('click', e => {
                     const winnerBtn = e.target.closest('.set-winner-btn');
-                    if(winnerBtn) setPlayerRole(winnerBtn.dataset.playerName);
+                    if(winnerBtn) {
+                        setPlayerRole(winnerBtn.dataset.playerName);
+                    }
                 });
                 
                 el.playerDetailsSection.addEventListener('input', e => {
@@ -1045,7 +915,8 @@
                                 callAmount = lastAggressiveAction.amount;
                             }
                             addActionToLog('Calls', callAmount);
-                        } else { 
+                        }
+                        else { 
                             addActionToLog(action); 
                         }
                     } 
@@ -1127,11 +998,6 @@
                     saveActionState();
                     renderAll();
                 };
-
-                el.handMemoInput.addEventListener('input', e => {
-                    state.actionState.memo = e.target.value;
-                    saveActionState();
-                });
             }
 
             async function initializeApp() {
@@ -1151,13 +1017,12 @@
                 el.smallBlindInput.value = formatNumber(state.actionState.smallBlind);
                 el.bigBlindInput.value = formatNumber(state.actionState.bigBlind);
                 el.bbAnteCheckbox.checked = state.actionState.hasBBAnte;
-                el.handMemoInput.value = state.actionState.memo;
                 
                 if(timeUpdater) clearInterval(timeUpdater);
                 timeUpdater = setInterval(updateTimeDisplay, 1000);
                 updateTimeDisplay();
 
-                logMessage('준비 완료!');
+                logMessage('준비 완료!', false);
             }
 
             initializeApp();
