@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>포커 핸드 로거 v36</title>
+    <title>포커 핸드 로거 v35</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
@@ -36,7 +36,7 @@
     <div id="app" class="max-w-4xl mx-auto">
         <header class="text-center mb-4">
             <h1 class="text-3xl font-bold text-amber-400">포커 핸드 로거</h1>
-            <p id="version-display" class="text-gray-400">v36: API 연결 수정</p>
+            <p id="version-display" class="text-gray-400">v35: 핸드 관리 기능 개선</p>
         </header>
 
         <!-- Hand Info Section -->
@@ -44,6 +44,7 @@
             <h2 class="text-xl font-bold section-title flex justify-between items-center">
                 <span>1. 핸드 정보 기록</span>
                 <div class="flex items-center gap-2">
+                    <button id="manage-players-btn" class="btn bg-gray-600 p-2 rounded-md text-sm">테이블/플레이어 관리</button>
                     <button id="refresh-data" class="text-2xl" title="데이터 새로고침">🔄</button>
                 </div>
             </h2>
@@ -52,6 +53,7 @@
                      <h3 class="text-lg font-semibold mb-2">핸드 번호</h3>
                      <div class="flex items-center gap-2">
                          <div id="hand-number-display" class="text-xl font-bold bg-gray-700 p-2 rounded-md flex-grow text-center"></div>
+                         <button id="load-hand-btn" class="btn bg-gray-600 p-2 rounded-md">불러오기</button>
                      </div>
                 </div>
                 <div>
@@ -131,11 +133,14 @@
     <div id="card-selector-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-2 sm:p-4 z-50 hidden opacity-0"></div>
     <div id="action-pad-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden opacity-0"></div>
     <div id="keypad-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden opacity-0"></div>
+    <div id="load-hand-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden opacity-0"></div>
+    <div id="registration-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden opacity-0"></div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             let timeUpdater;
             const state = {
+                dataSheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSDY_i4330JANAjIz4sMncdJdRHsOkfUCjQusHTGQk2tykrhA4d09LeIp3XRbLd8hkN6SgSB47k_nux/pub?gid=998576925&single=true&output=csv', 
                 playerDataByTable: {},
                 allTables: [],
                 allHandNumbers: [],
@@ -153,7 +158,7 @@
                     cardTarget: null,
                     actionPadStreet: null, actionPadPlayer: null, actionPadCurrentAction: null,
                     keypadTarget: null,
-                    keypadPurpose: null,
+                    keypadPurpose: null, // 'bet', 'pot', or 'input'
                 },
                 selectedTimezone: 'Asia/Seoul'
             };
@@ -168,6 +173,7 @@
                 boardCardPlaceholders: document.getElementById('board-card-placeholders'),
                 playerDetailsSection: document.getElementById('player-details-section'),
                 handNumberDisplay: document.getElementById('hand-number-display'),
+                loadHandBtn: document.getElementById('load-hand-btn'),
                 smallBlindInput: document.getElementById('small-blind-input'),
                 bigBlindInput: document.getElementById('big-blind-input'),
                 bbAnteCheckbox: document.getElementById('bb-ante-checkbox'),
@@ -180,8 +186,11 @@
                 cardSelectorModal: document.getElementById('card-selector-modal'),
                 actionPadModal: document.getElementById('action-pad-modal'),
                 keypadModal: document.getElementById('keypad-modal'),
+                loadHandModal: document.getElementById('load-hand-modal'),
                 timezoneSelector: document.getElementById('timezone-selector'),
                 timeDisplay: document.getElementById('time-display'),
+                managePlayersBtn: document.getElementById('manage-players-btn'),
+                registrationModal: document.getElementById('registration-modal'),
             };
 
             function logMessage(message, isError = false) {
@@ -237,10 +246,9 @@
 
             async function loadDataFromGoogleSheet() {
                 logMessage('초기 데이터 로딩 시작...');
-                const requestUrl = `${state.appsScriptUrl}?action=getInitialData`;
-                logMessage(`요청 URL: ${requestUrl}`);
+                logMessage(`요청 URL: ${state.appsScriptUrl}?action=getInitialData`);
                 try {
-                    const response = await fetch(requestUrl);
+                    const response = await fetch(`${state.appsScriptUrl}?action=getInitialData`);
                     logMessage('구글 시트로부터 응답 수신 중...');
                     
                     if (!response.ok) {
@@ -269,10 +277,16 @@
                     state.allHandNumbers = Object.keys(data.handData).map(n => parseInt(n, 10)).sort((a, b) => a - b);
                     
                     logMessage(`테이블 ${state.allTables.length}개, 핸드 ${state.allHandNumbers.length}개 로딩 완료.`);
+                    if (!Object.keys(state.allHandData || {}).length) {
+                        logMessage('불러올 수 있는 기존 핸드가 없습니다.');
+                    }
 
                 } catch (error) { 
                     console.error('Failed to load initial data:', error); 
                     logMessage(`초기 데이터 로딩 실패: ${error.message}`, true);
+                    if (error.message.includes('Failed to fetch')) {
+                        logMessage('팁: 이 오류는 보통 Apps Script 배포 설정 문제(CORS)로 발생합니다. 배포 설정을 확인해주세요.', true);
+                    }
                 }
             }
             
@@ -420,128 +434,190 @@
                 setTimeout(() => modalElement.classList.add('hidden'), 300);
             }
 
-            function openCardSelector() {
-                const { target, index, count, player } = state.modalState.cardTarget;
-                const allHands = state.playersInHand.flatMap(p => p.hand);
-                const usedCards = [...allHands, ...state.board].filter(Boolean);
-                let selectedCards = [];
-                let deckHTML = '';
-                
-                Object.keys(SUITS).forEach(suitKey => {
-                    deckHTML += `<div class="flex flex-wrap justify-center gap-1 mb-1">`;
-                    RANKS.forEach(rank => {
-                        const cardId = `${rank}${suitKey}`;
-                        const isUsed = usedCards.includes(cardId);
-                        const colorClass = (suitKey === 'h' || suitKey === 'd') ? 'card-red' : 'card-black';
-                        deckHTML += `<button class="btn card-selector-btn rounded-md w-10 h-12 sm:w-12 sm:h-14 flex-shrink-0 ${isUsed ? 'bg-gray-600 text-gray-500 cursor-not-allowed' : 'bg-white hover:bg-amber-300'} ${colorClass}" data-card-id="${cardId}" ${isUsed ? 'disabled' : ''}>${rank}${SUITS[suitKey]}</button>`;
-                    });
-                    deckHTML += '</div>';
-                });
+            // ---------------- Hand Loader (프론트 전용) ----------------
+            function openLoadHandModal() {
+              const handNos = Object.keys(state.allHandData)
+                .map(n => parseInt(n, 10))
+                .filter(Number.isFinite)
+                .sort((a, b) => b - a);
 
-                const content = `<div class="bg-gray-800 rounded-lg p-4 w-full max-w-md sm:max-w-lg"><h2 class="text-2xl font-bold text-amber-400 mb-4 text-center">카드 선택 (${count}장)</h2><div id="card-deck">${deckHTML}</div><button id="close-card-modal" class="btn mt-4 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md">닫기</button></div>`;
-                openModal(el.cardSelectorModal, content);
-                
-                el.cardSelectorModal.querySelector('#card-deck').onclick = e => {
-                    const btn = e.target.closest('.card-selector-btn');
-                    if(!btn) return;
-                    const cardId = btn.dataset.cardId;
-                    const selectedIndex = selectedCards.indexOf(cardId);
-                    if (selectedIndex > -1) {
-                        selectedCards.splice(selectedIndex, 1);
-                        btn.classList.remove('selected');
-                    } else if (selectedCards.length < count) {
-                        selectedCards.push(cardId);
-                        btn.classList.add('selected');
-                    }
-                    if (selectedCards.length === count) {
-                        assignCard(selectedCards);
-                    }
+              const listHtml = handNos.slice(0, 200).map(n => `
+                <button class="btn w-full text-left bg-gray-700 hover:bg-gray-600 p-2 rounded-md hand-pick-btn" data-hand="${n}">
+                  #${n}
+                </button>`).join('');
+
+              const content = `
+                <div class="bg-gray-800 rounded-lg p-4 w-full max-w-md">
+                  <h2 class="text-2xl font-bold text-amber-400 mb-3 text-center">핸드 불러오기</h2>
+                  <input id="hand-search" class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 mb-3" placeholder="핸드 번호 검색"/>
+                  <div id="hand-list" class="space-y-2 max-h-[50vh] overflow-y-auto">${listHtml || '<p class="text-gray-400">핸드가 없습니다.</p>'}</div>
+                  <div class="grid grid-cols-2 gap-2 mt-3">
+                    <button id="hand-load-input" class="btn bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-md">번호 입력 불러오기</button>
+                    <button id="close-hand-modal" class="btn bg-gray-600 hover:bg-gray-500 text-white p-2 rounded-md">닫기</button>
+                  </div>
+                </div>`;
+              openModal(el.loadHandModal, content);
+
+              const listEl = el.loadHandModal.querySelector('#hand-list');
+              const searchEl = el.loadHandModal.querySelector('#hand-search');
+
+              listEl.onclick = (e) => {
+                const btn = e.target.closest('.hand-pick-btn');
+                if (!btn) return;
+                const handNo = btn.dataset.hand;
+                loadHandFromState(handNo);
+                closeModal(el.loadHandModal);
+              };
+
+              searchEl.oninput = () => {
+                const q = searchEl.value.trim();
+                const target = parseInt(q, 10);
+                const filtered = Number.isFinite(target)
+                  ? handNos.filter(n => (''+n).includes(''+target))
+                  : handNos;
+                listEl.innerHTML = filtered.slice(0, 200).map(n => `
+                  <button class="btn w-full text-left bg-gray-700 hover:bg-gray-600 p-2 rounded-md hand-pick-btn" data-hand="${n}">
+                    #${n}
+                  </button>`).join('') || '<p class="text-gray-400">검색 결과가 없습니다.</p>';
+              };
+
+              el.loadHandModal.querySelector('#hand-load-input').onclick = () => {
+                const q = searchEl.value.trim();
+                const handNo = parseInt(q, 10);
+                if (!Number.isFinite(handNo) || !state.allHandData[handNo]) {
+                  showFeedback('해당 핸드를 찾을 수 없습니다.', true);
+                  return;
+                }
+                loadHandFromState(handNo);
+                closeModal(el.loadHandModal);
+              };
+
+              el.loadHandModal.querySelector('#close-hand-modal').onclick = () => closeModal(el.loadHandModal);
+            }
+
+            function loadHandFromState(handNumber) {
+              const record = state.allHandData[handNumber];
+              if (!record) { showFeedback('핸드 데이터가 없습니다.', true); return; }
+              try {
+                const parsed = parseGfxHandRecord(record);
+                applyLoadedHand(parsed);
+                showFeedback(`핸드 #${handNumber} 불러오기 완료`);
+              } catch (e) {
+                console.error(e);
+                showFeedback('핸드 파싱 중 오류가 발생했습니다.', true);
+              }
+            }
+
+            // record: { handInfo: [...], players: [[...], ...], events: [[...], ...] }
+            function parseGfxHandRecord(record) {
+              // 1) HAND 라인
+              const H = record.handInfo || [];
+              // H: ['HAND', handNo, epoch, 'HOLDEM', anteType, BB, ante(0), SB, BB(dup), ...]
+              const handNumber = H[2] ? String(H[1] || H[2]) : String(H[1] || '');
+              const anteType = (H[4] || '').toString();
+              const hasBBAnte = anteType === 'BB_ANTE';
+              const smallBlind = (H[7] ?? '').toString();
+              const bigBlind = (H[5] ?? '').toString();
+
+              // 2) PLAYERS
+              // ['PLAYER', name, seat, 0, startStack, endStack, cardsStr]
+              const seatToName = {};
+              const players = (record.players || []).map(row => {
+                const name = (row[1] || '').toString();
+                const seat = parseInt(row[2], 10) || 0;
+                const startStack = (row[4] ?? '').toString();
+                const cardsStr = (row[6] || '').toString().trim(); // e.g. "As Kh"
+                seatToName[seat] = name;
+                const handCards = cardsStr ? cardsStr.split(/\s+/) : [];
+                return {
+                  name,
+                  hand: handCards,
+                  initialChips: startStack,
+                  chips: startStack, // 불러온 뒤 시작칩 기준으로 표시
+                  role: null
                 };
-            }
-            
-            function openActionPad(street) {
-                if (state.playersInHand.length < 1) { showFeedback('먼저 플레이어를 선택해주세요.', true); return; }
-                state.modalState.actionPadStreet = street;
-                const playersHTML = state.playersInHand.map(p => `<button class="btn bg-gray-700 hover:bg-gray-600 p-3 rounded-md" data-player-name="${p.name}">${p.name}</button>`).join('');
-                const content = `<div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
-                    <h2 class="text-2xl font-bold text-amber-400 mb-4 text-center">${street.toUpperCase()} 액션</h2>
-                    <div id="action-pad-players" class="grid grid-cols-2 gap-3 mb-4">${playersHTML}</div>
-                    
-                    <div id="action-pad-actions" class="grid grid-cols-3 gap-3 mb-4 hidden">
-                        <button class="btn bg-red-600 hover:bg-red-700 p-3 rounded-md" data-action="Folds">Fold</button>
-                        <button class="btn bg-gray-600 hover:bg-gray-500 p-3 rounded-md" data-action="Checks">Check</button>
-                        <button class="btn bg-blue-600 hover:bg-blue-700 p-3 rounded-md" data-action="Calls">Call</button>
-                        <button class="btn bg-amber-500 hover:bg-amber-600 p-3 rounded-md col-span-2" data-action="Bet/Raises">Bet/Raise</button>
-                        <button class="btn bg-red-800 hover:bg-red-700 p-3 rounded-md font-bold" data-action="All In">ALL IN</button>
-                    </div>
-                    <button id="close-action-pad" class="btn mt-4 w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-md">닫기</button>
-                </div>`;
-                openModal(el.actionPadModal, content);
-            }
-            
-            function openKeypad(targetInput, purpose = 'bet', currentPot = 0) {
-                state.modalState.keypadTarget = targetInput;
-                state.modalState.keypadPurpose = purpose;
-                state.modalState.currentPotValue = currentPot;
-                
-                let potButtonsHTML = '';
-                if (purpose === 'bet') {
-                    const pot = calculatePotSize();
-                    potButtonsHTML = `
-                        <button class="keypad-btn btn bg-sky-700 p-2 rounded-md" data-amount="${Math.round(pot * 0.5)}">1/2 Pot</button>
-                        <button class="keypad-btn btn bg-sky-700 p-2 rounded-md" data-amount="${Math.round(pot * 0.75)}">3/4 Pot</button>
-                        <button class="keypad-btn btn bg-sky-700 p-2 rounded-md" data-amount="${pot}">Pot</button>
-                        <button class="keypad-btn btn bg-gray-700 p-2 rounded-md">←</button>
-                    `;
-                } else {
-                     potButtonsHTML = `
-                        <button class="keypad-btn btn bg-gray-700 p-2 rounded-md">C</button>
-                        <button class="keypad-btn btn bg-gray-700 p-2 rounded-md col-span-2">000</button>
-                        <button class="keypad-btn btn bg-gray-700 p-2 rounded-md">←</button>
-                    `;
+              });
+
+              // 3) EVENTS → 보드/액션/스트리트
+              // action: ['EVENT', TYPE, seat, amount, timecode]
+              // board : ['EVENT', 'BOARD', 1, card, timecode]
+              const board = [];
+              const preflop = [];
+              const flop = [];
+              const turn = [];
+              const river = [];
+              let street = 'preflop';
+              let boardCount = 0;
+
+              const mapActionLabel = (t) => {
+                const s = (t || '').toString().toUpperCase();
+                if (s === 'FOLD') return 'Folds';
+                if (s === 'CHECK') return 'Checks';
+                if (s === 'CALL') return 'Calls';
+                if (s === 'BET') return 'Bets';
+                if (s === 'RAISE TO' || s === 'RAISE') return 'Raises';
+                if (s === 'ALL IN' || s === 'ALL-IN') return 'All In';
+                if (s === 'POT CORRECTION') return 'Pot Correction';
+                return s; // fallback
+              };
+
+              (record.events || []).forEach(row => {
+                const kind = (row[1] || '').toString().toUpperCase();
+
+                if (kind === 'BOARD') {
+                    const card = (row[3] || '').toString();
+                    if (card) board.push(card);
+                    boardCount++;
+                    if (boardCount === 3) street = 'flop';
+                    else if (boardCount === 4) street = 'turn';
+                    else if (boardCount >= 5) street = 'river';
+                    return;
                 }
 
-                const content = `<div class="bg-gray-800 rounded-lg p-4 w-full max-w-xs">
-                    <div id="keypad-display" class="bg-gray-900 text-right text-2xl font-mono p-2 rounded-md mb-4 h-12">${targetInput ? targetInput.value : ''}</div>
-                    <div class="grid grid-cols-4 gap-2 text-xl font-bold">
-                        ${['1','2','3','4','5','6','7','8','9','0','00', '000'].map(k => `<button class="keypad-btn btn bg-gray-700 hover:bg-gray-600 rounded-md p-3">${k}</button>`).join('')}
-                    </div>
-                     <div class="grid grid-cols-4 gap-2 text-xl font-bold mt-2">${potButtonsHTML}</div>
-                    <div class="grid grid-cols-2 gap-2 mt-2">
-                        <button id="keypad-cancel" class="btn bg-red-600 hover:bg-red-700 p-3 rounded-md">취소</button>
-                        <button id="keypad-confirm" class="btn bg-green-600 hover:bg-green-700 p-3 rounded-md">확인</button>
-                    </div>
-                </div>`;
-                openModal(el.keypadModal, content);
+                // 액션
+                const seat = parseInt(row[2], 10);
+                const player = seatToName[seat] || '';
+                const amount = (row[3] ?? '').toString() || null;
+                const action = mapActionLabel(kind);
+                const entry = { player, action, amount, timestamp: null };
+
+                if (street === 'preflop') preflop.push(entry);
+                else if (street === 'flop') flop.push(entry);
+                else if (street === 'turn') turn.push(entry);
+                else river.push(entry);
+              });
+
+              return {
+                handNumber,
+                smallBlind,
+                bigBlind,
+                hasBBAnte,
+                players,
+                board,
+                actions: { preflop, flop, turn, river }
+              };
             }
 
-            function togglePlayerInHand(playerName) {
-                const playerIndex = state.playersInHand.findIndex(p => p.name === playerName);
-                if (playerIndex > -1) {
-                    state.playersInHand.splice(playerIndex, 1);
-                } else {
-                    const playersForTable = state.playerDataByTable[state.selectedTable] || [];
-                    const playerData = playersForTable.find(p => p.name === playerName);
-                    const initialChips = playerData ? playerData.chips : '';
-                    state.playersInHand.push({ name: playerName, hand: [], chips: initialChips, initialChips: initialChips, role: null });
-                }
-                renderPlayerSelection();
-                renderPlayerDetails();
-                renderWinnerSelection();
-            }
+            function applyLoadedHand(parsed) {
+              state.playersInHand = parsed.players;
+              state.board = parsed.board;
+              state.actionState.handNumber = parsed.handNumber || state.actionState.handNumber;
+              state.actionState.smallBlind = parsed.smallBlind || '';
+              state.actionState.bigBlind = parsed.bigBlind || '';
+              state.actionState.hasBBAnte = !!parsed.hasBBAnte;
+              state.actionState.preflop = parsed.actions.preflop;
+              state.actionState.flop = parsed.actions.flop;
+              state.actionState.turn = parsed.actions.turn;
+              state.actionState.river = parsed.actions.river;
 
-            function setPlayerRole(playerName) {
-                const targetPlayer = state.playersInHand.find(p => p.name === playerName);
-                if (!targetPlayer) return;
-                
-                if (targetPlayer.role === 'winner') {
-                    targetPlayer.role = null;
-                } else {
-                    targetPlayer.role = 'winner';
-                }
-                renderPlayerDetails();
-                renderWinnerSelection();
+              renderAll();
+              el.handNumberDisplay.textContent = `불러온 핸드 (#${state.actionState.handNumber})`;
+              el.smallBlindInput.value = formatNumber(state.actionState.smallBlind);
+              el.bigBlindInput.value = formatNumber(state.actionState.bigBlind);
+              el.bbAnteCheckbox.checked = state.actionState.hasBBAnte;
+              saveActionState();
             }
+            // ---------------- Hand Loader 끝 ----------------
 
             function assignCard(cards) {
                 const { target, player, index } = state.modalState.cardTarget;
@@ -590,9 +666,9 @@
                 renderAll();
             }
             
-            function saveActionState() { localStorage.setItem('pokerActionState_v36', JSON.stringify(state.actionState)); }
+            function saveActionState() { localStorage.setItem('pokerActionState_v32', JSON.stringify(state.actionState)); }
             function loadActionState() {
-                const savedState = localStorage.getItem('pokerActionState_v36');
+                const savedState = localStorage.getItem('pokerActionState_v32');
                 if (savedState) state.actionState = { ...state.actionState, ...JSON.parse(savedState) };
             }
 
@@ -664,8 +740,8 @@
                         p.name,
                         p.seat,
                         0,
-                        unformatNumber(p.initialChips) || 0,
-                        finalChips,
+                        unformatNumber(p.initialChips) || 0, // Start Stack
+                        finalChips, // End Stack
                         p.hand.length > 0 ? p.hand.map(formatCardForGfx).join(' ') : ''
                     ];
                     addRow(playerLine);
@@ -794,126 +870,11 @@
 
             const toCamelCase = (str) => str.replace(/-([a-z])/g, g => g[1].toUpperCase());
 
-            function openLoadHandModal() {
-                if (state.allHandNumbers.length === 0) {
-                    showFeedback('불러올 핸드가 없습니다.', true);
-                    return;
-                }
-                
-                const handListHTML = state.allHandNumbers.map(num => {
-                    const handInfo = state.allHandData[num];
-                    const playerCount = handInfo?.players?.length || 0;
-                    return `<button class="btn bg-gray-700 hover:bg-gray-600 p-2 rounded-md w-full text-left" data-hand-number="${num}">
-                        핸드 #${num} (플레이어: ${playerCount}명)
-                    </button>`;
-                }).reverse().join('');
-                
-                const content = `<div class="bg-gray-800 rounded-lg p-4 w-full max-w-md max-h-96 overflow-y-auto">
-                    <h2 class="text-2xl font-bold text-amber-400 mb-4 text-center">핸드 불러오기</h2>
-                    <div class="space-y-2">${handListHTML}</div>
-                    <button id="close-load-modal" class="btn mt-4 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md">닫기</button>
-                </div>`;
-                openModal(el.loadHandModal, content);
-            }
-            
-            function loadHandData(handNumber) {
-                const handData = state.allHandData[handNumber];
-                if (!handData) {
-                    showFeedback('핸드 데이터를 찾을 수 없습니다.', true);
-                    return;
-                }
-                
-                // 핸드 정보 파싱
-                const handInfo = handData.handInfo;
-                state.actionState.handNumber = handNumber.toString();
-                
-                // 블라인드 정보 설정
-                if (handInfo && handInfo.length > 8) {
-                    state.actionState.smallBlind = handInfo[8].toString();
-                    state.actionState.bigBlind = handInfo[9].toString();
-                    state.actionState.hasBBAnte = handInfo[5] === 'BB_ANTE';
-                }
-                
-                // 플레이어 정보 설정
-                state.playersInHand = [];
-                handData.players.forEach(playerRow => {
-                    const playerName = playerRow[2];
-                    const startStack = playerRow[5] || '0';
-                    const endStack = playerRow[6] || '0';
-                    const cards = playerRow[7] ? playerRow[7].split(' ') : [];
-                    
-                    state.playersInHand.push({
-                        name: playerName,
-                        hand: cards,
-                        chips: startStack,
-                        initialChips: startStack,
-                        role: null
-                    });
-                });
-                
-                // 이벤트 파싱 (보드 카드와 액션)
-                state.board = [];
-                state.actionState.preflop = [];
-                state.actionState.flop = [];
-                state.actionState.turn = [];
-                state.actionState.river = [];
-                
-                let currentStreet = 'preflop';
-                handData.events.forEach(eventRow => {
-                    const eventType = eventRow[2];
-                    
-                    if (eventType === 'BOARD') {
-                        const card = eventRow[4];
-                        if (card) state.board.push(card);
-                        
-                        // 스트릿 전환
-                        if (state.board.length === 3) currentStreet = 'flop';
-                        else if (state.board.length === 4) currentStreet = 'turn';
-                        else if (state.board.length === 5) currentStreet = 'river';
-                    } else {
-                        // 플레이어 액션
-                        const seat = eventRow[3];
-                        const player = state.playersInHand.find((p, i) => i + 1 === seat);
-                        if (player) {
-                            const actionMap = {
-                                'FOLD': 'Folds',
-                                'CHECK': 'Checks',
-                                'CALL': 'Calls',
-                                'BET': 'Bets',
-                                'RAISE TO': 'Raises',
-                                'ALL IN': 'All In'
-                            };
-                            
-                            const action = actionMap[eventType] || eventType;
-                            const amount = eventRow[4];
-                            
-                            state.actionState[currentStreet].push({
-                                player: player.name,
-                                action: action,
-                                amount: amount || null,
-                                timestamp: new Date().toISOString()
-                            });
-                        }
-                    }
-                });
-                
-                // UI 업데이트
-                el.handNumberDisplay.textContent = `핸드 #${state.actionState.handNumber} (불러옴)`;
-                el.smallBlindInput.value = formatNumber(state.actionState.smallBlind);
-                el.bigBlindInput.value = formatNumber(state.actionState.bigBlind);
-                el.bbAnteCheckbox.checked = state.actionState.hasBBAnte;
-                
-                renderAll();
-                saveActionState();
-                closeModal(el.loadHandModal);
-                showFeedback(`핸드 #${handNumber} 불러오기 완료!`);
-            }
-
             function setupEventListeners() {
                 el.refreshDataBtn.onclick = initializeApp;
                 el.resetBtn.onclick = resetApp;
                 el.sendToSheetBtn.onclick = sendDataToGoogleSheet;
-                el.loadHandBtn.onclick = openLoadHandModal;
+                el.loadHandBtn.onclick = openLoadHandModal; // ★ 핸드 불러오기 연결
                 
                 el.tableSelector.onchange = (e) => {
                     state.selectedTable = e.target.value;
@@ -1024,15 +985,6 @@
                             addActionToLog(action); 
                         }
                     } 
-                });
-                
-                el.loadHandModal.addEventListener('click', e => {
-                    const handBtn = e.target.closest('button[data-hand-number]');
-                    if (handBtn) {
-                        loadHandData(parseInt(handBtn.dataset.handNumber));
-                    } else if (e.target.id === 'close-load-modal') {
-                        closeModal(el.loadHandModal);
-                    }
                 });
                 
                 document.body.addEventListener('click', e => {
