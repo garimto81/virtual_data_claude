@@ -73,9 +73,8 @@
                     <span class="text-sm font-bold mr-2">승자:</span>
                     <div id="winner-buttons" class="flex flex-wrap gap-1 flex-grow"></div>
                 </div>
-                <div class="grid grid-cols-2 gap-2">
+                <div class="grid grid-cols-1 gap-2">
                      <button id="send-to-sheet-btn" class="w-full btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md text-sm">시트 전송</button>
-                     <button id="reset-all" class="w-full btn bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-3 rounded-md text-sm">새 핸드</button>
                 </div>
                 <p id="feedback-message" class="text-center h-4 text-xs font-semibold"></p>
             </div>
@@ -145,7 +144,6 @@
                 streetLogsContainer: document.getElementById('street-logs-container'),
                 winnerButtons: document.getElementById('winner-buttons'),
                 sendToSheetBtn: document.getElementById('send-to-sheet-btn'),
-                resetBtn: document.getElementById('reset-all'),
                 feedbackMessage: document.getElementById('feedback-message'),
                 logDisplay: document.getElementById('log-display'),
                 logModal: document.getElementById('log-modal'),
@@ -201,7 +199,7 @@
                 selector.value = state.selectedTimezone;
             }
 
-            function updateTimeDisplay() { el.timeDisplay.textContent = getFormattedTimeInTimezone(new Date(), state.selectedTimezone).slice(0, 5); }
+            function updateTimeDisplay() { el.timeDisplay.textContent = getFormattedTimeInTimezone(new Date(), state.selectedTimezone); }
 
             async function loadDataFromGoogleSheet() {
                 logMessage('초기 데이터 로딩 시작...');
@@ -251,7 +249,7 @@
                     return `<div class="player-card flex items-center gap-2 text-sm border-b border-gray-700 pb-1 ${roleClass}" data-player-name="${p.name}">
                         <div class="w-1/4 truncate font-bold">${p.name}</div>
                         <div class="w-1/4">
-                            <input type="text" class="number-input player-chip-input w-full bg-gray-700 border border-gray-600 rounded-md p-1 text-xs" placeholder="칩" value="${formatNumber(p.chips)}">
+                            <input type="text" readonly class="number-input player-chip-input w-full bg-gray-700 border border-gray-600 rounded-md p-1 text-xs" placeholder="칩" value="${formatNumber(p.chips)}">
                         </div>
                         <div class="w-1/4">
                             <button class="keypad-icon-btn btn bg-gray-600 p-1 rounded-md text-xs w-full">⌨️</button>
@@ -402,30 +400,22 @@
             function openKeypad(targetInput, options = {}) {
                 state.modalState.keypadTarget = targetInput; 
                 state.modalState.keypadOptions = options;
-                
-                let contextualButtonsHTML = '';
-                if (options.purpose === 'bet') {
-                    const pot = calculatePotSize();
-                    contextualButtonsHTML = `
-                        <button class="keypad-btn btn bg-sky-700 p-2 rounded" data-amount="${Math.round(pot * 0.5)}">1/2 Pot</button>
-                        <button class="keypad-btn btn bg-sky-700 p-2 rounded" data-amount="${Math.round(pot * 0.75)}">3/4 Pot</button>
-                        <button class="keypad-btn btn bg-sky-700 p-2 rounded" data-amount="${pot}">Pot</button>
-                    `;
-                } else {
-                    contextualButtonsHTML = `<div class="col-span-3"></div>`; // Placeholder
-                }
 
                 const content = `<div class="bg-gray-800 rounded-lg p-2 w-full max-w-xs">
                     <div id="keypad-display" class="bg-gray-900 text-right text-2xl font-mono p-2 rounded mb-2 h-12">${targetInput ? targetInput.value : ''}</div>
-                    <div class="grid grid-cols-4 gap-2 text-lg font-bold mb-2">
-                        ${contextualButtonsHTML}
-                        <button class="keypad-btn btn bg-gray-600 p-2 rounded">←</button>
+                    <div class="grid grid-cols-3 gap-2 text-xl font-bold">
+                        ${['7','8','9', '4','5','6', '1','2','3', '0','00','000'].map(k => 
+                            `<button class="keypad-btn btn bg-gray-700 p-3 rounded-md">${k}</button>`
+                        ).join('')}
                     </div>
-                    <div class="grid grid-cols-4 gap-2 text-xl font-bold">
-                        ${['7','8','9','000', '4','5','6','00', '1','2','3','C', '.', '0'].map(k => `<button class="keypad-btn btn bg-gray-700 p-3 rounded-md ${k === 'C' || k === '.' ? 'text-amber-400' : ''}">${k}</button>`).join('')}
-                        <button id="keypad-confirm" class="btn bg-green-600 p-3 rounded-md col-span-2">확인</button>
+                    <div class="grid grid-cols-2 gap-2 mt-2">
+                        <button class="keypad-btn btn bg-gray-600 text-amber-400 p-3 rounded-md">C</button>
+                        <button class="keypad-btn btn bg-gray-600 text-amber-400 p-3 rounded-md">←</button>
                     </div>
-                     <button id="keypad-cancel" class="btn bg-red-600 mt-2 w-full p-2 rounded-md">취소</button>
+                    <div class="grid grid-cols-2 gap-2 mt-2">
+                        <button id="keypad-cancel" class="btn bg-red-600 p-3 rounded-md">취소</button>
+                        <button id="keypad-confirm" class="btn bg-green-600 p-3 rounded-md">확인</button>
+                    </div>
                 </div>`;
                 openModal(el.keypadModal, content);
             }
@@ -498,9 +488,9 @@
                 saveActionState(); renderAll();
             }
             
-            function saveActionState() { localStorage.setItem('pokerActionState_v37_iphone', JSON.stringify(state.actionState)); }
+            function saveActionState() { localStorage.setItem('pokerActionState_v38_unified_keypad', JSON.stringify(state.actionState)); }
             function loadActionState() {
-                const savedState = localStorage.getItem('pokerActionState_v37_iphone');
+                const savedState = localStorage.getItem('pokerActionState_v38_unified_keypad');
                 if (savedState) state.actionState = { ...state.actionState, ...JSON.parse(savedState) };
             }
 
@@ -646,7 +636,7 @@
 
             function setupEventListeners() {
                 el.refreshDataBtn.onclick = initializeApp;
-                el.resetBtn.onclick = resetApp;
+                // el.resetBtn is removed
                 el.sendToSheetBtn.onclick = sendDataToGoogleSheet;
                 el.showLogBtn.onclick = openLogModal;
                 el.closeLogModalBtn.onclick = closeLogModal;
@@ -738,6 +728,7 @@
                     const btn = e.target.closest('button'); if(!btn) return;
                     const display = el.keypadModal.querySelector('#keypad-display');
                     const key = btn.textContent;
+                    
                     if (btn.id === 'keypad-confirm') {
                         const finalAmount = unformatNumber(display.textContent);
                         const { purpose, currentPot } = state.modalState.keypadOptions;
@@ -757,11 +748,15 @@
                             }
                         }
                         closeModal(el.keypadModal);
-                    } else if (btn.id === 'keypad-cancel') { closeModal(el.keypadModal);
-                    } else if (btn.dataset.amount) { display.textContent = formatNumber(btn.dataset.amount);
-                    } else if (key === 'C') { display.textContent = '';
-                    } else if (key === '←') { display.textContent = formatNumber(unformatNumber(display.textContent).slice(0, -1));
-                    } else { display.textContent = formatNumber(unformatNumber(display.textContent) + key); }
+                    } else if (btn.id === 'keypad-cancel') { 
+                        closeModal(el.keypadModal);
+                    } else if (key === 'C') { 
+                        display.textContent = '';
+                    } else if (key === '←') { 
+                        display.textContent = formatNumber(unformatNumber(display.textContent).slice(0, -1));
+                    } else { // It's a number key
+                        display.textContent = formatNumber(unformatNumber(display.textContent) + key);
+                    }
                 });
                 
                 document.querySelectorAll('.number-input').forEach(input => {
