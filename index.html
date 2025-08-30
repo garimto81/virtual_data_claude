@@ -73,7 +73,8 @@
                     <span class="text-sm font-bold mr-2">승자:</span>
                     <div id="winner-buttons" class="flex flex-wrap gap-1 flex-grow"></div>
                 </div>
-                <div class="grid grid-cols-1 gap-2">
+                <div class="grid grid-cols-2 gap-2">
+                       <button id="reset-btn" class="w-full btn bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-3 rounded-md text-sm">새 핸드</button>
                        <button id="send-to-sheet-btn" class="w-full btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md text-sm">시트 전송</button>
                 </div>
                 <p id="feedback-message" class="text-center h-4 text-xs font-semibold"></p>
@@ -143,6 +144,7 @@
                 streetLogsContainer: document.getElementById('street-logs-container'),
                 winnerButtons: document.getElementById('winner-buttons'),
                 sendToSheetBtn: document.getElementById('send-to-sheet-btn'),
+                resetBtn: document.getElementById('reset-btn'),
                 feedbackMessage: document.getElementById('feedback-message'),
                 logDisplay: document.getElementById('log-display'),
                 logModal: document.getElementById('log-modal'),
@@ -837,6 +839,7 @@
 
             function setupEventListeners() {
                 el.refreshDataBtn.onclick = initializeApp;
+                el.resetBtn.onclick = resetApp;
                 el.loadHandBtn.onclick = openLoadHandModal;
                 el.sendToSheetBtn.onclick = sendDataToGoogleSheet;
                 el.showLogBtn.onclick = openLogModal;
