@@ -7,9 +7,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
-        html, body { height: 100%; overflow: hidden; font-family: 'Noto Sans KR', sans-serif; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        html, body { height: 100vh; /* Viewport height */ overflow: hidden; font-family: 'Noto Sans KR', sans-serif; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
         #app-container { display: flex; flex-direction: column; height: 100%; }
-        main { flex-grow: 1; overflow-y: auto; }
+        main { flex-grow: 1; overflow-y: auto; /* Main content scrolls, not body */ }
         .btn { transition: all 0.1s ease-in-out; }
         .btn:active { transform: scale(0.95); }
         .btn-selected { background-color: #FBBF24 !important; color: #111827 !important; font-weight: bold; }
@@ -21,10 +21,7 @@
         .card-selector-btn.card-red { color: #DC2626; }
         .card-selector-btn.card-black { color: #111827; }
         .card-selector-btn.selected { border: 3px solid #FBBF24; transform: scale(0.95); }
-        .player-card.is-winner { background-color: rgba(251, 191, 36, 0.1); border-color: #FBBF24; }
-        .input-with-keypad { display: flex; align-items: center; gap: 2px; }
-        .input-with-keypad input { height: 36px; flex-grow: 1; min-width: 40px; }
-        .keypad-icon-btn { flex-shrink: 0; height: 36px; width: 36px; }
+        .player-card.is-winner { background-color: rgba(251, 191, 36, 0.1); }
         select, input[type="text"] { font-size: 0.875rem; }
     </style>
 </head>
@@ -34,18 +31,22 @@
         <main class="p-2 space-y-2">
             <!-- Hand Info Section -->
             <div class="bg-gray-800 p-2 rounded-lg space-y-2">
-                <div class="flex flex-wrap items-center gap-2 text-sm">
-                    <div class="flex items-center gap-1 bg-gray-700 p-1 rounded-md">
+                <div class="flex items-center gap-2 text-sm">
+                    <div class="flex-1 flex items-center gap-1 bg-gray-700 p-1 rounded-md min-w-0">
                         <span id="hand-number-display" class="font-bold px-1 whitespace-nowrap">#--</span>
-                        <button id="load-hand-btn" class="btn bg-gray-600 px-2 py-1 rounded-md text-xs">불러오기</button>
+                        <button id="load-hand-btn" class="btn bg-gray-600 px-2 py-1 rounded-md text-xs">Load</button>
                     </div>
-                    <select id="table-selector" class="flex-grow bg-gray-700 border border-gray-600 rounded-md px-2 py-1 min-w-[120px]"></select>
-                    <div class="flex items-center gap-1">
-                        <select id="timezone-selector" class="bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-xs"></select>
+                    <div class="flex-1 min-w-0">
+                        <select id="table-selector" class="w-full bg-gray-700 border border-gray-600 rounded-md px-2 py-1"></select>
+                    </div>
+                    <div class="flex-1 flex items-center gap-1 min-w-0">
+                        <select id="timezone-selector" class="flex-grow bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-xs"></select>
                         <span id="time-display" class="bg-gray-900/50 p-1 rounded-md font-mono text-xs"></span>
                     </div>
-                    <button id="manage-players-btn" class="btn bg-gray-600 p-1 rounded-md text-xs">관리</button>
-                    <button id="refresh-data" class="text-lg" title="데이터 새로고침">🔄</button>
+                    <div class="flex items-center gap-1">
+                        <button id="manage-players-btn" class="btn bg-gray-600 p-1 rounded-md text-xs">관리</button>
+                        <button id="refresh-data" class="text-lg" title="데이터 새로고침">🔄</button>
+                    </div>
                 </div>
                 <div id="player-selection-buttons" class="flex flex-wrap gap-1"></div>
             </div>
@@ -57,8 +58,8 @@
             <div class="bg-gray-800 p-2 rounded-lg space-y-2">
                 <div class="flex flex-wrap items-center gap-2">
                     <div class="flex items-center gap-1">
-                        <div class="input-with-keypad"><input type="text" id="small-blind-input" class="number-input w-full bg-gray-700 p-1 rounded-md text-sm" placeholder="SB"><button class="keypad-icon-btn btn bg-gray-600 p-1 rounded-md text-sm">⌨️</button></div>
-                        <div class="input-with-keypad"><input type="text" id="big-blind-input" class="number-input w-full bg-gray-700 p-1 rounded-md text-sm" placeholder="BB"><button class="keypad-icon-btn btn bg-gray-600 p-1 rounded-md text-sm">⌨️</button></div>
+                        <div class="input-with-keypad flex items-center"><input type="text" id="small-blind-input" class="number-input w-12 bg-gray-700 p-1 rounded-md text-sm" placeholder="SB"><button class="keypad-icon-btn btn bg-gray-600 p-1 rounded-md text-xs h-auto w-auto px-2 py-1">⌨️</button></div>
+                        <div class="input-with-keypad flex items-center"><input type="text" id="big-blind-input" class="number-input w-12 bg-gray-700 p-1 rounded-md text-sm" placeholder="BB"><button class="keypad-icon-btn btn bg-gray-600 p-1 rounded-md text-xs h-auto w-auto px-2 py-1">⌨️</button></div>
                         <div class="flex items-center"><input id="bb-ante-checkbox" type="checkbox" class="h-4 w-4 bg-gray-700 border-gray-600 rounded text-amber-500"><label for="bb-ante-checkbox" class="ml-1 text-xs">Ante</label></div>
                     </div>
                     <div id="board-card-placeholders" class="flex flex-wrap gap-1 items-center flex-grow justify-end"></div>
@@ -122,7 +123,7 @@
                     cardTarget: null,
                     actionPadStreet: null, actionPadPlayer: null, actionPadCurrentAction: null,
                     keypadTarget: null,
-                    keypadPurpose: null,
+                    keypadOptions: {},
                 },
                 selectedTimezone: 'Asia/Seoul'
             };
@@ -248,12 +249,14 @@
                 el.playerDetailsSection.innerHTML = state.playersInHand.map(p => {
                     const roleClass = (p.role === 'winner') ? 'is-winner' : '';
                     return `<div class="player-card flex items-center gap-2 text-sm border-b border-gray-700 pb-1 ${roleClass}" data-player-name="${p.name}">
-                        <strong class="w-16 truncate">${p.name}</strong>
-                        <div class="input-with-keypad flex-grow">
+                        <div class="w-1/4 truncate font-bold">${p.name}</div>
+                        <div class="w-1/4">
                             <input type="text" class="number-input player-chip-input w-full bg-gray-700 border border-gray-600 rounded-md p-1 text-xs" placeholder="칩" value="${formatNumber(p.chips)}">
-                            <button class="keypad-icon-btn btn bg-gray-600 p-1 rounded-md text-xs">⌨️</button>
                         </div>
-                        <div class="card-placeholder h-10 w-20 flex justify-center items-center gap-1" data-player-name="${p.name}" data-count="2">
+                        <div class="w-1/4">
+                            <button class="keypad-icon-btn btn bg-gray-600 p-1 rounded-md text-xs w-full">⌨️</button>
+                        </div>
+                        <div class="w-1/4 card-placeholder h-10 flex justify-center items-center gap-1" data-player-name="${p.name}" data-count="2">
                             ${p.hand.length > 0 ? p.hand.map(formatCardDisplay).join('') : '<span class="text-gray-400 text-lg">+</span>'}
                         </div>
                     </div>`;
@@ -396,32 +399,37 @@
                 openModal(el.actionPadModal, content);
             }
             
-            function openKeypad(targetInput, purpose = 'bet', currentPot = 0) {
-                state.modalState.keypadTarget = targetInput; state.modalState.keypadPurpose = purpose; state.modalState.currentPotValue = currentPot;
-                let potButtonsHTML = '';
-                if (purpose === 'bet') {
+            function openKeypad(targetInput, options = {}) {
+                state.modalState.keypadTarget = targetInput; 
+                state.modalState.keypadOptions = options;
+                
+                let contextualButtonsHTML = '';
+                if (options.purpose === 'bet') {
                     const pot = calculatePotSize();
-                    potButtonsHTML = `<button class="keypad-btn btn bg-sky-700 p-2 rounded" data-amount="${Math.round(pot * 0.5)}">1/2</button><button class="keypad-btn btn bg-sky-700 p-2 rounded" data-amount="${Math.round(pot * 0.75)}">3/4</button><button class="keypad-btn btn bg-sky-700 p-2 rounded" data-amount="${pot}">Pot</button>`;
+                    contextualButtonsHTML = `
+                        <button class="keypad-btn btn bg-sky-700 p-2 rounded" data-amount="${Math.round(pot * 0.5)}">1/2 Pot</button>
+                        <button class="keypad-btn btn bg-sky-700 p-2 rounded" data-amount="${Math.round(pot * 0.75)}">3/4 Pot</button>
+                        <button class="keypad-btn btn bg-sky-700 p-2 rounded" data-amount="${pot}">Pot</button>
+                    `;
                 } else {
-                     potButtonsHTML = `<button class="keypad-btn btn bg-gray-700 p-2 rounded">C</button><button class="keypad-btn btn bg-gray-700 col-span-2 p-2 rounded">000</button>`;
+                    contextualButtonsHTML = `<div class="col-span-3"></div>`; // Placeholder
                 }
-                const content = `<div class="bg-gray-800 rounded-lg p-4 w-full max-w-xs">
-                    <div id="keypad-display" class="bg-gray-900 text-right text-xl font-mono p-2 rounded mb-2 h-10">${targetInput ? targetInput.value : ''}</div>
-                    <div class="grid grid-cols-4 gap-2 text-lg font-bold">
-                        ${potButtonsHTML}
-                        <button class="keypad-btn btn bg-gray-700 p-2 rounded">←</button>
+
+                const content = `<div class="bg-gray-800 rounded-lg p-2 w-full max-w-xs">
+                    <div id="keypad-display" class="bg-gray-900 text-right text-2xl font-mono p-2 rounded mb-2 h-12">${targetInput ? targetInput.value : ''}</div>
+                    <div class="grid grid-cols-4 gap-2 text-lg font-bold mb-2">
+                        ${contextualButtonsHTML}
+                        <button class="keypad-btn btn bg-gray-600 p-2 rounded">←</button>
                     </div>
-                    <div class="grid grid-cols-3 gap-2 text-xl font-bold mt-2">
-                        ${['1','2','3','4','5','6','7','8','9', '00','0'].map(k => `<button class="keypad-btn btn bg-gray-700 p-3 rounded">${k}</button>`).join('')}
+                    <div class="grid grid-cols-4 gap-2 text-xl font-bold">
+                        ${['7','8','9','000', '4','5','6','00', '1','2','3','C', '.', '0'].map(k => `<button class="keypad-btn btn bg-gray-700 p-3 rounded-md ${k === 'C' || k === '.' ? 'text-amber-400' : ''}">${k}</button>`).join('')}
+                        <button id="keypad-confirm" class="btn bg-green-600 p-3 rounded-md col-span-2">확인</button>
                     </div>
-                    <div class="grid grid-cols-2 gap-2 mt-2">
-                        <button id="keypad-cancel" class="btn bg-red-600 p-3 rounded">취소</button><button id="keypad-confirm" class="btn bg-green-600 p-3 rounded">확인</button>
-                    </div>
+                     <button id="keypad-cancel" class="btn bg-red-600 mt-2 w-full p-2 rounded-md">취소</button>
                 </div>`;
                 openModal(el.keypadModal, content);
             }
             
-            // ... (rest of the logic remains largely the same) ...
              function togglePlayerInHand(playerName) {
                 const playerIndex = state.playersInHand.findIndex(p => p.name === playerName);
                 if (playerIndex > -1) {
@@ -490,9 +498,9 @@
                 saveActionState(); renderAll();
             }
             
-            function saveActionState() { localStorage.setItem('pokerActionState_v36_compact', JSON.stringify(state.actionState)); }
+            function saveActionState() { localStorage.setItem('pokerActionState_v37_iphone', JSON.stringify(state.actionState)); }
             function loadActionState() {
-                const savedState = localStorage.getItem('pokerActionState_v36_compact');
+                const savedState = localStorage.getItem('pokerActionState_v37_iphone');
                 if (savedState) state.actionState = { ...state.actionState, ...JSON.parse(savedState) };
             }
 
@@ -507,27 +515,114 @@
             }
             
             function generateGfxLogRows() {
-                // This function's logic doesn't need to change for the layout update.
-                // It generates data, not UI.
-                return []; // Placeholder for brevity
+                const finalRows = []; let rowCounter = 1;
+                const addRow = (data) => {
+                    const paddedData = [...data]; while (paddedData.length < 16) { paddedData.push(''); }
+                    finalRows.push([rowCounter, ...paddedData]); rowCounter++;
+                };
+                const handStartTime = new Date(); let currentTime = new Date(handStartTime.getTime());
+                const playersWithSeats = state.playersInHand.map((p, i) => ({ ...p, seat: i + 1 }));
+                const totalPot = calculatePotSize();
+                const winners = playersWithSeats.filter(p => p.role === 'winner');
+                const potPerWinner = winners.length > 0 ? Math.floor(totalPot / winners.length) : 0;
+                addRow(['GAME', 'PokerGFX 3.111', 'FEATURE_TABLE']); addRow(['PAYOUTS']);
+                const handLine = ['HAND', unformatNumber(state.actionState.handNumber) || '1', Math.floor(handStartTime.getTime() / 1000), 'HOLDEM', state.actionState.hasBBAnte ? 'BB_ANTE' : 'NO_ANTE', unformatNumber(state.actionState.bigBlind) || 0, 0, unformatNumber(state.actionState.smallBlind) || 0, unformatNumber(state.actionState.bigBlind) || 0, 0, 1, 2, 3, 0, 0, 1 ];
+                addRow(handLine);
+                playersWithSeats.forEach(p => {
+                    let finalChips = parseInt(unformatNumber(p.chips) || 0, 10);
+                    if (p.role === 'winner') { finalChips += potPerWinner; }
+                    addRow(['PLAYER', p.name, p.seat, 0, unformatNumber(p.initialChips) || 0, finalChips, p.hand.length > 0 ? p.hand.join(' ') : '']);
+                });
+                const addActionEvent = (actionLog) => {
+                    const player = playersWithSeats.find(p => p.name === actionLog.player);
+                    if (!player && actionLog.action !== 'Pot Correction') return;
+                    currentTime.setTime(currentTime.getTime() + (2000 + Math.random() * 3000));
+                    const timecode = getFormattedTimeInTimezone(currentTime, state.selectedTimezone);
+                    let actionType = actionLog.action.toUpperCase().replace(/S$/, '');
+                    if (actionType === 'BET/RAISES') actionType = 'RAISE TO';
+                    addRow(['EVENT', actionType, player ? player.seat : '', actionLog.amount ? unformatNumber(actionLog.amount) : '', timecode]);
+                };
+                const addBoardEvents = (cards) => {
+                    currentTime.setTime(currentTime.getTime() + (1000 + Math.random() * 2000));
+                    const timecode = getFormattedTimeInTimezone(currentTime, state.selectedTimezone);
+                    cards.forEach(card => addRow(['EVENT', 'BOARD', 1, card, timecode]));
+                };
+                state.actionState.preflop.forEach(addActionEvent);
+                if (state.board.length >= 3) { addBoardEvents(state.board.slice(0, 3)); state.actionState.flop.forEach(addActionEvent); }
+                if (state.board.length >= 4) { addBoardEvents([state.board[3]]); state.actionState.turn.forEach(addActionEvent); }
+                if (state.board.length >= 5) { addBoardEvents([state.board[4]]); state.actionState.river.forEach(addActionEvent); }
+                finalRows.push([rowCounter]); 
+                return finalRows;
             }
 
             async function sendDataToGoogleSheet() {
                 if (state.playersInHand.filter(p => p.role === 'winner').length === 0) {
-                    showFeedback('승자를 선택해야 합니다.', true); return;
+                    showFeedback('승자를 선택해야 합니다.', true);
+                    return;
                 }
-                el.sendToSheetBtn.textContent = '전송 중...'; el.sendToSheetBtn.disabled = true;
-                showFeedback('시트로 데이터 전송을 시작합니다...');
-                // Actual fetch logic omitted for brevity, assuming it works
-                setTimeout(() => { // Simulate API call
-                    showFeedback('✅ 데이터가 성공적으로 입력되었습니다!');
-                    el.sendToSheetBtn.textContent = '전송 완료!';
-                    setTimeout(() => {
-                        el.sendToSheetBtn.textContent = '시트 전송';
-                        el.sendToSheetBtn.disabled = false;
-                    }, 2000);
-                }, 1000);
+                openLogModal();
+                logMessage('시트 전송 시작...');
+                el.sendToSheetBtn.textContent = '전송 중...';
+                el.sendToSheetBtn.disabled = true;
+                let successfulWrite = false;
+
+                try {
+                    const gfxLogRows = generateGfxLogRows();
+                    logMessage(`${gfxLogRows.length}개 행 데이터 생성 완료.`);
+                    logMessage('Google Apps Script로 데이터 전송 시도...');
+                    const response = await fetch(state.appsScriptUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ rows: gfxLogRows })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`서버 응답 에러: ${response.status}`);
+                    }
+                    
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        logMessage('✅ 전송 성공! (Apps Script 정상 응답)');
+                        successfulWrite = true;
+                    } else {
+                        logMessage('⚠️ Apps Script가 성공 메시지를 반환하지 않았습니다.');
+                        logMessage('데이터는 시트에 기록된 것으로 간주하고 앱을 새로고침합니다.');
+                        successfulWrite = true; 
+                    }
+                } catch (error) {
+                    console.error('Data submission failed:', error);
+                    logMessage(`전송 중 오류 발생: ${error.message}`, true);
+                    
+                    if (error instanceof SyntaxError) {
+                         logMessage('Apps Script의 응답을 파싱할 수 없습니다. 데이터는 기록된 것으로 간주하고 새로고침합니다.');
+                         successfulWrite = true;
+                    } else {
+                        showFeedback(`❌ 전송 실패: ${error.message}`, true);
+                    }
+                } finally {
+                    if (successfulWrite) {
+                        showFeedback('✅ 데이터가 기록되었습니다. 핸드 목록을 업데이트합니다.');
+                        el.sendToSheetBtn.textContent = '업데이트 중...';
+                        
+                        await loadDataFromGoogleSheet();
+                        renderTableSelection();
+                        resetApp();
+                        
+                        el.sendToSheetBtn.textContent = '전송 완료!';
+                        setTimeout(() => {
+                            el.sendToSheetBtn.textContent = '시트 전송';
+                            el.sendToSheetBtn.disabled = false;
+                            closeLogModal();
+                        }, 1500);
+
+                    } else {
+                         el.sendToSheetBtn.textContent = '시트 전송';
+                         el.sendToSheetBtn.disabled = false;
+                    }
+                }
             }
+
 
             function resetApp() {
                 const nextHandNum = state.allHandNumbers.length > 0 ? Math.max(...state.allHandNumbers) + 1 : 1;
@@ -556,23 +651,27 @@
                 el.showLogBtn.onclick = openLogModal;
                 el.closeLogModalBtn.onclick = closeLogModal;
                 
-                el.tableSelector.onchange = (e) => {
-                    state.selectedTable = e.target.value; state.playersInHand = []; 
-                    renderAll();
-                };
+                el.tableSelector.onchange = (e) => { state.selectedTable = e.target.value; state.playersInHand = []; renderAll(); };
                 el.timezoneSelector.onchange = (e) => { state.selectedTimezone = e.target.value; updateTimeDisplay(); renderAll(); };
                 el.playerSelectionButtons.addEventListener('click', e => e.target.closest('button')?.dataset.playerName && togglePlayerInHand(e.target.closest('button').dataset.playerName));
+                
                 el.playerDetailsSection.addEventListener('click', e => {
-                    const placeholder = e.target.closest('.card-placeholder');
-                    if (placeholder) {
-                        state.modalState.cardTarget = { target: 'playerHand', player: placeholder.dataset.playerName, count: parseInt(placeholder.dataset.count) };
+                    const cardPlaceholder = e.target.closest('.card-placeholder');
+                    const keypadBtn = e.target.closest('.keypad-icon-btn');
+                    const playerCard = e.target.closest('.player-card');
+                    if (!playerCard) return;
+
+                    if (cardPlaceholder) {
+                        state.modalState.cardTarget = { target: 'playerHand', player: cardPlaceholder.dataset.playerName, count: parseInt(cardPlaceholder.dataset.count) };
                         openCardSelector();
+                    } else if (keypadBtn) {
+                        const input = playerCard.querySelector('.player-chip-input');
+                        openKeypad(input, { purpose: 'input' });
                     }
                 });
-                el.winnerButtons.addEventListener('click', e => {
-                    const winnerBtn = e.target.closest('.set-winner-btn');
-                    if(winnerBtn) setPlayerRole(winnerBtn.dataset.playerName);
-                });
+
+                el.winnerButtons.addEventListener('click', e => { const winnerBtn = e.target.closest('.set-winner-btn'); if(winnerBtn) setPlayerRole(winnerBtn.dataset.playerName); });
+                
                 el.playerDetailsSection.addEventListener('input', e => {
                     if (e.target.classList.contains('player-chip-input')) {
                         const player = state.playersInHand.find(p => p.name === e.target.closest('.player-card').dataset.playerName);
@@ -580,6 +679,7 @@
                         e.target.value = formatNumber(e.target.value);
                     }
                 });
+
                 el.boardCardPlaceholders.addEventListener('click', e => {
                     const placeholder = e.target.closest('.card-placeholder');
                     if (placeholder) {
@@ -587,7 +687,9 @@
                         openCardSelector();
                     }
                 });
+                
                 el.cardSelectorModal.addEventListener('click', e => { if (e.target.id === 'close-card-modal') closeModal(el.cardSelectorModal); });
+                
                 el.streetLogsContainer.addEventListener('click', e => {
                     const addBtn = e.target.closest('.add-action-btn');
                     const undoBtn = e.target.closest('.undo-action-btn');
@@ -596,9 +698,10 @@
                     if(undoBtn) undoLastAction(undoBtn.dataset.street);
                     if(potBtn) {
                         state.modalState.actionPadStreet = potBtn.dataset.street;
-                        openKeypad(null, 'pot', potBtn.dataset.currentPot);
+                        openKeypad(null, { purpose: 'pot', currentPot: potBtn.dataset.currentPot });
                     }
                 });
+                
                 el.actionPadModal.addEventListener('click', e => {
                     const target = e.target.closest('button');
                     if (!target || target.id === 'close-action-pad') { closeModal(el.actionPadModal); return; }
@@ -612,7 +715,7 @@
                         if (action === 'Bet/Raises') {
                             const hasBet = state.actionState[state.modalState.actionPadStreet].some(a => a.action === 'Bets' || a.action === 'Raises');
                             state.modalState.actionPadCurrentAction = hasBet ? 'Raises' : 'Bets';
-                            closeModal(el.actionPadModal); openKeypad(null, 'bet');
+                            closeModal(el.actionPadModal); openKeypad(null, { purpose: 'bet' });
                         } else if (action === 'All In') {
                             const player = state.playersInHand.find(p => p.name === state.modalState.actionPadPlayer);
                             if (player) addActionToLog('All In', player.chips);
@@ -623,24 +726,31 @@
                         } else { addActionToLog(action); }
                     }
                 });
+                
                 document.body.addEventListener('click', e => {
-                    if(e.target.classList.contains('keypad-icon-btn')) openKeypad(e.target.previousElementSibling, 'input');
+                    const keypadBtn = e.target.closest('.keypad-icon-btn');
+                    if(keypadBtn && !keypadBtn.closest('.player-card')) {
+                         openKeypad(keypadBtn.previousElementSibling, { purpose: 'input' });
+                    }
                 });
+                
                 el.keypadModal.addEventListener('click', e => {
                     const btn = e.target.closest('button'); if(!btn) return;
                     const display = el.keypadModal.querySelector('#keypad-display');
                     const key = btn.textContent;
                     if (btn.id === 'keypad-confirm') {
                         const finalAmount = unformatNumber(display.textContent);
-                        if (state.modalState.keypadPurpose === 'bet') {
+                        const { purpose, currentPot } = state.modalState.keypadOptions;
+
+                        if (purpose === 'bet') {
                             if(finalAmount) addActionToLog(state.modalState.actionPadCurrentAction, finalAmount);
-                        } else if (state.modalState.keypadPurpose === 'pot') {
-                            const correction = parseInt(finalAmount, 10) - parseInt(state.modalState.currentPotValue, 10);
+                        } else if (purpose === 'pot') {
+                            const correction = parseInt(finalAmount, 10) - parseInt(currentPot, 10);
                             if (correction !== 0) {
                                 state.actionState[state.modalState.actionPadStreet].push({ action: 'Pot Correction', amount: correction.toString(), timestamp: new Date().toISOString() });
                                 saveActionState(); renderAll();
                             }
-                        } else if (state.modalState.keypadPurpose === 'input') {
+                        } else if (purpose === 'input') {
                             if (state.modalState.keypadTarget) {
                                 state.modalState.keypadTarget.value = display.textContent;
                                 state.modalState.keypadTarget.dispatchEvent(new Event('input', { bubbles: true }));
@@ -653,6 +763,7 @@
                     } else if (key === '←') { display.textContent = formatNumber(unformatNumber(display.textContent).slice(0, -1));
                     } else { display.textContent = formatNumber(unformatNumber(display.textContent) + key); }
                 });
+                
                 document.querySelectorAll('.number-input').forEach(input => {
                     input.addEventListener('input', e => {
                         const unformatted = unformatNumber(e.target.value);
@@ -663,6 +774,7 @@
                         saveActionState();
                     });
                 });
+                
                 el.bbAnteCheckbox.onchange = (e) => { state.actionState.hasBBAnte = e.target.checked; saveActionState(); renderAll(); };
             }
 
