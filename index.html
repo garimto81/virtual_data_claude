@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <title>포커 핸드 로거</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn-tailwindcss.vercel.app/"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
         html, body { height: 100vh; /* Viewport height */ overflow: hidden; font-family: 'Noto Sans KR', sans-serif; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
@@ -74,7 +74,7 @@
                     <div id="winner-buttons" class="flex flex-wrap gap-1 flex-grow"></div>
                 </div>
                 <div class="grid grid-cols-1 gap-2">
-                     <button id="send-to-sheet-btn" class="w-full btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md text-sm">시트 전송</button>
+                       <button id="send-to-sheet-btn" class="w-full btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md text-sm">시트 전송</button>
                 </div>
                 <p id="feedback-message" class="text-center h-4 text-xs font-semibold"></p>
             </div>
@@ -104,7 +104,6 @@
         document.addEventListener('DOMContentLoaded', () => {
             let timeUpdater;
             const state = {
-                dataSheetUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSDY_i4330JANAjIz4sMncdJdRHsOkfUCjQusHTGQk2tykrhA4d09LeIp3XRbLd8hkN6SgSB47k_nux/pub?gid=998576925&single=true&output=csv', 
                 playerDataByTable: {},
                 allTables: [],
                 allHandNumbers: [],
@@ -201,19 +200,133 @@
 
             function updateTimeDisplay() { el.timeDisplay.textContent = getFormattedTimeInTimezone(new Date(), state.selectedTimezone); }
 
+            function parseGfxLogData(logRows) {
+                const allHandData = {};
+                let currentHand = null;
+                let currentStreet = 'preflop';
+
+                logRows.forEach(row => {
+                    if (row.length < 2) return; // 빈 행이나 잘못된 행은 건너뜁니다.
+                    const type = row[1];
+
+                    if (type === 'HAND') {
+                        if (currentHand) {
+                            allHandData[currentHand.handNumber] = currentHand;
+                        }
+                        
+                        currentHand = {
+                            handNumber: row[2],
+                            table: '',
+                            smallBlind: row[8],
+                            bigBlind: row[9],
+                            hasBBAnte: row[6] === 'BB_ANTE',
+                            players: [],
+                            board: [],
+                            actions: { preflop: [], flop: [], turn: [], river: [] },
+                            totalPot: 0
+                        };
+                        currentStreet = 'preflop';
+                    }
+
+                    if (!currentHand) return;
+
+                    if (type === 'PLAYER') {
+                        const playerName = row[2];
+                        const initialChips = parseInt(row[5] || 0);
+                        const finalChips = parseInt(row[6] || 0);
+                        const handCards = row[7] ? row[7].split(' ') : [];
+                        
+                        currentHand.players.push({
+                            name: playerName,
+                            initialChips: initialChips,
+                            finalChips: finalChips,
+                            hand: handCards,
+                            role: finalChips > initialChips ? 'winner' : null
+                        });
+                    }
+
+                    if (type === 'EVENT') {
+                        const eventType = row[2];
+                        
+                        if (eventType === 'BOARD') {
+                            currentHand.board.push(row[4]);
+                            if (currentHand.board.length === 3) currentStreet = 'flop';
+                            else if (currentHand.board.length === 4) currentStreet = 'turn';
+                            else if (currentHand.board.length === 5) currentStreet = 'river';
+                        } else {
+                            const playerSeat = row[3];
+                            if (!playerSeat || !currentHand.players[parseInt(playerSeat) - 1]) return;
+                            const player = currentHand.players[parseInt(playerSeat) - 1];
+                            
+                            const amount = row[4] || null;
+                            const actionLog = {
+                                player: player.name,
+                                action: eventType,
+                                amount: amount,
+                                timestamp: row[5]
+                            };
+                            currentHand.actions[currentStreet].push(actionLog);
+                            if (amount) {
+                               currentHand.totalPot += parseInt(String(amount).replace(/,/g, '') || 0);
+                            }
+                        }
+                    }
+                });
+
+                if (currentHand) {
+                    allHandData[currentHand.handNumber] = currentHand;
+                }
+                
+                 for(const handNum in allHandData) {
+                    const hand = allHandData[handNum];
+                    hand.totalPot += parseInt(String(hand.smallBlind).replace(/,/g, '') || 0);
+                    hand.totalPot += parseInt(String(hand.bigBlind).replace(/,/g, '') || 0);
+                    if(hand.hasBBAnte) hand.totalPot += parseInt(String(hand.bigBlind).replace(/,/g, '') || 0);
+
+                    const firstPlayerName = hand.players.length > 0 ? hand.players[0].name : null;
+                    if(firstPlayerName) {
+                        for(const tableName in state.playerDataByTable) {
+                            if(state.playerDataByTable[tableName].some(p => p.name === firstPlayerName)){
+                                hand.table = tableName;
+                                break;
+                            }
+                        }
+                    }
+                }
+                return allHandData;
+            }
+
             async function loadDataFromGoogleSheet() {
                 logMessage('초기 데이터 로딩 시작...');
                 try {
-                    const response = await fetch(`${state.appsScriptUrl}?action=getInitialData`);
-                    if (!response.ok) throw new Error(`서버 응답 오류: ${response.status}`);
-                    const data = await response.json();
-                    if(data.error) throw new Error(data.error);
+                    // 1단계: 선수 목록 및 테이블 정보는 기존 앱 스크립트에서 가져옵니다.
+                    logMessage('선수 목록 데이터 가져오는 중...');
+                    const appScriptResponse = await fetch(`${state.appsScriptUrl}?action=getInitialData`);
+                    if (!appScriptResponse.ok) throw new Error(`앱 스크립트 응답 오류: ${appScriptResponse.status}`);
+                    const initialData = await appScriptResponse.json();
+                    if(initialData.error) throw new Error(initialData.error);
                     
-                    state.playerDataByTable = data.playerData;
-                    state.allTables = Object.keys(data.playerData).sort();
-                    state.allHandData = data.handData;
-                    state.allHandNumbers = Object.keys(data.handData).map(n => parseInt(n, 10)).sort((a, b) => a - b);
-                    logMessage(`데이터 로딩 완료.`);
+                    state.playerDataByTable = initialData.playerData || {};
+                    state.allTables = Object.keys(state.playerDataByTable).sort();
+                    logMessage('선수 목록 로딩 완료.');
+
+                    // 2단계: GFX 핸드 로그는 공개된 CSV 주소에서 직접 가져옵니다.
+                    logMessage('GFX 핸드 로그 원본 데이터 가져오는 중...');
+                    const gfxLogUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSDY_i4330JANAjIz4sMncdJdRHsOkfUCjQusHTGQk2tykrhA4d09LeIp3XRbLd8hkN6SgSB47k_nux/pub?gid=1906746276&single=true&output=csv';
+                    const gfxResponse = await fetch(gfxLogUrl);
+                    if (!gfxResponse.ok) throw new Error(`GFX 로그 시트 응답 오류: ${gfxResponse.status}`);
+                    const csvText = await gfxResponse.text();
+                    
+                    // 3단계: 가져온 CSV 텍스트를 줄과 쉼표 기준으로 잘라 배열로 만듭니다.
+                    const logRows = csvText.split(/\r?\n/).map(row => row.split(','));
+                    logRows.shift(); // 헤더(첫 줄)는 제거합니다.
+
+                    // 4단계: 새로 만든 클라이언트 파서로 원본 로그를 분석합니다.
+                    logMessage('핸드 로그 데이터 파싱 중...');
+                    state.allHandData = parseGfxLogData(logRows);
+                    state.allHandNumbers = Object.keys(state.allHandData).map(n => parseInt(n, 10)).sort((a, b) => a - b);
+                    logMessage('핸드 로그 파싱 완료.');
+
                 } catch (error) { 
                     console.error('Failed to load initial data:', error); 
                     logMessage(`초기 데이터 로딩 실패: ${error.message}`, true);
@@ -247,17 +360,17 @@
                 el.playerDetailsSection.innerHTML = state.playersInHand.map(p => {
                     const roleClass = (p.role === 'winner') ? 'is-winner' : '';
                     return `<div class="player-card flex items-center gap-2 text-sm border-b border-gray-700 pb-1 ${roleClass}" data-player-name="${p.name}">
-                        <div class="w-1/4 truncate font-bold">${p.name}</div>
-                        <div class="w-1/4">
-                            <input type="text" readonly class="number-input player-chip-input w-full bg-gray-700 border border-gray-600 rounded-md p-1 text-xs" placeholder="칩" value="${formatNumber(p.chips)}">
-                        </div>
-                        <div class="w-1/4">
-                            <button class="keypad-icon-btn btn bg-gray-600 p-1 rounded-md text-xs w-full">⌨️</button>
-                        </div>
-                        <div class="w-1/4 card-placeholder h-10 flex justify-center items-center gap-1" data-player-name="${p.name}" data-count="2">
-                            ${p.hand.length > 0 ? p.hand.map(formatCardDisplay).join('') : '<span class="text-gray-400 text-lg">+</span>'}
-                        </div>
-                    </div>`;
+                            <div class="w-1/4 truncate font-bold">${p.name}</div>
+                            <div class="w-1/4">
+                                <input type="text" readonly class="number-input player-chip-input w-full bg-gray-700 border border-gray-600 rounded-md p-1 text-xs" placeholder="칩" value="${formatNumber(p.chips)}">
+                            </div>
+                            <div class="w-1/4">
+                                <button class="keypad-icon-btn btn bg-gray-600 p-1 rounded-md text-xs w-full">⌨️</button>
+                            </div>
+                            <div class="w-1/4 card-placeholder h-10 flex justify-center items-center gap-1" data-player-name="${p.name}" data-count="2">
+                                ${p.hand.length > 0 ? p.hand.map(formatCardDisplay).join('') : '<span class="text-gray-400 text-lg">+</span>'}
+                            </div>
+                        </div>`;
                 }).join('');
             }
 
@@ -290,19 +403,19 @@
                     }).join('');
 
                     return `<div class="street-container bg-gray-900/50 p-1 rounded-md">
-                        <div class="flex justify-between items-center text-xs mb-1">
-                            <strong class="text-amber-400 w-14">${street}</strong>
-                            <div class="flex items-center gap-1">
-                                <span class="font-mono">Pot: ${formatNumber(cumulativePot)}</span>
-                                <button class="pot-keypad-btn btn bg-gray-600 px-1 py-0 rounded" data-street="${street}" data-current-pot="${cumulativePot}">⌨️</button>
+                            <div class="flex justify-between items-center text-xs mb-1">
+                                <strong class="text-amber-400 w-14">${street}</strong>
+                                <div class="flex items-center gap-1">
+                                    <span class="font-mono">Pot: ${formatNumber(cumulativePot)}</span>
+                                    <button class="pot-keypad-btn btn bg-gray-600 px-1 py-0 rounded" data-street="${street}" data-current-pot="${cumulativePot}">⌨️</button>
+                                </div>
+                                <div class="flex gap-1">
+                                    <button class="add-action-btn btn bg-indigo-600 text-white font-bold py-1 px-2 rounded" data-street="${street}">액션+</button>
+                                    <button class="undo-action-btn btn bg-gray-600 py-1 px-2 rounded" data-street="${street}">↩</button>
+                                </div>
                             </div>
-                            <div class="flex gap-1">
-                                <button class="add-action-btn btn bg-indigo-600 text-white font-bold py-1 px-2 rounded" data-street="${street}">액션+</button>
-                                <button class="undo-action-btn btn bg-gray-600 py-1 px-2 rounded" data-street="${street}">↩</button>
-                            </div>
-                        </div>
-                        <div id="${street}-log" class="action-log-display text-xs whitespace-nowrap overflow-x-auto">${logHTML || '<span class="text-gray-500">No actions</span>'}</div>
-                    </div>`;
+                            <div id="${street}-log" class="action-log-display text-xs whitespace-nowrap overflow-x-auto">${logHTML || '<span class="text-gray-500">No actions</span>'}</div>
+                        </div>`;
                 }).join('');
             }
             
@@ -545,6 +658,94 @@
                 return finalRows;
             }
 
+            function loadHandData(handNumber) {
+                const handData = state.allHandData[handNumber];
+                if (!handData) {
+                    showFeedback(`Hand #${handNumber} 데이터를 찾을 수 없습니다.`, true);
+                    return;
+                }
+
+                state.playersInHand = [];
+                state.board = [];
+                const actions = handData.actions || {};
+
+                state.actionState = {
+                    ...state.actionState,
+                    handNumber: handNumber,
+                    smallBlind: handData.smallBlind || '',
+                    bigBlind: handData.bigBlind || '',
+                    hasBBAnte: handData.hasBBAnte || false,
+                    preflop: actions.preflop || [],
+                    flop: actions.flop || [],
+                    turn: actions.turn || [],
+                    river: actions.river || [],
+                };
+                
+                state.selectedTable = handData.table || '';
+                el.tableSelector.value = state.selectedTable;
+
+                state.playersInHand = (handData.players || []).map(p => ({
+                    name: p.name,
+                    hand: p.hand || [],
+                    chips: p.finalChips,
+                    initialChips: p.initialChips,
+                    role: p.role || null
+                }));
+                
+                state.board = handData.board || [];
+
+                el.handNumberDisplay.textContent = `#${handNumber}`;
+                el.smallBlindInput.value = formatNumber(state.actionState.smallBlind);
+                el.bigBlindInput.value = formatNumber(state.actionState.bigBlind);
+                el.bbAnteCheckbox.checked = state.actionState.hasBBAnte;
+
+                renderAll();
+                saveActionState();
+                closeModal(el.loadHandModal);
+                showFeedback(`#${handNumber} 핸드를 불러왔습니다.`);
+            }
+
+            function openLoadHandModal() {
+                if (!state.allHandNumbers || state.allHandNumbers.length === 0) {
+                    showFeedback('저장된 핸드 데이터가 없습니다.', true);
+                    return;
+                }
+                const sortedHandNumbers = [...state.allHandNumbers].sort((a, b) => b - a);
+                const handsHTML = sortedHandNumbers.map(num => {
+                    const hand = state.allHandData[num] || {};
+                    const winnerInfo = hand.players?.filter(p => p.role === 'winner').map(p => p.name).join(', ');
+                    const potInfo = hand.totalPot ? `Pot: ${formatNumber(hand.totalPot)}` : '';
+                    return `<button class="btn bg-gray-700 p-2 rounded-md w-full text-left load-hand-item-btn mb-2" data-hand-number="${num}">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-white">#${num}</span>
+                            <span class="text-xs text-amber-400 truncate">${winnerInfo ? `🏆 ${winnerInfo}` : ''}</span>
+                            <span class="text-xs text-gray-300">${potInfo}</span>
+                        </div>
+                        <div class="text-xs text-gray-400 mt-1">${hand.table || '테이블 정보 없음'}</div>
+                    </button>`
+                }).join('');
+
+                const content = `<div class="bg-gray-800 rounded-lg p-4 w-full max-w-md flex flex-col h-2/3">
+                    <div class="flex justify-between items-center mb-4">
+                         <h2 class="text-xl font-bold text-amber-400">핸드 불러오기</h2>
+                         <button id="close-load-hand-modal" class="text-2xl">&times;</button>
+                    </div>
+                    <div class="overflow-y-auto space-y-2 flex-grow pr-2">${handsHTML}</div>
+                </div>`;
+                openModal(el.loadHandModal, content);
+
+                el.loadHandModal.onclick = e => {
+                    const closeBtn = e.target.closest('#close-load-hand-modal');
+                    const handBtn = e.target.closest('.load-hand-item-btn');
+                    if (closeBtn) {
+                        closeModal(el.loadHandModal);
+                    } else if (handBtn) {
+                        const handNumber = handBtn.dataset.handNumber;
+                        loadHandData(handNumber);
+                    }
+                };
+            }
+
             async function sendDataToGoogleSheet() {
                 if (state.playersInHand.filter(p => p.role === 'winner').length === 0) {
                     showFeedback('승자를 선택해야 합니다.', true);
@@ -607,8 +808,8 @@
                         }, 1500);
 
                     } else {
-                         el.sendToSheetBtn.textContent = '시트 전송';
-                         el.sendToSheetBtn.disabled = false;
+                        el.sendToSheetBtn.textContent = '시트 전송';
+                        el.sendToSheetBtn.disabled = false;
                     }
                 }
             }
@@ -636,7 +837,7 @@
 
             function setupEventListeners() {
                 el.refreshDataBtn.onclick = initializeApp;
-                // el.resetBtn is removed
+                el.loadHandBtn.onclick = openLoadHandModal;
                 el.sendToSheetBtn.onclick = sendDataToGoogleSheet;
                 el.showLogBtn.onclick = openLogModal;
                 el.closeLogModalBtn.onclick = closeLogModal;
