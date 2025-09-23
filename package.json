@@ -1,0 +1,26 @@
+{
+  "name": "virtual_data",
+  "version": "1.0.0",
+  "description": "> 실시간 포커 핸드 기록 및 분석 시스템 v3.4.24",
+  "main": "test_phase4_playwright.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/garimto81/virtual_data.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/garimto81/virtual_data/issues"
+  },
+  "homepage": "https://github.com/garimto81/virtual_data#readme",
+  "dependencies": {
+    "playwright": "^1.55.1"
+  }
+}

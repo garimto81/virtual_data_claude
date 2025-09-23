@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>URL 저장 기능 테스트</title>
+  <script src="https://cdn-tailwindcss.vercel.app/"></script>
+</head>
+<body class="bg-gray-900 text-white p-4">
+  <h1 class="text-2xl mb-4">URL 저장 기능 테스트</h1>
+
+  <!-- 테스트용 UI -->
+  <div class="bg-gray-800 p-4 rounded-lg max-w-md">
+    <button id="manage-players-btn" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded mb-4">
+      관리 (클릭하여 모달 열기)
+    </button>
+
+    <div id="test-modal" class="hidden bg-gray-700 p-4 rounded">
+      <h2 class="text-lg font-bold mb-4">관리 설정</h2>
+
+      <!-- Apps Script URL 설정 -->
+      <div class="bg-gray-600 p-3 rounded">
+        <label class="block text-sm mb-2">Apps Script URL</label>
+        <input type="text" id="management-apps-url-input"
+               class="w-full bg-gray-500 text-white rounded px-3 py-2 mb-2"
+               placeholder="https://script.google.com/macros/s/.../exec">
+        <button id="save-apps-url-btn" class="w-full bg-amber-600 hover:bg-amber-700 py-2 rounded">
+          💾 URL 저장
+        </button>
+        <div class="text-xs mt-2">
+          현재: <span id="management-current-url" class="text-gray-400"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 피드백 표시 영역 -->
+  <div id="feedback" class="mt-4 p-3 rounded hidden"></div>
+
+  <script>
+    // 간단한 테스트 스크립트
+    const DEFAULT_URL = "https://script.google.com/macros/s/AKfycbzbya/exec";
+    let APPS_SCRIPT_URL = localStorage.getItem('appsScriptUrl') || DEFAULT_URL;
+
+    function showFeedback(msg, isError = false) {
+      const feedback = document.getElementById('feedback');
+      feedback.textContent = msg;
+      feedback.className = isError ?
+        'mt-4 p-3 rounded bg-red-600' :
+        'mt-4 p-3 rounded bg-green-600';
+      feedback.classList.remove('hidden');
+      setTimeout(() => feedback.classList.add('hidden'), 3000);
+    }
+
+    function updateAppsScriptUrl(newUrl) {
+      if (newUrl && newUrl.includes('script.google.com')) {
+        APPS_SCRIPT_URL = newUrl;
+        localStorage.setItem('appsScriptUrl', newUrl);
+        console.log('✅ URL 저장됨:', newUrl);
+        return true;
+      }
+      return false;
+    }
+
+    // 모달 토글
+    document.getElementById('manage-players-btn').addEventListener('click', () => {
+      const modal = document.getElementById('test-modal');
+      modal.classList.toggle('hidden');
+
+      // URL 표시 업데이트
+      const currentUrlSpan = document.getElementById('management-current-url');
+      if (currentUrlSpan) currentUrlSpan.textContent = APPS_SCRIPT_URL;
+    });
+
+    // URL 저장 버튼
+    const saveBtn = document.getElementById('save-apps-url-btn');
+    console.log('저장 버튼:', saveBtn);
+
+    if (saveBtn) {
+      saveBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        console.log('URL 저장 버튼 클릭됨');
+
+        const urlInput = document.getElementById('management-apps-url-input');
+        const newUrl = urlInput?.value.trim();
+
+        console.log('입력된 URL:', newUrl);
+        console.log('현재 URL:', APPS_SCRIPT_URL);
+
+        if (newUrl && newUrl !== APPS_SCRIPT_URL) {
+          if (updateAppsScriptUrl(newUrl)) {
+            const currentUrlSpan = document.getElementById('management-current-url');
+            if (currentUrlSpan) currentUrlSpan.textContent = newUrl;
+            showFeedback('✅ Apps Script URL이 저장되었습니다');
+            urlInput.value = '';
+          } else {
+            showFeedback('❌ 올바른 URL 형식이 아닙니다', true);
+          }
+        } else if (!newUrl) {
+          showFeedback('URL을 입력해주세요', true);
+        } else {
+          showFeedback('동일한 URL입니다', true);
+        }
+      });
+      console.log('이벤트 리스너 등록 완료');
+    } else {
+      console.error('save-apps-url-btn을 찾을 수 없음');
+    }
+  </script>
+</body>
+</html>

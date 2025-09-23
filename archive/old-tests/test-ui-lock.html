@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>UI 잠금 시스템 테스트</title>
+  <script src="https://cdn-tailwindcss.vercel.app/"></script>
+</head>
+<body class="bg-gray-900 text-white p-4">
+  <h1 class="text-2xl mb-4">UI 잠금 시스템 테스트</h1>
+
+  <!-- 테스트용 UI -->
+  <div class="bg-gray-800 p-4 rounded-lg max-w-md space-y-4">
+    <!-- 테스트 버튼들 -->
+    <div class="space-y-2">
+      <button id="test-lock-btn" class="w-full bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">
+        🔒 UI 잠금 테스트 (3초)
+      </button>
+      <button id="test-async-btn" class="w-full bg-green-600 hover:bg-green-700 px-4 py-2 rounded">
+        ⏱️ 비동기 작업 테스트 (5초)
+      </button>
+      <button id="test-error-btn" class="w-full bg-red-600 hover:bg-red-700 px-4 py-2 rounded">
+        ❌ 오류 시나리오 테스트
+      </button>
+    </div>
+
+    <!-- 상태 표시 -->
+    <div id="status" class="bg-gray-700 p-2 rounded text-sm">
+      준비완료 - 버튼을 클릭하여 테스트하세요
+    </div>
+
+    <!-- 입력 필드들 -->
+    <div class="space-y-2">
+      <input type="text" placeholder="테스트 입력 필드 1" class="w-full bg-gray-700 p-2 rounded">
+      <input type="text" placeholder="테스트 입력 필드 2" class="w-full bg-gray-700 p-2 rounded">
+      <select class="w-full bg-gray-700 p-2 rounded">
+        <option>테스트 옵션 1</option>
+        <option>테스트 옵션 2</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- 로딩 오버레이 -->
+  <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-75 z-60 hidden flex items-center justify-center">
+    <div class="bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4">
+      <div class="flex items-center space-x-3">
+        <div class="animate-spin h-5 w-5 border-2 border-amber-500 border-t-transparent rounded-full"></div>
+        <div>
+          <div id="loading-title" class="text-white font-medium">처리 중...</div>
+          <div id="loading-message" class="text-gray-400 text-sm mt-1">잠시만 기다려주세요</div>
+        </div>
+      </div>
+      <div class="mt-4 text-xs text-gray-500">
+        작업이 완료될 때까지 다른 버튼을 클릭하지 마세요
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // DOM 요소들
+    const el = {
+      loadingOverlay: document.getElementById('loading-overlay'),
+      loadingTitle: document.getElementById('loading-title'),
+      loadingMessage: document.getElementById('loading-message'),
+      status: document.getElementById('status'),
+      testLockBtn: document.getElementById('test-lock-btn'),
+      testAsyncBtn: document.getElementById('test-async-btn'),
+      testErrorBtn: document.getElementById('test-error-btn')
+    };
+
+    // UI 잠금 상태
+    let isUILocked = false;
+
+    // UI 잠금
+    function lockUI(title = '처리 중...', message = '잠시만 기다려주세요') {
+      if (isUILocked) return;
+      isUILocked = true;
+
+      // 로딩 오버레이 표시
+      el.loadingTitle.textContent = title;
+      el.loadingMessage.textContent = message;
+      el.loadingOverlay.classList.remove('hidden');
+
+      // 모든 버튼과 입력 필드 비활성화
+      document.querySelectorAll('button, input, select').forEach(elem => {
+        elem.disabled = true;
+        elem.classList.add('opacity-50', 'cursor-not-allowed');
+      });
+
+      el.status.textContent = `🔒 UI 잠금됨: ${title}`;
+      console.log('🔒 UI 잠금:', title);
+    }
+
+    // UI 잠금 해제
+    function unlockUI() {
+      if (!isUILocked) return;
+      isUILocked = false;
+
+      // 로딩 오버레이 숨기기
+      el.loadingOverlay.classList.add('hidden');
+
+      // 모든 버튼과 입력 필드 활성화
+      document.querySelectorAll('button, input, select').forEach(elem => {
+        elem.disabled = false;
+        elem.classList.remove('opacity-50', 'cursor-not-allowed');
+      });
+
+      el.status.textContent = '🔓 UI 잠금 해제됨 - 준비완료';
+      console.log('🔓 UI 잠금 해제');
+    }
+
+    // 작업 실행 래퍼
+    async function executeWithLock(asyncFunction, title = '처리 중...', message = '잠시만 기다려주세요') {
+      try {
+        lockUI(title, message);
+        await asyncFunction();
+      } catch (error) {
+        console.error('작업 실행 중 오류:', error);
+        el.status.textContent = '❌ 오류: ' + error.message;
+      } finally {
+        unlockUI();
+      }
+    }
+
+    // 테스트 함수들
+    async function testBasicLock() {
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      el.status.textContent = '✅ 기본 잠금 테스트 완료';
+    }
+
+    async function testAsyncOperation() {
+      el.status.textContent = '⏱️ 비동기 작업 실행 중...';
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      el.status.textContent = '✅ 비동기 작업 완료';
+    }
+
+    async function testErrorScenario() {
+      el.status.textContent = '❌ 의도적 오류 발생...';
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      throw new Error('테스트용 오류입니다');
+    }
+
+    // 이벤트 리스너
+    el.testLockBtn.addEventListener('click', () =>
+      executeWithLock(testBasicLock, 'UI 잠금 테스트', '3초 동안 UI가 잠금됩니다')
+    );
+
+    el.testAsyncBtn.addEventListener('click', () =>
+      executeWithLock(testAsyncOperation, '비동기 작업', '5초간 작업을 수행합니다')
+    );
+
+    el.testErrorBtn.addEventListener('click', () =>
+      executeWithLock(testErrorScenario, '오류 테스트', '의도적으로 오류를 발생시킵니다')
+    );
+
+    console.log('UI 잠금 시스템 테스트 준비 완료');
+  </script>
+</body>
+</html>

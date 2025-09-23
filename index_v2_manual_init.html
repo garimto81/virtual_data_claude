@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Virtual Data v2 - Manual Init</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 14px;
+        }
+
+        .setup-section {
+            margin-bottom: 30px;
+        }
+
+        .setup-section h2 {
+            color: #444;
+            margin-bottom: 15px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .input-group input[type="text"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.3s;
+            font-family: 'Courier New', monospace;
+        }
+
+        .input-group input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .input-group input[type="text"].valid {
+            border-color: #10b981;
+        }
+
+        .input-group input[type="text"].invalid {
+            border-color: #ef4444;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        button {
+            flex: 1;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-secondary:hover {
+            background: #f5f3ff;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.checking {
+            background: #fbbf24;
+        }
+
+        .status-indicator.connected {
+            background: #10b981;
+        }
+
+        .status-indicator.error {
+            background: #ef4444;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(251, 191, 36, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(251, 191, 36, 0);
+            }
+        }
+
+        .message-box {
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                max-height: 0;
+            }
+            to {
+                opacity: 1;
+                max-height: 200px;
+            }
+        }
+
+        .message-box.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #10b981;
+            display: block;
+        }
+
+        .message-box.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #ef4444;
+            display: block;
+        }
+
+        .message-box.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #3b82f6;
+            display: block;
+        }
+
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loader.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .app-container {
+            display: none;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 15px;
+            margin-top: 30px;
+        }
+
+        .app-container.active {
+            display: block;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 30px 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            button {
+                font-size: 14px;
+                padding: 12px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Virtual Data</h1>
+        <div class="subtitle">Version 2.0 - Manual Initialization</div>
+
+        <div class="setup-section">
+            <h2>
+                <span class="step-number">1</span>
+                Google Apps Script 설정
+            </h2>
+
+            <div class="input-group">
+                <label for="apps-script-url">
+                    Apps Script URL
+                    <span class="status-indicator" id="url-status"></span>
+                </label>
+                <input
+                    type="text"
+                    id="apps-script-url"
+                    placeholder="https://script.google.com/macros/s/.../exec"
+                    autocomplete="off"
+                >
+                <div class="help-text">
+                    Google Apps Script 배포 후 생성된 URL을 입력하세요
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="spreadsheet-id">
+                    Spreadsheet ID (선택사항)
+                </label>
+                <input
+                    type="text"
+                    id="spreadsheet-id"
+                    placeholder="1gZN9S2rP5_U9zdxX1cJHBzBAl..."
+                    autocomplete="off"
+                >
+                <div class="help-text">
+                    Google Sheets URL에서 /d/ 다음 부분의 ID
+                </div>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button type="button" class="btn-secondary" onclick="testConnection()">
+                연결 테스트
+            </button>
+            <button type="button" class="btn-primary" id="init-button" onclick="initializeApp()" disabled>
+                앱 시작
+            </button>
+        </div>
+
+        <div id="message" class="message-box"></div>
+
+        <div class="loader" id="loader">
+            <div class="spinner"></div>
+            <p style="margin-top: 15px; color: #666;">연결 중...</p>
+        </div>
+
+        <div class="app-container" id="app-container">
+            <h2>✅ 앱이 성공적으로 로드되었습니다!</h2>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="player-count">0</div>
+                    <div class="stat-label">플레이어</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="table-count">0</div>
+                    <div class="stat-label">테이블</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="hand-count">0</div>
+                    <div class="stat-label">핸드</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="connection-status">🟢</div>
+                    <div class="stat-label">연결 상태</div>
+                </div>
+            </div>
+
+            <div class="button-group" style="margin-top: 30px;">
+                <button type="button" class="btn-secondary" onclick="refreshData()">
+                    데이터 새로고침
+                </button>
+                <button type="button" class="btn-primary" onclick="openMainApp()">
+                    메인 앱 열기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 전역 상태 관리
+        let APP_STATE = {
+            appsScriptUrl: null,
+            spreadsheetId: null,
+            isInitialized: false,
+            playerData: {},
+            indexData: [],
+            typeData: []
+        };
+
+        // 페이지 로드 시 localStorage에서 이전 설정 복원
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedUrl = localStorage.getItem('virtualData_appsScriptUrl');
+            const savedSpreadsheetId = localStorage.getItem('virtualData_spreadsheetId');
+
+            if (savedUrl) {
+                document.getElementById('apps-script-url').value = savedUrl;
+                validateUrl(savedUrl);
+            }
+
+            if (savedSpreadsheetId) {
+                document.getElementById('spreadsheet-id').value = savedSpreadsheetId;
+            }
+
+            // URL 입력 시 실시간 검증
+            document.getElementById('apps-script-url').addEventListener('input', (e) => {
+                validateUrl(e.target.value);
+            });
+        });
+
+        function validateUrl(url) {
+            const input = document.getElementById('apps-script-url');
+            const status = document.getElementById('url-status');
+            const initButton = document.getElementById('init-button');
+
+            // Apps Script URL 패턴 검증
+            const pattern = /^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/;
+
+            if (!url) {
+                input.className = '';
+                status.className = 'status-indicator';
+                initButton.disabled = true;
+                return false;
+            }
+
+            if (pattern.test(url)) {
+                input.className = 'valid';
+                status.className = 'status-indicator connected';
+                initButton.disabled = false;
+                return true;
+            } else {
+                input.className = 'invalid';
+                status.className = 'status-indicator error';
+                initButton.disabled = true;
+                return false;
+            }
+        }
+
+        function showMessage(message, type = 'info') {
+            const messageBox = document.getElementById('message');
+            messageBox.className = `message-box ${type}`;
+            messageBox.textContent = message;
+            messageBox.style.display = 'block';
+
+            // 5초 후 자동으로 숨기기
+            setTimeout(() => {
+                messageBox.style.display = 'none';
+            }, 5000);
+        }
+
+        function showLoader(show = true) {
+            const loader = document.getElementById('loader');
+            loader.className = show ? 'loader active' : 'loader';
+        }
+
+        async function testConnection() {
+            const url = document.getElementById('apps-script-url').value;
+
+            if (!validateUrl(url)) {
+                showMessage('올바른 Apps Script URL을 입력하세요', 'error');
+                return;
+            }
+
+            showLoader(true);
+            showMessage('연결 테스트 중...', 'info');
+
+            try {
+                // GET 요청으로 테스트
+                const response = await fetch(url + '?test=true', {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+
+                if (response.ok) {
+                    const text = await response.text();
+
+                    // JSON 파싱 시도
+                    try {
+                        const data = JSON.parse(text);
+                        if (data.success || data.message) {
+                            showMessage('✅ 연결 성공! Apps Script가 정상 작동합니다.', 'success');
+
+                            // URL 저장
+                            localStorage.setItem('virtualData_appsScriptUrl', url);
+                            APP_STATE.appsScriptUrl = url;
+                        } else {
+                            showMessage('⚠️ 응답을 받았지만 예상과 다릅니다', 'error');
+                        }
+                    } catch (e) {
+                        // HTML 응답일 가능성
+                        if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+                            showMessage('❌ HTML 응답 - Apps Script 설정을 확인하세요', 'error');
+                        } else {
+                            showMessage('✅ 연결 성공 (비표준 응답)', 'success');
+                        }
+                    }
+                } else {
+                    showMessage(`❌ 연결 실패: HTTP ${response.status}`, 'error');
+                }
+            } catch (error) {
+                console.error('Connection test failed:', error);
+                showMessage(`❌ 연결 실패: ${error.message}`, 'error');
+            } finally {
+                showLoader(false);
+            }
+        }
+
+        async function initializeApp() {
+            const url = document.getElementById('apps-script-url').value;
+            const spreadsheetId = document.getElementById('spreadsheet-id').value;
+
+            if (!validateUrl(url)) {
+                showMessage('올바른 Apps Script URL을 입력하세요', 'error');
+                return;
+            }
+
+            showLoader(true);
+            showMessage('앱을 초기화하는 중...', 'info');
+
+            try {
+                // 설정 저장
+                APP_STATE.appsScriptUrl = url;
+                APP_STATE.spreadsheetId = spreadsheetId;
+                localStorage.setItem('virtualData_appsScriptUrl', url);
+                if (spreadsheetId) {
+                    localStorage.setItem('virtualData_spreadsheetId', spreadsheetId);
+                }
+
+                // Type 시트 데이터 로드
+                const typeData = await loadDataFromAppsScript('getTypeSheet');
+
+                // Index 시트 데이터 로드
+                const indexData = await loadDataFromAppsScript('getIndexSheet');
+
+                if (typeData && indexData) {
+                    APP_STATE.typeData = typeData;
+                    APP_STATE.indexData = indexData;
+                    APP_STATE.isInitialized = true;
+
+                    // 통계 업데이트
+                    updateStats(typeData, indexData);
+
+                    // UI 전환
+                    document.querySelector('.setup-section').style.display = 'none';
+                    document.querySelector('.button-group').style.display = 'none';
+                    document.getElementById('app-container').className = 'app-container active';
+
+                    showMessage('🎉 앱이 성공적으로 초기화되었습니다!', 'success');
+                } else {
+                    showMessage('❌ 데이터를 로드할 수 없습니다', 'error');
+                }
+            } catch (error) {
+                console.error('Initialization failed:', error);
+                showMessage(`❌ 초기화 실패: ${error.message}`, 'error');
+            } finally {
+                showLoader(false);
+            }
+        }
+
+        async function loadDataFromAppsScript(action) {
+            const formData = new FormData();
+            formData.append('action', action);
+
+            try {
+                const response = await fetch(APP_STATE.appsScriptUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    return result.data || result.csvData || [];
+                } else {
+                    throw new Error(result.error || 'Unknown error');
+                }
+            } catch (error) {
+                console.error(`Failed to load ${action}:`, error);
+                return null;
+            }
+        }
+
+        function updateStats(typeData, indexData) {
+            // 플레이어 수 계산
+            const uniquePlayers = new Set();
+            if (Array.isArray(typeData)) {
+                typeData.forEach(row => {
+                    if (row.Player) uniquePlayers.add(row.Player);
+                });
+            }
+
+            // 테이블 수 계산
+            const uniqueTables = new Set();
+            if (Array.isArray(typeData)) {
+                typeData.forEach(row => {
+                    if (row.Table) uniqueTables.add(row.Table);
+                });
+            }
+
+            // 핸드 수 계산
+            const handCount = Array.isArray(indexData) ? indexData.length : 0;
+
+            // UI 업데이트
+            document.getElementById('player-count').textContent = uniquePlayers.size;
+            document.getElementById('table-count').textContent = uniqueTables.size;
+            document.getElementById('hand-count').textContent = handCount;
+        }
+
+        async function refreshData() {
+            showMessage('데이터를 새로고침하는 중...', 'info');
+            showLoader(true);
+
+            try {
+                const typeData = await loadDataFromAppsScript('getTypeSheet');
+                const indexData = await loadDataFromAppsScript('getIndexSheet');
+
+                if (typeData && indexData) {
+                    APP_STATE.typeData = typeData;
+                    APP_STATE.indexData = indexData;
+                    updateStats(typeData, indexData);
+                    showMessage('✅ 데이터가 새로고침되었습니다', 'success');
+                } else {
+                    showMessage('❌ 새로고침 실패', 'error');
+                }
+            } catch (error) {
+                showMessage(`❌ 새로고침 실패: ${error.message}`, 'error');
+            } finally {
+                showLoader(false);
+            }
+        }
+
+        function openMainApp() {
+            // 메인 앱으로 상태 전달
+            sessionStorage.setItem('virtualData_appState', JSON.stringify(APP_STATE));
+
+            // 메인 앱 페이지로 이동 (또는 모달/탭으로 열기)
+            showMessage('메인 앱을 여는 중...', 'info');
+
+            // 실제 구현 시 메인 앱 경로로 변경
+            setTimeout(() => {
+                alert('메인 앱이 준비되면 여기서 열립니다.\n현재 상태:\n' + JSON.stringify(APP_STATE, null, 2));
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

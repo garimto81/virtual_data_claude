@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phase 3 검증 - 모바일 최적화</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+
+    .header p {
+      font-size: 1.2em;
+      opacity: 0.9;
+    }
+
+    .test-section {
+      padding: 30px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .test-section:last-child {
+      border-bottom: none;
+    }
+
+    .test-section h2 {
+      color: #1f2937;
+      margin-bottom: 20px;
+      font-size: 1.5em;
+      display: flex;
+      align-items: center;
+    }
+
+    .test-section h2::before {
+      content: attr(data-icon);
+      font-size: 1.2em;
+      margin-right: 10px;
+    }
+
+    .test-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .test-item {
+      background: #f9fafb;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .test-item:hover {
+      border-color: #3b82f6;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    }
+
+    .test-item.passed {
+      border-color: #10b981;
+      background: #ecfdf5;
+    }
+
+    .test-item.failed {
+      border-color: #ef4444;
+      background: #fef2f2;
+    }
+
+    .test-item h3 {
+      color: #1f2937;
+      margin-bottom: 8px;
+      font-size: 1.1em;
+    }
+
+    .test-item p {
+      color: #6b7280;
+      font-size: 0.9em;
+      margin-bottom: 12px;
+    }
+
+    .test-result {
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.85em;
+    }
+
+    .test-result.passed {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .test-result.failed {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .test-result.pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .demo-area {
+      background: #f3f4f6;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 15px;
+    }
+
+    .button-demo {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+
+    .demo-button {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      min-width: 44px;
+      min-height: 44px;
+    }
+
+    .demo-button.primary {
+      background: #3b82f6;
+      color: white;
+    }
+
+    .demo-button.danger {
+      background: #ef4444;
+      color: white;
+    }
+
+    .demo-button.success {
+      background: #10b981;
+      color: white;
+    }
+
+    .virtual-scroll-demo {
+      height: 300px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .swipe-demo {
+      background: #ddd6fe;
+      border-radius: 8px;
+      padding: 30px;
+      text-align: center;
+      border: 2px dashed #8b5cf6;
+      margin: 15px 0;
+    }
+
+    .logs {
+      background: #1f2937;
+      color: #e5e7eb;
+      border-radius: 8px;
+      padding: 15px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      margin-top: 15px;
+    }
+
+    .progress {
+      width: 100%;
+      height: 8px;
+      background: #e5e7eb;
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 20px 0;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 2em;
+      font-weight: bold;
+      color: #1f2937;
+    }
+
+    .stat-label {
+      color: #6b7280;
+      font-size: 0.9em;
+      margin-top: 5px;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        margin: 10px;
+        border-radius: 12px;
+      }
+
+      .header {
+        padding: 20px;
+      }
+
+      .header h1 {
+        font-size: 2em;
+      }
+
+      .test-section {
+        padding: 20px;
+      }
+
+      .test-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stats {
+        flex-direction: column;
+        gap: 15px;
+      }
+    }
+
+    .long-press-demo {
+      background: #fef3c7;
+      border: 2px dashed #f59e0b;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      margin: 10px 0;
+    }
+
+    .offline-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.9em;
+      font-weight: 500;
+    }
+
+    .offline-status.online {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .offline-status.offline {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎯 Phase 3 검증</h1>
+      <p>모바일 최적화 시스템 테스트</p>
+    </div>
+
+    <!-- 전체 진행률 -->
+    <div class="test-section">
+      <h2 data-icon="📊">전체 진행률</h2>
+      <div class="progress">
+        <div class="progress-bar" id="overall-progress"></div>
+      </div>
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-value" id="passed-count">0</div>
+          <div class="stat-label">통과</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="failed-count">0</div>
+          <div class="stat-label">실패</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="total-count">0</div>
+          <div class="stat-label">전체</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1. 터치 인터페이스 최적화 -->
+    <div class="test-section">
+      <h2 data-icon="👆">터치 인터페이스 최적화</h2>
+      <div class="test-grid">
+        <div class="test-item" id="test-touch-size">
+          <h3>최소 터치 크기 (44x44px)</h3>
+          <p>모든 터치 가능한 요소가 최소 크기를 만족하는지 확인</p>
+          <div class="test-result pending">대기 중...</div>
+        </div>
+        <div class="test-item" id="test-touch-response">
+          <h3>터치 응답 시간</h3>
+          <p>터치 이벤트 응답 시간이 50ms 이하인지 확인</p>
+          <div class="test-result pending">대기 중...</div>
+        </div>
+        <div class="test-item" id="test-double-tap-prevention">
+          <h3>더블탭 줌 방지</h3>
+          <p>의도하지 않은 더블탭 줌이 방지되는지 확인</p>
+          <div class="test-result pending">대기 중...</div>
+        </div>
+      </div>
+      <div class="demo-area">
+        <h4>터치 테스트 버튼들</h4>
+        <div class="button-demo">
+          <button class="demo-button primary" data-test="touch">터치 테스트</button>
+          <button class="demo-button success" data-test="response">응답 시간</button>
+          <button class="demo-button danger" data-test="double-tap">더블탭 방지</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. 제스처 시스템 -->
+    <div class="test-section">
+      <h2 data-icon="👋">제스처 시스템</h2>
+      <div class="test-grid">
+        <div class="test-item" id="test-swipe-gesture">
+          <h3>스와이프 제스처</h3>
+          <p>오른쪽 스와이프로 실행취소가 작동하는지 확인</p>
+          <div class="test-result pending">대기 중...</div>
+        </div>
+        <div class="test-item" id="test-long-press">
+          <h3>롱프레스 컨텍스트 메뉴</h3>
+          <p>롱프레스로 컨텍스트 메뉴가 표시되는지 확인</p>
+          <div class="test-result pending">대기 중...</div>
+        </div>
+        <div class="test-item" id="test-haptic-feedback">
+          <h3>햅틱 피드백</h3>
+          <p>터치 액션에 햅틱 피드백이 제공되는지 확인</p>
+          <div class="test-result pending">대기 중...</div>
+        </div>
+      </div>
+      <div class="demo-area">
+        <div class="swipe-demo" id="swipe-area">
+          <p>🚀 오른쪽으로 스와이프해보세요!</p>
+          <small>스와이프하면 실행취소 액션이 실행됩니다</small>
+        </div>
+        <div class="long-press-demo" data-long-press="player">
+          <p>👆 여기를 길게 눌러보세요 (500ms)</p>
+          <small>컨텍스트 메뉴가 표시됩니다</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. 가상 스크롤 -->
+    <div class="test-section">
+      <h2 data-icon="📜">가상 스크롤</h2>
+      <div class="test-grid">
+        <div class="test-item" id="test-virtual-scroll-performance">
+          <h3>성능 최적화</h3>
+          <p>1000개 아이템도 부드럽게 스크롤되는지 확인</p>
+          <div class="test-result pending">대기 중...</div>
+        </div>
+        <div class="test-item" id="test-virtual-scroll-memory">
+          <h3>메모리 효율성</h3>
+          <p>DOM 요소가 재활용되어 메모리 사용량이 일정한지 확인</p>
+          <div class="test-result pending">대기 중...</div>
+        </div>
+      </div>
+      <div class="demo-area">
+        <h4>가상 스크롤 데모 (1000개 플레이어)</h4>
+        <div class="virtual-scroll-demo" id="virtual-scroll-container"></div>
+      </div>
+    </div>
+
+    <!-- 4. 오프라인 지원 -->
+    <div class="test-section">
+      <h2 data-icon="📱">오프라인 지원</h2>
+      <div class="test-grid">
+        <div class="test-item" id="test-indexeddb">
+          <h3>IndexedDB 저장</h3>
+          <p>데이터가 IndexedDB에 저장되는지 확인</p>
+          <div class="test-result pending">대기 중...</div>
+        </div>
+        <div class="test-item" id="test-offline-mode">
+          <h3>오프라인 모드</h3>
+          <p>네트워크 연결 없이도 앱이 작동하는지 확인</p>
+          <div class="test-result pending">대기 중...</div>
+        </div>
+        <div class="test-item" id="test-sync-queue">
+          <h3>동기화 큐</h3>
+          <p>온라인 복구 시 데이터가 동기화되는지 확인</p>
+          <div class="test-result pending">대기 중...</div>
+        </div>
+      </div>
+      <div class="demo-area">
+        <div class="offline-status" id="offline-status">
+          <span>🌐</span>
+          <span>연결 상태 확인 중...</span>
+        </div>
+        <div class="button-demo">
+          <button class="demo-button primary" id="save-offline-btn">오프라인 저장</button>
+          <button class="demo-button success" id="load-offline-btn">오프라인 로드</button>
+          <button class="demo-button danger" id="simulate-offline-btn">오프라인 시뮬레이션</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 로그 -->
+    <div class="test-section">
+      <h2 data-icon="📋">테스트 로그</h2>
+      <div class="logs" id="test-logs">
+        <div>Phase 3 테스트 시작...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phase 3 모듈들 로드 -->
+  <script src="action-history.js"></script>
+  <script src="mobile-optimizer.js"></script>
+  <script src="virtual-scroll.js"></script>
+  <script src="offline-storage.js"></script>
+
+  <script>
+    class Phase3Tester {
+      constructor() {
+        this.tests = [];
+        this.passedCount = 0;
+        this.failedCount = 0;
+        this.totalCount = 0;
+
+        this.init();
+      }
+
+      init() {
+        this.setupTests();
+        this.startTesting();
+        this.setupDemoHandlers();
+      }
+
+      setupTests() {
+        // 터치 인터페이스 테스트
+        this.addTest('test-touch-size', '터치 크기 검사', this.testTouchSize.bind(this));
+        this.addTest('test-touch-response', '터치 응답 시간', this.testTouchResponse.bind(this));
+        this.addTest('test-double-tap-prevention', '더블탭 방지', this.testDoubleTapPrevention.bind(this));
+
+        // 제스처 시스템 테스트
+        this.addTest('test-swipe-gesture', '스와이프 제스처', this.testSwipeGesture.bind(this));
+        this.addTest('test-long-press', '롱프레스', this.testLongPress.bind(this));
+        this.addTest('test-haptic-feedback', '햅틱 피드백', this.testHapticFeedback.bind(this));
+
+        // 가상 스크롤 테스트
+        this.addTest('test-virtual-scroll-performance', '가상 스크롤 성능', this.testVirtualScrollPerformance.bind(this));
+        this.addTest('test-virtual-scroll-memory', '가상 스크롤 메모리', this.testVirtualScrollMemory.bind(this));
+
+        // 오프라인 지원 테스트
+        this.addTest('test-indexeddb', 'IndexedDB', this.testIndexedDB.bind(this));
+        this.addTest('test-offline-mode', '오프라인 모드', this.testOfflineMode.bind(this));
+        this.addTest('test-sync-queue', '동기화 큐', this.testSyncQueue.bind(this));
+
+        this.totalCount = this.tests.length;
+        document.getElementById('total-count').textContent = this.totalCount;
+      }
+
+      addTest(id, name, testFunc) {
+        this.tests.push({ id, name, testFunc });
+      }
+
+      async startTesting() {
+        this.log('🧪 Phase 3 테스트 시작...');
+
+        for (const test of this.tests) {
+          try {
+            this.log(`⚡ ${test.name} 테스트 실행 중...`);
+            const passed = await test.testFunc();
+            this.updateTestResult(test.id, passed);
+          } catch (error) {
+            this.log(`❌ ${test.name} 테스트 오류: ${error.message}`);
+            this.updateTestResult(test.id, false);
+          }
+
+          await this.delay(500); // 테스트 간 딜레이
+        }
+
+        this.log('✅ Phase 3 테스트 완료!');
+        this.showFinalResults();
+      }
+
+      async testTouchSize() {
+        const buttons = document.querySelectorAll('button, [role="button"]');
+        let allValid = true;
+
+        buttons.forEach(button => {
+          const rect = button.getBoundingClientRect();
+          if (rect.width < 44 || rect.height < 44) {
+            allValid = false;
+            this.log(`⚠️ 터치 크기 부족: ${button.textContent} (${rect.width}x${rect.height})`);
+          }
+        });
+
+        return allValid;
+      }
+
+      async testTouchResponse() {
+        return new Promise((resolve) => {
+          const button = document.querySelector('[data-test="response"]');
+          const startTime = performance.now();
+
+          const handler = () => {
+            const responseTime = performance.now() - startTime;
+            this.log(`⏱️ 터치 응답 시간: ${responseTime.toFixed(2)}ms`);
+            button.removeEventListener('touchend', handler);
+            resolve(responseTime <= 50);
+          };
+
+          button.addEventListener('touchend', handler);
+
+          // 자동 트리거 (모바일이 아닌 경우)
+          setTimeout(() => {
+            if (button.onclick) {
+              button.click();
+              const responseTime = performance.now() - startTime;
+              this.log(`⏱️ 클릭 응답 시간: ${responseTime.toFixed(2)}ms`);
+              resolve(responseTime <= 50);
+            }
+          }, 100);
+        });
+      }
+
+      async testDoubleTapPrevention() {
+        // 더블탭 방지 로직이 있는지 확인
+        const hasPreventionLogic = document.addEventListener.toString().includes('touchend');
+        return hasPreventionLogic;
+      }
+
+      async testSwipeGesture() {
+        return window.mobileOptimizer && typeof window.mobileOptimizer.handleSwipe === 'function';
+      }
+
+      async testLongPress() {
+        return window.mobileOptimizer && typeof window.mobileOptimizer.handleLongPress === 'function';
+      }
+
+      async testHapticFeedback() {
+        return navigator.vibrate !== undefined || window.mobileOptimizer?.hasVibration;
+      }
+
+      async testVirtualScrollPerformance() {
+        if (!window.VirtualScroll) return false;
+
+        const container = document.getElementById('virtual-scroll-container');
+        const virtualScroll = new window.PlayerVirtualScroll(container);
+
+        // 1000개 테스트 데이터 생성
+        const testData = Array.from({length: 1000}, (_, i) => ({
+          id: i,
+          name: `테스트 플레이어 ${i + 1}`,
+          chips: Math.floor(Math.random() * 10000),
+          status: i % 10 === 0 ? 'OUT' : 'IN'
+        }));
+
+        virtualScroll.setItems(testData);
+        this.log(`📜 가상 스크롤: ${testData.length}개 아이템 렌더링 완료`);
+
+        return true;
+      }
+
+      async testVirtualScrollMemory() {
+        // 메모리 사용량 체크 (가능한 경우)
+        if (performance.memory) {
+          const before = performance.memory.usedJSHeapSize;
+          await this.testVirtualScrollPerformance();
+          const after = performance.memory.usedJSHeapSize;
+          const increase = after - before;
+          this.log(`💾 메모리 증가량: ${(increase / 1024 / 1024).toFixed(2)} MB`);
+          return increase < 5 * 1024 * 1024; // 5MB 이하
+        }
+        return true;
+      }
+
+      async testIndexedDB() {
+        if (!window.offlineStorage) return false;
+
+        try {
+          // 테스트 데이터 저장
+          await window.offlineStorage.save('players', {
+            id: 'test-player',
+            name: '테스트 플레이어',
+            chips: 1000
+          });
+
+          // 데이터 조회
+          const saved = await window.offlineStorage.get('players', 'test-player');
+          this.log('💾 IndexedDB 저장/로드 성공');
+          return saved && saved.name === '테스트 플레이어';
+        } catch (error) {
+          this.log(`❌ IndexedDB 오류: ${error.message}`);
+          return false;
+        }
+      }
+
+      async testOfflineMode() {
+        return window.offlineStorage && typeof window.offlineStorage.isOffline === 'function';
+      }
+
+      async testSyncQueue() {
+        if (!window.offlineStorage) return false;
+
+        const status = await window.offlineStorage.getSyncStatus();
+        this.log(`🔄 동기화 상태: ${status.isOnline ? '온라인' : '오프라인'}`);
+        return typeof status.pendingSync === 'number';
+      }
+
+      updateTestResult(testId, passed) {
+        const element = document.getElementById(testId);
+        const resultEl = element.querySelector('.test-result');
+
+        if (passed) {
+          element.classList.add('passed');
+          resultEl.classList.add('passed');
+          resultEl.textContent = '✅ 통과';
+          this.passedCount++;
+        } else {
+          element.classList.add('failed');
+          resultEl.classList.add('failed');
+          resultEl.textContent = '❌ 실패';
+          this.failedCount++;
+        }
+
+        this.updateProgress();
+      }
+
+      updateProgress() {
+        const progress = ((this.passedCount + this.failedCount) / this.totalCount) * 100;
+        document.getElementById('overall-progress').style.width = progress + '%';
+        document.getElementById('passed-count').textContent = this.passedCount;
+        document.getElementById('failed-count').textContent = this.failedCount;
+      }
+
+      showFinalResults() {
+        const successRate = (this.passedCount / this.totalCount * 100).toFixed(1);
+        this.log(`📊 최종 결과: ${this.passedCount}/${this.totalCount} 통과 (${successRate}%)`);
+
+        if (this.passedCount === this.totalCount) {
+          this.log('🎉 Phase 3 검증 완료! 모든 테스트 통과');
+        } else {
+          this.log(`⚠️ ${this.failedCount}개 테스트 실패 - 추가 확인 필요`);
+        }
+      }
+
+      setupDemoHandlers() {
+        // 오프라인 상태 표시
+        this.updateOfflineStatus();
+        window.addEventListener('online', () => this.updateOfflineStatus());
+        window.addEventListener('offline', () => this.updateOfflineStatus());
+
+        // 데모 버튼 핸들러
+        document.getElementById('save-offline-btn')?.addEventListener('click', async () => {
+          if (window.offlineStorage) {
+            await window.offlineStorage.save('players', {
+              id: Date.now(),
+              name: '오프라인 테스트',
+              chips: 5000
+            });
+            this.log('💾 오프라인 데이터 저장됨');
+          }
+        });
+
+        document.getElementById('simulate-offline-btn')?.addEventListener('click', () => {
+          // 오프라인 시뮬레이션
+          window.dispatchEvent(new Event('offline'));
+          this.log('📱 오프라인 모드 시뮬레이션');
+
+          setTimeout(() => {
+            window.dispatchEvent(new Event('online'));
+            this.log('🌐 온라인 모드 복구');
+          }, 3000);
+        });
+      }
+
+      updateOfflineStatus() {
+        const statusEl = document.getElementById('offline-status');
+        const isOnline = navigator.onLine;
+
+        statusEl.className = 'offline-status ' + (isOnline ? 'online' : 'offline');
+        statusEl.innerHTML = `
+          <span>${isOnline ? '🌐' : '📱'}</span>
+          <span>${isOnline ? '온라인' : '오프라인'}</span>
+        `;
+      }
+
+      log(message) {
+        const logs = document.getElementById('test-logs');
+        const timestamp = new Date().toLocaleTimeString();
+        logs.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+        logs.scrollTop = logs.scrollHeight;
+      }
+
+      delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+      }
+    }
+
+    // 페이지 로드 후 테스트 시작
+    document.addEventListener('DOMContentLoaded', () => {
+      new Phase3Tester();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 4 External Script Test</title>
+</head>
+<body>
+    <h1>Phase 4 External Script Test</h1>
+    <div id="test-result"></div>
+    <button onclick="testPhase4Functions()">Test Phase 4 Functions</button>
+
+    <script>
+        console.log('🚀 External script test started');
+
+        // APP_CONFIG 정의
+        window.APP_CONFIG = {
+            isInitialized: true,
+            appsScriptUrl: 'https://script.google.com/macros/s/test123456789/exec',
+            autoInit: false,
+            version: '3.4.26',
+            data: {},
+            settings: { debugMode: true, autoSave: true, offlineMode: false },
+            state: { lastConnection: null, connectionAttempts: 0, isOnline: navigator.onLine }
+        };
+
+        // fetchFromAppsScript 모킹 함수
+        window.fetchFromAppsScript = async function(action, data) {
+            console.log('📡 Mock fetchFromAppsScript:', action, data);
+            await new Promise(resolve => setTimeout(resolve, 100));
+            return { success: true, action, data, timestamp: Date.now() };
+        };
+
+        // 테스트 함수
+        function testPhase4Functions() {
+            console.log('🧪 Phase 4 External Functions 테스트 시작...');
+
+            const results = {
+                PHASE4_FUNCTIONS_LOADED: typeof window.PHASE4_FUNCTIONS_LOADED,
+                APP_CONFIG: typeof window.APP_CONFIG,
+                ensureAppsScriptUrl: typeof window.ensureAppsScriptUrl,
+                protectedApiCall: typeof window.protectedApiCall,
+                ApiCallManager: typeof window.ApiCallManager,
+                getUserFriendlyErrorMessage: typeof window.getUserFriendlyErrorMessage,
+                protectedSendToSheets: typeof window.protectedSendToSheets,
+                protectedBulkRegister: typeof window.protectedBulkRegister,
+                protectedAddPlayer: typeof window.protectedAddPlayer
+            };
+
+            console.log('📊 함수 정의 상태:', results);
+
+            const resultDiv = document.getElementById('test-result');
+            const allDefined = Object.entries(results).every(([name, type]) => {
+                if (name === 'PHASE4_FUNCTIONS_LOADED') return type === 'boolean';
+                return type === 'function' || type === 'object';
+            });
+
+            resultDiv.innerHTML = `
+                <h3>테스트 결과: ${allDefined ? '✅ 성공' : '❌ 실패'}</h3>
+                <ul>
+                    ${Object.entries(results).map(([name, type]) =>
+                        `<li>${name}: ${type} ${
+                            (name === 'PHASE4_FUNCTIONS_LOADED' && type === 'boolean') ||
+                            (name !== 'PHASE4_FUNCTIONS_LOADED' && (type === 'function' || type === 'object'))
+                            ? '✅' : '❌'
+                        }</li>`
+                    ).join('')}
+                </ul>
+            `;
+
+            // 실제 함수 호출 테스트
+            if (allDefined) {
+                console.log('🎯 함수 호출 테스트...');
+
+                // URL 검증 테스트
+                try {
+                    const url = window.ensureAppsScriptUrl();
+                    console.log('✅ URL 검증 성공:', url);
+                } catch (error) {
+                    console.log('❌ URL 검증 에러:', error.message);
+                }
+
+                // 에러 메시지 테스트
+                const errorMsg = window.getUserFriendlyErrorMessage(
+                    new Error('네트워크 연결이 끊어졌습니다'),
+                    'testAction'
+                );
+                console.log('✅ 에러 메시지 생성:', errorMsg);
+
+                // API Call Manager 테스트
+                const callId = window.ApiCallManager.startCall('testCall', { test: true });
+                window.ApiCallManager.completeCall(callId, true, { result: 'success' });
+                const stats = window.ApiCallManager.getCallStats();
+                console.log('✅ API Call Manager 통계:', stats);
+
+                // 보호된 API 호출 테스트 (실제 호출)
+                window.protectedApiCall('test', { data: 'test' })
+                    .then(result => {
+                        console.log('✅ 보호된 API 호출 성공:', result);
+                    })
+                    .catch(error => {
+                        console.log('❌ 보호된 API 호출 실패:', error.message);
+                    });
+            }
+
+            return allDefined;
+        }
+
+        // 페이지 로드 후 자동 테스트
+        window.addEventListener('load', function() {
+            console.log('✅ 페이지 로드 완료');
+            setTimeout(() => {
+                if (window.PHASE4_FUNCTIONS_LOADED) {
+                    testPhase4Functions();
+                } else {
+                    console.log('❌ Phase 4 Functions가 로드되지 않음');
+                    document.getElementById('test-result').innerHTML =
+                        '<p style="color: red;">❌ Phase 4 Functions 로드 실패</p>';
+                }
+            }, 100);
+        });
+
+        console.log('✅ External test script completed');
+    </script>
+
+    <!-- Phase 4 Functions 외부 스크립트 로드 -->
+    <script src="phase4-functions.js"></script>
+</body>
+</html>

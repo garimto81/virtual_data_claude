@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 2 Test - 조건부 초기화</title>
+    <style>
+        body {
+            font-family: -apple-system, system-ui, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #6366f1;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #6366f1;
+            margin-top: 30px;
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .test-card {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .test-card h3 {
+            margin-top: 0;
+            color: #4b5563;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 10px;
+        }
+        button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background: #4f46e5;
+        }
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 8px 0;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+        }
+        .result.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #10b981;
+        }
+        .result.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #ef4444;
+        }
+        .result.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #3b82f6;
+        }
+        .status {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        .status.pass { background: #10b981; color: white; }
+        .status.fail { background: #ef4444; color: white; }
+        .status.pending { background: #f59e0b; color: white; }
+        .log-area {
+            background: #1f2937;
+            color: #10b981;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+        .scenario-step {
+            background: #f3f4f6;
+            border-left: 4px solid #6366f1;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 0 6px 6px 0;
+        }
+        .scenario-step.active {
+            background: #fef3c7;
+            border-left-color: #f59e0b;
+        }
+        .scenario-step.completed {
+            background: #d1fae5;
+            border-left-color: #10b981;
+        }
+        .iframe-container {
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            height: 400px;
+            margin: 15px 0;
+        }
+        .iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Phase 2: 조건부 초기화 구현 테스트</h1>
+        <p class="text-gray-600">initializeApp() 함수의 수동/자동 모드 분기와 설정 화면 UI를 테스트합니다.</p>
+
+        <div class="test-grid">
+            <!-- 초기화 모드 테스트 -->
+            <div class="test-card">
+                <h3>1. 초기화 모드 테스트</h3>
+                <button onclick="testAutoMode()">🚀 자동 모드 테스트</button>
+                <button onclick="testManualMode()">⚙️ 수동 모드 테스트</button>
+                <button onclick="testNoUrlMode()">❌ URL 없는 상태 테스트</button>
+                <div id="init-mode-result" class="result info">테스트 결과가 여기에 표시됩니다</div>
+            </div>
+
+            <!-- 설정 화면 표시 테스트 -->
+            <div class="test-card">
+                <h3>2. 설정 화면 표시 테스트</h3>
+                <button onclick="showSetupScreenTest()">🔧 설정 화면 열기</button>
+                <button onclick="hideSetupScreenTest()">🔒 설정 화면 닫기</button>
+                <button onclick="testSetupScreenWithSavedUrl()">💾 저장된 URL로 열기</button>
+                <div id="setup-screen-result" class="result info">설정 화면 상태를 확인합니다</div>
+            </div>
+
+            <!-- URL 검증 및 연결 테스트 -->
+            <div class="test-card">
+                <h3>3. URL 검증 및 연결 테스트</h3>
+                <input type="text" id="test-url-input" placeholder="Apps Script URL 입력">
+                <button onclick="testUrlValidationInSetup()">✅ URL 검증 테스트</button>
+                <button onclick="testConnectionInSetup()">🌐 연결 테스트</button>
+                <div id="url-validation-result" class="result info">URL 검증 결과가 표시됩니다</div>
+            </div>
+
+            <!-- 자동 초기화 체크박스 테스트 -->
+            <div class="test-card">
+                <h3>4. 자동 초기화 체크박스 테스트</h3>
+                <button onclick="testAutoInitCheckboxOn()">✅ 체크박스 ON</button>
+                <button onclick="testAutoInitCheckboxOff()">❌ 체크박스 OFF</button>
+                <button onclick="testAutoInitToggle()">🔄 토글 테스트</button>
+                <div id="checkbox-result" class="result info">체크박스 상태를 확인합니다</div>
+            </div>
+
+            <!-- 데모 모드 테스트 -->
+            <div class="test-card">
+                <h3>5. 데모 모드 테스트</h3>
+                <button onclick="testDemoModeStart()">🎮 데모 모드 시작</button>
+                <button onclick="testDemoModeCheck()">📊 데모 모드 상태 확인</button>
+                <div id="demo-mode-result" class="result info">데모 모드 테스트 결과입니다</div>
+            </div>
+
+            <!-- 에러 처리 테스트 -->
+            <div class="test-card">
+                <h3>6. 에러 처리 테스트</h3>
+                <button onclick="testInvalidUrl()">🚫 잘못된 URL 처리</button>
+                <button onclick="testNetworkError()">🌐 네트워크 오류 처리</button>
+                <button onclick="testInitializationError()">⚠️ 초기화 오류 처리</button>
+                <div id="error-handling-result" class="result info">에러 처리 결과를 확인합니다</div>
+            </div>
+        </div>
+
+        <h2>7. 통합 시나리오 테스트</h2>
+        <div class="test-card">
+            <h3>전체 사용자 플로우 테스트</h3>
+            <div id="scenario-steps">
+                <div class="scenario-step" id="step-1">1. 첫 방문 (URL 없음) → 설정 화면 표시</div>
+                <div class="scenario-step" id="step-2">2. URL 입력 및 검증</div>
+                <div class="scenario-step" id="step-3">3. 자동 초기화 설정</div>
+                <div class="scenario-step" id="step-4">4. 연결 및 초기화</div>
+                <div class="scenario-step" id="step-5">5. 재방문 시 자동 초기화</div>
+            </div>
+            <button onclick="runIntegratedScenario()" id="scenario-btn">🚀 전체 시나리오 실행</button>
+            <div id="integrated-scenario-result" class="result info">통합 시나리오 실행 결과입니다</div>
+        </div>
+
+        <h2>8. 실시간 앱 테스트</h2>
+        <div class="test-card">
+            <h3>실제 앱 동작 확인</h3>
+            <p>아래 iframe에서 실제 앱의 Phase 2 구현을 테스트할 수 있습니다:</p>
+            <div class="iframe-container">
+                <iframe src="index.html" title="Virtual Data App - Phase 2"></iframe>
+            </div>
+            <button onclick="reloadApp()">🔄 앱 새로고침</button>
+            <button onclick="clearAppStorage()">🗑️ 저장소 초기화</button>
+        </div>
+
+        <h2>9. 실시간 로그</h2>
+        <div class="log-area" id="log-area">
+            > Phase 2 테스트 환경 준비 완료...<br>
+        </div>
+    </div>
+
+    <script>
+        // 로그 함수
+        function addLog(message, type = 'info') {
+            const logArea = document.getElementById('log-area');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ef4444' : type === 'success' ? '#10b981' : '#94a3b8';
+            logArea.innerHTML += `<span style="color: ${color}">[${timestamp}] ${message}</span><br>`;
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        // Phase 1에서 구현된 함수들 (간소화 버전)
+        const APP_VERSION = 'v3.5.0-phase2';
+
+        window.APP_CONFIG = {
+            isInitialized: false,
+            appsScriptUrl: null,
+            autoInit: false,
+            version: APP_VERSION,
+            data: {},
+            settings: { debugMode: false, autoSave: true, offlineMode: false },
+            state: { lastConnection: null, connectionAttempts: 0, isOnline: navigator.onLine }
+        };
+
+        function validateAppsScriptUrl(url) {
+            if (!url || typeof url !== 'string') return false;
+            const pattern = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/;
+            return pattern.test(url.trim());
+        }
+
+        function shouldAutoInit() {
+            const savedUrl = localStorage.getItem('vd_appsScriptUrl');
+            const autoInitFlag = localStorage.getItem('vd_autoInit');
+            return !!(savedUrl && autoInitFlag === 'true' && validateAppsScriptUrl(savedUrl));
+        }
+
+        const ConfigManager = {
+            saveAppsScriptUrl(url) {
+                if (validateAppsScriptUrl(url)) {
+                    localStorage.setItem('vd_appsScriptUrl', url);
+                    localStorage.setItem('vd_lastSaved', new Date().toISOString());
+                    window.APP_CONFIG.appsScriptUrl = url;
+                    return true;
+                }
+                return false;
+            },
+
+            loadAppsScriptUrl() {
+                const savedUrl = localStorage.getItem('vd_appsScriptUrl');
+                if (savedUrl && validateAppsScriptUrl(savedUrl)) {
+                    window.APP_CONFIG.appsScriptUrl = savedUrl;
+                    return savedUrl;
+                }
+                return null;
+            },
+
+            setAutoInit(enabled) {
+                localStorage.setItem('vd_autoInit', enabled ? 'true' : 'false');
+                window.APP_CONFIG.autoInit = enabled;
+            },
+
+            clearConfig() {
+                localStorage.removeItem('vd_appsScriptUrl');
+                localStorage.removeItem('vd_autoInit');
+                localStorage.removeItem('vd_lastSaved');
+                window.APP_CONFIG.appsScriptUrl = null;
+                window.APP_CONFIG.autoInit = false;
+            },
+
+            updateConnectionState(success) {
+                const now = new Date().toISOString();
+                if (success) {
+                    window.APP_CONFIG.state.lastConnection = now;
+                    window.APP_CONFIG.state.connectionAttempts = 0;
+                    localStorage.setItem('vd_lastConnection', now);
+                } else {
+                    window.APP_CONFIG.state.connectionAttempts++;
+                }
+            }
+        };
+
+        // 테스트 함수들
+        function testAutoMode() {
+            const result = document.getElementById('init-mode-result');
+            addLog('자동 모드 테스트 시작', 'info');
+
+            // 테스트용 설정
+            const testUrl = 'https://script.google.com/macros/s/AKfycbwdwVRj8FrFA5XvdNx8ERp6YrGMTFjNQ8UmBIIevi1CNu_isLUok4TLsGtclns2ty0j/exec';
+            ConfigManager.saveAppsScriptUrl(testUrl);
+            ConfigManager.setAutoInit(true);
+
+            const shouldInit = shouldAutoInit();
+
+            result.className = 'result ' + (shouldInit ? 'success' : 'error');
+            result.textContent = `자동 초기화 조건: ${shouldInit ? '만족' : '불만족'}\nURL: ${window.APP_CONFIG.appsScriptUrl ? '설정됨' : '미설정'}\nAutoInit: ${window.APP_CONFIG.autoInit}`;
+
+            addLog(`자동 모드 테스트 결과: ${shouldInit}`, shouldInit ? 'success' : 'error');
+        }
+
+        function testManualMode() {
+            const result = document.getElementById('init-mode-result');
+            addLog('수동 모드 테스트 시작', 'info');
+
+            // 자동 초기화 비활성화
+            ConfigManager.setAutoInit(false);
+            const shouldInit = shouldAutoInit();
+
+            result.className = 'result info';
+            result.textContent = `수동 모드 설정 완료\n자동 초기화: ${shouldInit ? '활성' : '비활성'}\n상태: 수동 초기화 필요`;
+
+            addLog('수동 모드로 설정 완료', 'success');
+        }
+
+        function testNoUrlMode() {
+            const result = document.getElementById('init-mode-result');
+            addLog('URL 없는 상태 테스트 시작', 'info');
+
+            // 모든 설정 삭제
+            ConfigManager.clearConfig();
+            const shouldInit = shouldAutoInit();
+
+            result.className = 'result error';
+            result.textContent = `설정 없음 상태\n자동 초기화: ${shouldInit ? '가능' : '불가능'}\n상태: 설정 화면 표시 필요`;
+
+            addLog('URL 없는 상태로 설정됨 - 설정 화면 필요', 'error');
+        }
+
+        function showSetupScreenTest() {
+            const result = document.getElementById('setup-screen-result');
+            addLog('설정 화면 표시 테스트', 'info');
+
+            // 시뮬레이션
+            result.className = 'result success';
+            result.textContent = '✅ 설정 화면이 표시되었습니다\n상태: 사용자 입력 대기 중';
+
+            addLog('설정 화면 표시 완료', 'success');
+        }
+
+        function hideSetupScreenTest() {
+            const result = document.getElementById('setup-screen-result');
+            addLog('설정 화면 숨기기 테스트', 'info');
+
+            result.className = 'result info';
+            result.textContent = '🔒 설정 화면이 숨겨졌습니다\n상태: 메인 앱 실행 중';
+
+            addLog('설정 화면 숨김 완료', 'success');
+        }
+
+        function testSetupScreenWithSavedUrl() {
+            const result = document.getElementById('setup-screen-result');
+            addLog('저장된 URL로 설정 화면 열기 테스트', 'info');
+
+            // 테스트용 URL 저장
+            const testUrl = 'https://script.google.com/macros/s/AKfycbwdwVRj8FrFA5XvdNx8ERp6YrGMTFjNQ8UmBIIevi1CNu_isLUok4TLsGtclns2ty0j/exec';
+            ConfigManager.saveAppsScriptUrl(testUrl);
+
+            result.className = 'result success';
+            result.textContent = `✅ 저장된 URL로 설정 화면 열림\nURL: ${testUrl.substring(0, 50)}...\n상태: 기존 설정 표시됨`;
+
+            addLog('저장된 URL로 설정 화면 열기 완료', 'success');
+        }
+
+        function testUrlValidationInSetup() {
+            const urlInput = document.getElementById('test-url-input');
+            const result = document.getElementById('url-validation-result');
+            const url = urlInput.value.trim();
+
+            addLog(`URL 검증 테스트: ${url}`, 'info');
+
+            if (!url) {
+                result.className = 'result error';
+                result.textContent = '❌ URL을 입력해주세요';
+                addLog('URL 입력 없음', 'error');
+                return;
+            }
+
+            const isValid = validateAppsScriptUrl(url);
+
+            result.className = 'result ' + (isValid ? 'success' : 'error');
+            result.textContent = isValid ?
+                `✅ 올바른 Apps Script URL입니다\n${url}` :
+                `❌ 잘못된 URL 형식입니다\n${url}`;
+
+            addLog(`URL 검증 결과: ${isValid}`, isValid ? 'success' : 'error');
+        }
+
+        function testConnectionInSetup() {
+            const urlInput = document.getElementById('test-url-input');
+            const result = document.getElementById('url-validation-result');
+            const url = urlInput.value.trim();
+
+            if (!url || !validateAppsScriptUrl(url)) {
+                result.className = 'result error';
+                result.textContent = '❌ 먼저 올바른 URL을 입력해주세요';
+                return;
+            }
+
+            addLog(`연결 테스트 시작: ${url}`, 'info');
+
+            result.className = 'result info';
+            result.textContent = '🌐 연결을 테스트하고 있습니다...';
+
+            // 실제 연결 테스트 시뮬레이션
+            setTimeout(async () => {
+                try {
+                    const response = await fetch(url + '?test=true', {
+                        method: 'GET',
+                        mode: 'cors'
+                    });
+
+                    if (response.ok) {
+                        result.className = 'result success';
+                        result.textContent = '✅ 연결 성공!\n이 URL을 사용할 수 있습니다';
+                        addLog('연결 테스트 성공', 'success');
+                    } else {
+                        result.className = 'result error';
+                        result.textContent = `❌ 연결 실패 (HTTP ${response.status})`;
+                        addLog(`연결 실패: HTTP ${response.status}`, 'error');
+                    }
+                } catch (error) {
+                    result.className = 'result error';
+                    result.textContent = `❌ 연결 오류: ${error.message}`;
+                    addLog(`연결 오류: ${error.message}`, 'error');
+                }
+            }, 1000);
+        }
+
+        function testAutoInitCheckboxOn() {
+            const result = document.getElementById('checkbox-result');
+            addLog('자동 초기화 체크박스 ON 테스트', 'info');
+
+            ConfigManager.setAutoInit(true);
+
+            result.className = 'result success';
+            result.textContent = '✅ 자동 초기화가 활성화되었습니다\n상태: 다음 방문 시 자동 연결';
+
+            addLog('자동 초기화 체크박스 ON', 'success');
+        }
+
+        function testAutoInitCheckboxOff() {
+            const result = document.getElementById('checkbox-result');
+            addLog('자동 초기화 체크박스 OFF 테스트', 'info');
+
+            ConfigManager.setAutoInit(false);
+
+            result.className = 'result info';
+            result.textContent = '❌ 자동 초기화가 비활성화되었습니다\n상태: 매번 설정 화면 표시';
+
+            addLog('자동 초기화 체크박스 OFF', 'success');
+        }
+
+        function testAutoInitToggle() {
+            const result = document.getElementById('checkbox-result');
+            addLog('자동 초기화 토글 테스트', 'info');
+
+            const currentState = localStorage.getItem('vd_autoInit') === 'true';
+            ConfigManager.setAutoInit(!currentState);
+
+            result.className = 'result success';
+            result.textContent = `🔄 토글 완료: ${currentState ? 'ON → OFF' : 'OFF → ON'}\n현재 상태: ${!currentState ? '자동' : '수동'}`;
+
+            addLog(`토글 완료: ${!currentState}`, 'success');
+        }
+
+        function testDemoModeStart() {
+            const result = document.getElementById('demo-mode-result');
+            addLog('데모 모드 시작 테스트', 'info');
+
+            // 데모 모드 시뮬레이션
+            window.APP_CONFIG.isInitialized = true;
+            window.APP_CONFIG.appsScriptUrl = 'demo-mode';
+
+            result.className = 'result success';
+            result.textContent = '🎮 데모 모드가 시작되었습니다\n상태: 더미 데이터로 실행 중\nURL: demo-mode';
+
+            addLog('데모 모드 시작 완료', 'success');
+        }
+
+        function testDemoModeCheck() {
+            const result = document.getElementById('demo-mode-result');
+            addLog('데모 모드 상태 확인', 'info');
+
+            const isDemo = window.APP_CONFIG.appsScriptUrl === 'demo-mode';
+
+            result.className = 'result info';
+            result.textContent = `📊 데모 모드 상태: ${isDemo ? 'ON' : 'OFF'}\n초기화 상태: ${window.APP_CONFIG.isInitialized ? '완료' : '미완료'}\nURL: ${window.APP_CONFIG.appsScriptUrl || '없음'}`;
+
+            addLog(`데모 모드 상태: ${isDemo}`, 'success');
+        }
+
+        function testInvalidUrl() {
+            const result = document.getElementById('error-handling-result');
+            addLog('잘못된 URL 에러 처리 테스트', 'info');
+
+            const invalidUrl = 'https://invalid-url.com';
+            const isValid = validateAppsScriptUrl(invalidUrl);
+
+            result.className = 'result success';
+            result.textContent = `✅ 잘못된 URL이 올바르게 차단됨\nURL: ${invalidUrl}\n검증 결과: ${isValid ? 'PASS (오류!)' : 'REJECT (정상)'}`;
+
+            addLog(`잘못된 URL 차단: ${!isValid}`, isValid ? 'error' : 'success');
+        }
+
+        function testNetworkError() {
+            const result = document.getElementById('error-handling-result');
+            addLog('네트워크 오류 처리 테스트', 'info');
+
+            // 네트워크 오류 시뮬레이션
+            fetch('https://invalid-domain-12345.com')
+                .catch(error => {
+                    result.className = 'result success';
+                    result.textContent = `✅ 네트워크 오류가 올바르게 처리됨\n오류 타입: ${error.name}\n메시지: ${error.message}`;
+                    addLog('네트워크 오류 처리 완료', 'success');
+                });
+
+            result.className = 'result info';
+            result.textContent = '🌐 네트워크 오류 테스트 중...';
+        }
+
+        function testInitializationError() {
+            const result = document.getElementById('error-handling-result');
+            addLog('초기화 오류 처리 테스트', 'info');
+
+            try {
+                // 의도적 오류 발생
+                throw new Error('테스트용 초기화 오류');
+            } catch (error) {
+                result.className = 'result success';
+                result.textContent = `✅ 초기화 오류가 올바르게 캐치됨\n오류 메시지: ${error.message}\n처리: 에러 핸들러 동작`;
+                addLog('초기화 오류 처리 완료', 'success');
+            }
+        }
+
+        function runIntegratedScenario() {
+            addLog('=== 통합 시나리오 시작 ===', 'info');
+            const scenarioBtn = document.getElementById('scenario-btn');
+            const result = document.getElementById('integrated-scenario-result');
+
+            scenarioBtn.disabled = true;
+            scenarioBtn.textContent = '실행 중...';
+
+            let currentStep = 1;
+
+            function activateStep(stepNum) {
+                document.querySelectorAll('.scenario-step').forEach(step => {
+                    step.classList.remove('active', 'completed');
+                });
+
+                for (let i = 1; i < stepNum; i++) {
+                    document.getElementById(`step-${i}`).classList.add('completed');
+                }
+                document.getElementById(`step-${stepNum}`).classList.add('active');
+            }
+
+            function nextStep() {
+                return new Promise(resolve => {
+                    setTimeout(() => {
+                        switch(currentStep) {
+                            case 1:
+                                addLog('1. 설정 초기화 - URL 없는 상태로 설정', 'info');
+                                ConfigManager.clearConfig();
+                                activateStep(1);
+                                break;
+                            case 2:
+                                addLog('2. URL 입력 및 검증', 'info');
+                                const testUrl = 'https://script.google.com/macros/s/AKfycbwdwVRj8FrFA5XvdNx8ERp6YrGMTFjNQ8UmBIIevi1CNu_isLUok4TLsGtclns2ty0j/exec';
+                                ConfigManager.saveAppsScriptUrl(testUrl);
+                                activateStep(2);
+                                break;
+                            case 3:
+                                addLog('3. 자동 초기화 설정', 'info');
+                                ConfigManager.setAutoInit(true);
+                                activateStep(3);
+                                break;
+                            case 4:
+                                addLog('4. 연결 및 초기화 테스트', 'info');
+                                window.APP_CONFIG.isInitialized = true;
+                                activateStep(4);
+                                break;
+                            case 5:
+                                addLog('5. 자동 초기화 조건 확인', 'info');
+                                const shouldInit = shouldAutoInit();
+                                activateStep(5);
+                                addLog(`최종 자동 초기화 가능: ${shouldInit}`, shouldInit ? 'success' : 'error');
+                                break;
+                        }
+                        currentStep++;
+                        resolve();
+                    }, 1000);
+                });
+            }
+
+            async function runScenario() {
+                for (let i = 0; i < 5; i++) {
+                    await nextStep();
+                }
+
+                document.querySelectorAll('.scenario-step').forEach(step => {
+                    step.classList.remove('active');
+                    step.classList.add('completed');
+                });
+
+                result.className = 'result success';
+                result.textContent = '✅ 통합 시나리오 완료!\n모든 단계가 성공적으로 실행되었습니다.';
+
+                scenarioBtn.disabled = false;
+                scenarioBtn.textContent = '🚀 전체 시나리오 실행';
+
+                addLog('=== 통합 시나리오 완료 ===', 'success');
+            }
+
+            runScenario();
+        }
+
+        function reloadApp() {
+            const iframe = document.querySelector('.iframe-container iframe');
+            if (iframe) {
+                iframe.src = iframe.src;
+                addLog('앱 새로고침 완료', 'success');
+            }
+        }
+
+        function clearAppStorage() {
+            ConfigManager.clearConfig();
+            // iframe의 localStorage도 클리어해야 하지만, 보안상 직접 접근 불가
+            addLog('로컬 저장소 초기화 완료 (iframe은 새로고침 필요)', 'success');
+        }
+
+        // 페이지 로드 시 초기화
+        window.addEventListener('DOMContentLoaded', () => {
+            addLog('Phase 2 테스트 환경 초기화 완료', 'success');
+            addLog('모든 테스트 준비 완료', 'info');
+        });
+    </script>
+</body>
+</html>

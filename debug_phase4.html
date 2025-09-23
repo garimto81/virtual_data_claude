@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 4 Debug - 함수 정의 확인</title>
+</head>
+<body>
+    <h1>Phase 4 Debug</h1>
+    <div id="debug-info"></div>
+
+    <script>
+        // 1초마다 Phase 4 함수들이 정의되었는지 확인
+        let checkCount = 0;
+        const maxChecks = 10;
+
+        function checkPhase4Functions() {
+            checkCount++;
+            console.log(`[Check ${checkCount}/${maxChecks}] Phase 4 함수 확인 중...`);
+
+            const results = {
+                timestamp: new Date().toISOString(),
+                APP_CONFIG: typeof window.APP_CONFIG,
+                ensureAppsScriptUrl: typeof window.ensureAppsScriptUrl,
+                protectedApiCall: typeof window.protectedApiCall,
+                ApiCallManager: typeof window.ApiCallManager,
+                getUserFriendlyErrorMessage: typeof window.getUserFriendlyErrorMessage,
+                validateAppsScriptUrl: typeof validateAppsScriptUrl
+            };
+
+            console.log('Phase 4 함수 상태:', results);
+
+            // HTML에도 표시
+            const debugDiv = document.getElementById('debug-info');
+            debugDiv.innerHTML += `<div>
+                <h3>[Check ${checkCount}] ${results.timestamp}</h3>
+                <ul>
+                    <li>APP_CONFIG: ${results.APP_CONFIG}</li>
+                    <li>ensureAppsScriptUrl: ${results.ensureAppsScriptUrl}</li>
+                    <li>protectedApiCall: ${results.protectedApiCall}</li>
+                    <li>ApiCallManager: ${results.ApiCallManager}</li>
+                    <li>getUserFriendlyErrorMessage: ${results.getUserFriendlyErrorMessage}</li>
+                    <li>validateAppsScriptUrl: ${results.validateAppsScriptUrl}</li>
+                </ul>
+            </div>`;
+
+            // 모든 함수가 정의되었거나 최대 확인 횟수에 도달하면 중지
+            if (checkCount >= maxChecks ||
+                (results.ensureAppsScriptUrl === 'function' &&
+                 results.protectedApiCall === 'function' &&
+                 results.ApiCallManager === 'object' &&
+                 results.getUserFriendlyErrorMessage === 'function')) {
+                console.log('함수 확인 완료');
+                return;
+            }
+
+            // 1초 후 다시 확인
+            setTimeout(checkPhase4Functions, 1000);
+        }
+
+        // DOMContentLoaded 전에 시작
+        console.log('Phase 4 Debug 스크립트 로드됨');
+        checkPhase4Functions();
+
+        // DOMContentLoaded 이벤트도 모니터링
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOMContentLoaded 이벤트 발생');
+        });
+
+        // 페이지 로드 완료 시에도 확인
+        window.addEventListener('load', () => {
+            console.log('window load 이벤트 발생');
+        });
+    </script>
+
+    <!-- 메인 애플리케이션의 스크립트를 포함하여 Phase 4 함수들이 로드되는지 확인 -->
+    <iframe src="index.html" style="width: 100px; height: 100px; position: absolute; left: -1000px; top: -1000px;"></iframe>
+</body>
+</html>

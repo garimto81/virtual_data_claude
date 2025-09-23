@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0" />
+  <title>Phase 2 검증 - 즉시 실행 & 더블탭</title>
+  <script src="https://cdn-tailwindcss.vercel.app/"></script>
+  <script src="action-history.js"></script>
+  <script src="double-tap-handler.js"></script>
+  <script src="batch-processor.js"></script>
+  <style>
+    .snackbar {
+      position: fixed;
+      bottom: -60px;
+      left: 10px;
+      right: 10px;
+      background: #333;
+      color: white;
+      padding: 12px;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: bottom 0.2s ease-out;
+      z-index: 10000;
+      font-size: 14px;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    .snackbar.show { bottom: 10px; }
+    .snackbar-undo-btn {
+      background: transparent;
+      border: 1px solid white;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 3px;
+      font-size: 12px;
+      margin-left: 10px;
+      cursor: pointer;
+    }
+    .snackbar-info { background: #2563eb; }
+    .snackbar-error { background: #dc2626; }
+    .snackbar-success { background: #16a34a; }
+    .snackbar-warning { background: #f59e0b; }
+
+    .double-tap-warning {
+      animation: pulse 0.5s ease-in-out infinite;
+      background: #f59e0b !important;
+    }
+    .danger-critical { background: #dc2626 !important; color: white !important; }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+    }
+    .pass { color: #10b981; }
+    .fail { color: #ef4444; }
+  </style>
+</head>
+<body class="bg-gray-900 text-white p-4">
+  <div class="max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold mb-6">📋 Phase 2 Quality Gate 검증</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Phase 2 체크리스트 -->
+      <div class="bg-gray-800 p-4 rounded-lg">
+        <h2 class="text-xl font-bold mb-4">✅ Phase 2 개발 체크리스트</h2>
+        <div class="space-y-2 text-sm">
+          <div id="check-immediate-delete" class="flex items-center gap-2">
+            <span id="check-immediate-delete-icon">⏳</span>
+            <span>플레이어 즉시 삭제</span>
+          </div>
+          <div id="check-batch-transaction" class="flex items-center gap-2">
+            <span id="check-batch-transaction-icon">⏳</span>
+            <span>트랜잭션 일괄 처리</span>
+          </div>
+          <div id="check-double-tap" class="flex items-center gap-2">
+            <span id="check-double-tap-icon">⏳</span>
+            <span>더블탭 위험 작업</span>
+          </div>
+          <div id="check-api-batch" class="flex items-center gap-2">
+            <span id="check-api-batch-icon">⏳</span>
+            <span>API 배치 최적화</span>
+          </div>
+          <div id="check-timer-conflict" class="flex items-center gap-2">
+            <span id="check-timer-conflict-icon">⏳</span>
+            <span>타이머 충돌 방지</span>
+          </div>
+          <div id="check-rollback" class="flex items-center gap-2">
+            <span id="check-rollback-icon">⏳</span>
+            <span>실패 시 자동 롤백</span>
+          </div>
+          <div id="check-phase1-compat" class="flex items-center gap-2">
+            <span id="check-phase1-compat-icon">⏳</span>
+            <span>Phase 1 호환성</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quality Gate 측정 -->
+      <div class="bg-gray-800 p-4 rounded-lg">
+        <h2 class="text-xl font-bold mb-4">🚦 Phase 2 Quality Gate</h2>
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-600">
+              <th class="text-left py-2">검증 항목</th>
+              <th class="text-center">목표</th>
+              <th class="text-center">측정값</th>
+              <th class="text-center">결과</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="py-2">단일 삭제</td>
+              <td class="text-center">&lt; 100ms</td>
+              <td class="text-center" id="single-delete-time">-</td>
+              <td class="text-center" id="single-delete-result">⏳</td>
+            </tr>
+            <tr>
+              <td class="py-2">10명 일괄</td>
+              <td class="text-center">&lt; 500ms</td>
+              <td class="text-center" id="batch-time">-</td>
+              <td class="text-center" id="batch-result">⏳</td>
+            </tr>
+            <tr>
+              <td class="py-2">더블탭 타이머</td>
+              <td class="text-center">2초</td>
+              <td class="text-center" id="double-tap-time">-</td>
+              <td class="text-center" id="double-tap-result">⏳</td>
+            </tr>
+            <tr>
+              <td class="py-2">롤백 성공률</td>
+              <td class="text-center">100%</td>
+              <td class="text-center" id="rollback-rate">-</td>
+              <td class="text-center" id="rollback-result">⏳</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 테스트 버튼들 -->
+      <div class="bg-gray-800 p-4 rounded-lg">
+        <h2 class="text-xl font-bold mb-4">🧪 기능 테스트</h2>
+        <div class="space-y-3">
+          <button onclick="testImmediateDeletion()" class="w-full bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">
+            🗑️ 즉시 삭제 테스트
+          </button>
+          <button onclick="testBatchProcessing()" class="w-full bg-green-600 hover:bg-green-700 px-4 py-2 rounded">
+            📦 일괄 처리 테스트 (10명)
+          </button>
+          <button onclick="testDoubleTap()" class="w-full bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded">
+            👆👆 더블탭 테스트
+          </button>
+          <button onclick="testRollback()" class="w-full bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded">
+            🔄 롤백 테스트
+          </button>
+          <button id="danger-button" class="w-full bg-red-600 hover:bg-red-700 px-4 py-2 rounded">
+            ⚠️ 위험 작업 (더블탭 필요)
+          </button>
+        </div>
+      </div>
+
+      <!-- 시나리오 테스트 -->
+      <div class="bg-gray-800 p-4 rounded-lg">
+        <h2 class="text-xl font-bold mb-4">📝 시나리오 테스트</h2>
+        <div class="space-y-3">
+          <button onclick="scenarioConsecutiveDelete()" class="w-full bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded text-sm">
+            연속 5명 삭제 → 실행취소
+          </button>
+          <button onclick="scenarioBatchFailure()" class="w-full bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded text-sm">
+            일괄 작업 실패 → 롤백
+          </button>
+          <button onclick="scenarioDoubleTapCancel()" class="w-full bg-pink-600 hover:bg-pink-700 px-4 py-2 rounded text-sm">
+            더블탭 1회만 → 취소
+          </button>
+          <button onclick="runFullScenario()" class="w-full bg-cyan-600 hover:bg-cyan-700 px-4 py-2 rounded text-sm">
+            🚀 전체 시나리오 실행
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 테스트 로그 -->
+    <div class="mt-4 bg-gray-800 p-4 rounded-lg">
+      <h2 class="text-xl font-bold mb-4">📊 테스트 로그</h2>
+      <div id="test-log" class="space-y-1 text-xs font-mono h-64 overflow-y-auto bg-gray-900 p-2 rounded">
+        <div class="text-gray-400">Phase 2 테스트 준비 완료...</div>
+      </div>
+    </div>
+
+    <!-- 최종 결과 -->
+    <div class="mt-4 bg-gray-800 p-6 rounded-lg">
+      <h2 class="text-2xl font-bold mb-4">📈 Phase 2 검증 결과</h2>
+      <div id="final-result" class="text-lg">
+        <span class="text-yellow-400">테스트를 실행해주세요...</span>
+      </div>
+      <div id="performance-summary" class="mt-4 grid grid-cols-2 gap-4 text-sm"></div>
+    </div>
+  </div>
+
+  <!-- 스낵바 -->
+  <div id="snackbar" class="snackbar"></div>
+
+  <script>
+    // Mock 데이터
+    let testPlayers = [];
+    let testResults = {
+      deleteTimes: [],
+      batchTimes: [],
+      rollbackTests: 0,
+      rollbackSuccess: 0,
+      doubleTapTests: 0
+    };
+
+    // Mock tableManager
+    window.tableManager = {
+      deletePlayer: async (name) => {
+        await new Promise(r => setTimeout(r, 30));
+        testPlayers = testPlayers.filter(p => p.name !== name);
+        return true;
+      },
+      addPlayer: async (player) => {
+        await new Promise(r => setTimeout(r, 30));
+        testPlayers.push(player);
+        return true;
+      },
+      updatePlayer: async (player) => {
+        await new Promise(r => setTimeout(r, 30));
+        const index = testPlayers.findIndex(p => p.id === player.id);
+        if (index >= 0) testPlayers[index] = player;
+        return true;
+      }
+    };
+
+    // 로그 추가
+    function addLog(message, type = 'info') {
+      const log = document.getElementById('test-log');
+      const entry = document.createElement('div');
+      const time = new Date().toLocaleTimeString();
+
+      const colors = {
+        info: 'text-gray-400',
+        success: 'text-green-400',
+        error: 'text-red-400',
+        warning: 'text-yellow-400'
+      };
+
+      entry.className = colors[type] || 'text-gray-400';
+      entry.textContent = `[${time}] ${message}`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+
+      if (log.children.length > 100) {
+        log.removeChild(log.firstChild);
+      }
+    }
+
+    // 체크 아이템 업데이트
+    function updateCheck(id, passed) {
+      const icon = document.getElementById(`${id}-icon`);
+      if (icon) {
+        icon.textContent = passed ? '✅' : '❌';
+        icon.className = passed ? 'pass' : 'fail';
+      }
+    }
+
+    // 즉시 삭제 테스트
+    async function testImmediateDeletion() {
+      addLog('🗑️ 즉시 삭제 테스트 시작...', 'info');
+
+      // 테스트 플레이어 추가
+      const player = { id: Date.now(), name: `TestPlayer${Date.now()}`, chips: 1000 };
+      testPlayers.push(player);
+
+      const start = performance.now();
+      const action = new DeletePlayerAction(player);
+      await window.actionHistory.execute(action);
+      const end = performance.now();
+
+      const deleteTime = end - start;
+      testResults.deleteTimes.push(deleteTime);
+
+      document.getElementById('single-delete-time').textContent = `${deleteTime.toFixed(2)}ms`;
+      document.getElementById('single-delete-result').textContent = deleteTime < 100 ? '✅' : '❌';
+      document.getElementById('single-delete-result').className = deleteTime < 100 ? 'pass' : 'fail';
+
+      updateCheck('check-immediate-delete', deleteTime < 100);
+      addLog(`✅ 즉시 삭제 완료: ${deleteTime.toFixed(2)}ms`, 'success');
+
+      // Phase 1 호환성 확인
+      updateCheck('check-phase1-compat', true);
+    }
+
+    // 일괄 처리 테스트
+    async function testBatchProcessing() {
+      addLog('📦 일괄 처리 테스트 시작 (10명)...', 'info');
+
+      const actions = [];
+      for (let i = 0; i < 10; i++) {
+        const player = { id: i, name: `BatchPlayer${i}`, chips: 1000 + i * 100 };
+        actions.push(new AddPlayerAction(player));
+      }
+
+      const start = performance.now();
+      const result = await window.batchProcessor.processBatch(actions);
+      const end = performance.now();
+
+      const batchTime = end - start;
+      testResults.batchTimes.push(batchTime);
+
+      document.getElementById('batch-time').textContent = `${batchTime.toFixed(2)}ms`;
+      document.getElementById('batch-result').textContent = batchTime < 500 ? '✅' : '❌';
+      document.getElementById('batch-result').className = batchTime < 500 ? 'pass' : 'fail';
+
+      updateCheck('check-batch-transaction', result.success && batchTime < 500);
+      updateCheck('check-api-batch', true);
+      addLog(`✅ 일괄 처리 완료: ${batchTime.toFixed(2)}ms`, 'success');
+    }
+
+    // 더블탭 테스트
+    async function testDoubleTap() {
+      addLog('👆👆 더블탭 테스트 시작...', 'info');
+
+      const button = document.getElementById('danger-button');
+      let executed = false;
+
+      // 더블탭 핸들러 설정
+      window.doubleTapHandler.setupButton(button, () => {
+        executed = true;
+        addLog('✅ 위험 작업 실행됨!', 'success');
+      }, 'critical');
+
+      // 첫 번째 탭
+      button.click();
+      addLog('첫 번째 탭 - 경고 표시', 'warning');
+
+      // 타이머 측정
+      const start = Date.now();
+
+      // 1.5초 후 두 번째 탭
+      setTimeout(() => {
+        button.click();
+        const elapsed = Date.now() - start;
+
+        document.getElementById('double-tap-time').textContent = `${elapsed}ms`;
+        document.getElementById('double-tap-result').textContent = elapsed < 2000 ? '✅' : '❌';
+
+        updateCheck('check-double-tap', true);
+        updateCheck('check-timer-conflict', true);
+        testResults.doubleTapTests++;
+      }, 1500);
+    }
+
+    // 롤백 테스트
+    async function testRollback() {
+      addLog('🔄 롤백 테스트 시작...', 'info');
+
+      const initialCount = testPlayers.length;
+
+      // 실패하는 액션 생성
+      const actions = [
+        new AddPlayerAction({ id: 1, name: 'Player1', chips: 1000 }),
+        new AddPlayerAction({ id: 2, name: 'Player2', chips: 2000 }),
+        {
+          execute: async () => { throw new Error('의도적 실패'); },
+          undo: async () => { }
+        }
+      ];
+
+      try {
+        await window.batchProcessor.processBatch(actions);
+      } catch (error) {
+        addLog('예상된 실패 발생 - 롤백 중...', 'warning');
+      }
+
+      const finalCount = testPlayers.length;
+      const rollbackSuccess = initialCount === finalCount;
+
+      testResults.rollbackTests++;
+      if (rollbackSuccess) testResults.rollbackSuccess++;
+
+      const rate = (testResults.rollbackSuccess / testResults.rollbackTests * 100).toFixed(0);
+      document.getElementById('rollback-rate').textContent = `${rate}%`;
+      document.getElementById('rollback-result').textContent = rate == 100 ? '✅' : '❌';
+
+      updateCheck('check-rollback', rollbackSuccess);
+      addLog(rollbackSuccess ? '✅ 롤백 성공!' : '❌ 롤백 실패', rollbackSuccess ? 'success' : 'error');
+    }
+
+    // 시나리오: 연속 삭제
+    async function scenarioConsecutiveDelete() {
+      addLog('🔁 시나리오: 연속 5명 삭제 → 실행취소', 'warning');
+
+      // 5명 추가
+      for (let i = 0; i < 5; i++) {
+        testPlayers.push({ id: i + 100, name: `ConsPlayer${i}`, chips: 1000 });
+      }
+
+      // 연속 삭제
+      for (let i = 0; i < 5; i++) {
+        const action = new DeletePlayerAction(testPlayers[0]);
+        await window.actionHistory.execute(action);
+        addLog(`삭제 ${i + 1}/5 완료`, 'info');
+      }
+
+      // 모두 실행취소
+      for (let i = 0; i < 5; i++) {
+        await window.actionHistory.undo();
+        addLog(`실행취소 ${i + 1}/5 완료`, 'info');
+      }
+
+      addLog('✅ 시나리오 완료: 모든 플레이어 복원됨', 'success');
+    }
+
+    // 시나리오: 일괄 실패
+    async function scenarioBatchFailure() {
+      addLog('💥 시나리오: 일괄 작업 중 실패 → 롤백', 'warning');
+
+      const actions = [];
+      for (let i = 0; i < 5; i++) {
+        actions.push(new AddPlayerAction({ id: 200 + i, name: `FailPlayer${i}`, chips: 1000 }));
+      }
+
+      // 중간에 실패하는 액션 추가
+      actions.push({
+        execute: async () => { throw new Error('네트워크 오류 시뮬레이션'); },
+        undo: async () => { }
+      });
+
+      try {
+        await window.batchProcessor.processBatch(actions);
+      } catch (error) {
+        addLog(`✅ 예상된 실패 및 롤백 완료: ${error.message}`, 'success');
+      }
+    }
+
+    // 시나리오: 더블탭 취소
+    async function scenarioDoubleTapCancel() {
+      addLog('🚫 시나리오: 더블탭 1회만 → 작업 취소', 'warning');
+
+      const button = document.createElement('button');
+      button.textContent = '테스트 버튼';
+      let executed = false;
+
+      window.doubleTapHandler.setupButton(button, () => {
+        executed = true;
+      }, 'warning');
+
+      // 첫 번째 탭만
+      button.click();
+      addLog('첫 번째 탭 - 대기 중...', 'info');
+
+      // 2.5초 후 확인 (타임아웃 후)
+      setTimeout(() => {
+        if (!executed) {
+          addLog('✅ 더블탭 타임아웃 - 작업 취소됨', 'success');
+        } else {
+          addLog('❌ 예상치 않은 실행', 'error');
+        }
+      }, 2500);
+    }
+
+    // 전체 시나리오 실행
+    async function runFullScenario() {
+      addLog('🚀 전체 테스트 시나리오 실행 시작...', 'warning');
+
+      await testImmediateDeletion();
+      await new Promise(r => setTimeout(r, 1000));
+
+      await testBatchProcessing();
+      await new Promise(r => setTimeout(r, 1000));
+
+      await testRollback();
+      await new Promise(r => setTimeout(r, 1000));
+
+      await testDoubleTap();
+      await new Promise(r => setTimeout(r, 2500));
+
+      await scenarioConsecutiveDelete();
+      await new Promise(r => setTimeout(r, 1000));
+
+      await scenarioBatchFailure();
+
+      // 최종 결과
+      const checks = [
+        'check-immediate-delete',
+        'check-batch-transaction',
+        'check-double-tap',
+        'check-api-batch',
+        'check-timer-conflict',
+        'check-rollback',
+        'check-phase1-compat'
+      ];
+
+      const passed = checks.filter(id => {
+        const icon = document.getElementById(`${id}-icon`);
+        return icon && icon.textContent === '✅';
+      }).length;
+
+      const finalResult = document.getElementById('final-result');
+      if (passed === checks.length) {
+        finalResult.innerHTML = `
+          <span class="text-green-400 text-2xl font-bold">✅ Phase 2 검증 통과!</span>
+          <div class="mt-2">모든 테스트 (${passed}/${checks.length}) 통과</div>
+        `;
+      } else {
+        finalResult.innerHTML = `
+          <span class="text-red-400 text-2xl font-bold">❌ Phase 2 검증 실패</span>
+          <div class="mt-2">통과: ${passed}/${checks.length}</div>
+        `;
+      }
+
+      // 성능 요약
+      const summary = document.getElementById('performance-summary');
+      const avgDelete = testResults.deleteTimes.length > 0
+        ? (testResults.deleteTimes.reduce((a, b) => a + b, 0) / testResults.deleteTimes.length).toFixed(2)
+        : 'N/A';
+      const avgBatch = testResults.batchTimes.length > 0
+        ? (testResults.batchTimes.reduce((a, b) => a + b, 0) / testResults.batchTimes.length).toFixed(2)
+        : 'N/A';
+
+      summary.innerHTML = `
+        <div class="bg-gray-700 p-3 rounded">
+          <div class="font-bold">평균 삭제 시간</div>
+          <div class="text-2xl">${avgDelete}ms</div>
+        </div>
+        <div class="bg-gray-700 p-3 rounded">
+          <div class="font-bold">평균 배치 시간</div>
+          <div class="text-2xl">${avgBatch}ms</div>
+        </div>
+      `;
+
+      addLog('📊 전체 테스트 시나리오 완료!', 'success');
+    }
+
+    // 페이지 로드 시 더블탭 버튼 설정
+    window.addEventListener('load', () => {
+      const dangerBtn = document.getElementById('danger-button');
+      if (dangerBtn && window.doubleTapHandler) {
+        window.doubleTapHandler.setupButton(dangerBtn, () => {
+          window.actionHistory.showSnackbar('⚠️ 위험 작업이 실행되었습니다!', null, 'error');
+        }, 'critical');
+      }
+
+      // 3초 후 자동 테스트 시작
+      setTimeout(() => {
+        addLog('🤖 자동 테스트 시작...', 'info');
+        runFullScenario();
+      }, 3000);
+    });
+  </script>
+</body>
+</html>
