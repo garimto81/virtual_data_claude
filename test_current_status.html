@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>현재 상태 테스트</title>
+</head>
+<body>
+    <h1>JavaScript 에러 상태 확인</h1>
+    <div id="status"></div>
+    <button onclick="testAPI()">Phase 4 API 테스트</button>
+
+    <!-- 실제 앱에서 사용하는 모든 스크립트 로드 -->
+    <script src="archive/chip-analysis-module.js?v=3.0.0" defer></script>
+    <script src="archive/table-management-v59.js?v=3.0.0" defer></script>
+    <script src="archive/action-history.js?v=3.2.5" defer></script>
+    <script src="archive/double-tap-handler.js?v=3.2.5" defer></script>
+    <script src="archive/batch-processor.js?v=3.2.5" defer></script>
+    <script src="archive/mobile-optimizer.js?v=3.2.5" defer></script>
+    <script src="archive/virtual-scroll.js?v=3.2.5" defer></script>
+    <script src="archive/offline-storage.js?v=3.2.5" defer></script>
+    <script src="src/js/modal-auto-close.js?v=1.0.0" defer></script>
+    <script src="phase4-functions.js?v=4.0.0" defer></script>
+    <script src="src/js/action-order-manager-v2.js?v=2.0.0" defer></script>
+    <script src="src/js/duplicate-remover.js?v=3.4.6" defer></script>
+
+    <script>
+        let errorCount = 0;
+        const statusDiv = document.getElementById('status');
+
+        // 에러 캐처
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            errorCount++;
+            const errorMsg = `❌ 에러 #${errorCount}: ${msg} at ${url}:${lineNo}:${columnNo}`;
+            console.error(errorMsg);
+            statusDiv.innerHTML += `<div style="color:red">${errorMsg}</div>`;
+            return true;
+        };
+
+        // 로드 완료 테스트
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                if (errorCount === 0) {
+                    statusDiv.innerHTML = '<h2 style="color:green">✅ JavaScript 에러 없음!</h2>';
+
+                    // Phase 4 함수 체크
+                    const phase4Status = `
+                        <h3>Phase 4 함수 상태:</h3>
+                        <ul>
+                            <li>window.ensureAppsScriptUrl: ${typeof window.ensureAppsScriptUrl}</li>
+                            <li>window.protectedApiCall: ${typeof window.protectedApiCall}</li>
+                            <li>window.ApiCallManager: ${typeof window.ApiCallManager}</li>
+                            <li>window.getUserFriendlyErrorMessage: ${typeof window.getUserFriendlyErrorMessage}</li>
+                        </ul>
+                    `;
+                    statusDiv.innerHTML += phase4Status;
+                } else {
+                    statusDiv.innerHTML = `<h2 style="color:red">❌ ${errorCount}개의 JavaScript 에러 발생!</h2>`;
+                }
+            }, 2000);
+        });
+
+        function testAPI() {
+            if (typeof window.getPhase4SystemStatus === 'function') {
+                const status = window.getPhase4SystemStatus();
+                alert('Phase 4 시스템 상태:\n' + JSON.stringify(status, null, 2));
+            } else {
+                alert('Phase 4 시스템이 로드되지 않았습니다!');
+            }
+        }
+    </script>
+</body>
+</html>

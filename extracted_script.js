@@ -1,780 +1,4 @@
-<!DOCTYPE html>
-<!--
-  ============================================
-  포커 핸드 로거 (Poker Hand Logger)
-  Version: 3.5.0
-  Last Modified: 2025-09-22 KST
 
-  Change Log:
-  - v3.5.0 (2025-09-24): Phase 5 - 수동 중복 제거 시스템 구현
-    • 자동 실행 완전 제거: duplicate-remover.js 스크립트 태그 제거
-    • 관리 모달에 🧹 중복 제거 버튼 추가 (빨간색 테마)
-    • 조건부 실행 로직: 앱 초기화 및 Apps Script URL 검증
-    • 사용자 경험 개선: 확인 대화상자, 로딩 상태, 결과 요약 표시
-    • 동적 모듈 로딩: 필요 시에만 duplicate-remover.js 로드
-    • Phase 5 전용 테스트 시나리오 및 검증 도구 제공
-  - v3.4.26 (2025-09-22): Type 시트 구조 변경 대응 및 Camera Preset 로직 제거
-    • Type 시트 새 구조: A:Player, B:Table, C:Notable, D:Chips, E:UpdatedAt, F:Seat, G:Status
-    • Camera Preset 처리 로직 완전 제거 (기본값으로 변경)
-    • buildTypeFromCsv() 함수 칼럼 매핑 업데이트
-    • Apps Script v66 상수 업데이트 (TYPE_COLUMNS, RANGE_COLUMNS)
-    • DuplicateRemover 칼럼 인덱스 수정
-    • updatePlayerChips, batchUpdatePlayers, addPlayer 함수 구조 변경
-  - v3.4.25 (2025-09-19): ActionOrderManagerV2 완전 통합
-    • 기존 ActionOrderManager 제거
-    • 절대 순위 시스템으로 전면 교체
-    • 핸드별 고정 순서로 안정성 향상
-    • 폴드/올인 시에도 순서 유지
-  - v3.4.10 (2025-09-18): GitHub 저장소 구조 통합 및 간소화
-    • 파일들을 루트 레벨로 이동 (virtual_data 서브폴더 제거)
-    • GitHub Pages 경로 단순화: garimto81.github.io/virtual_data
-    • 관리 포인트 통합으로 유지보수성 향상
-  - v3.4.9 (2025-09-18): openCardSelector 함수 전역 접근 문제 해결
-    • openCardSelector 함수를 window 객체에 등록
-    • ActionOrderManager에서 카드 선택 UI 정상 호출 가능
-  - v3.4.8 (2025-09-18): JavaScript 파일 경로 버그 수정
-    • archive 폴더로 스크립트 경로 수정 (404 에러 해결)
-    • 모든 JavaScript 파일이 정상 로드됨
-  - v3.4.7 (2025-09-18): 텍스트 카드 입력 UI 완전 제거
-    • 텍스트 입력 필드 제거, 비주얼 카드 선택기로 통합
-    • showFeedback 함수 전역 접근 문제 해결
-    • promptForBoardCards가 openCardSelector 사용하도록 변경
-    • 모든 카드 입력이 일관된 UI로 통합
-  - v3.4.6 (2025-09-18): 중복 플레이어 검사 사용자 경험 개선
-    • 백그라운드 검사로 변경 (UI 차단 없음)
-    • 진행 메시지 간소화 (콘솔 위주)
-    • 중요한 결과만 짧게 표시 (2초 스낵바)
-    • 페이지 로드 시 조용한 실행
-  - v3.4.5 (2025-09-18): 카드 입력 시스템 통합
-    • 비주얼 카드 선택 UI로 완전 통일
-    • 이미 입력된 카드가 있으면 자동 스킵
-  - v3.3.3 (2025-09-17): 유연한 칩 처리 시스템
-    • 칩 초과 베팅 허용 - 경고만 표시하고 진햗
-    • 마이너스 칩 허용 및 시각적 표시 (빨간색)
-    • 수동 칩 조정으로 유연한 처리 가능
-    • 현실적인 상황에 대응하는 설계
-  - v3.3.2 (2025-09-17): 칩 초과 베팅 방지 시스템 (deprecated)
-  - v3.3.1 (2025-09-17): 칩 초과 베팅 자동 올인 처리 (deprecated)
-  - v3.3.0 (2025-09-17): 칩 수정 시 중복 플레이어 생성 문제 해결
-    • Apps Script v65로 업그레이드
-    • updatePlayerChips 함수 개선: 기존 플레이어 없으면 새로 추가
-    • 칩 수정 시 자동 중복 제거 로직 추가
-  - v3.2.9 (2025-09-17): 중복 제거 아키텍처 개선
-    • 별도 중복 제거 버튼 제거
-    • 일괄 등록 시 자동 중복 제거 처리
-    • Apps Script v64로 업그레이드
-  - v3.2.8 (2025-09-17): 중복 플레이어 감지 및 제거 시스템 구현
-    • Apps Script에 removeDuplicatePlayers() 함수 추가
-    • batchUpdate 및 addPlayer에서 자동 중복 제거
-    • 프론트엔드에 중복 제거 버튼 추가 (관리 모달)
-    • 자동 플레이어 등록 로직 제거 (중복 방지)
-    • 강화된 중복 체크 시스템 (테이블_플레이어 조합)
-  - v3.2.7 (2025-09-17): Apps Script 삭제 로직 디버깅 강화 및 조건 완화
-  - v3.2.7 (2025-09-17): 시트 정렬 버튼 제거, 플레이어 삭제 로직 개선
-  - v3.2.7 (2025-09-17): 정렬 기준 변경 (Table > Seat)
-  - v3.2.4 (2025-09-17): Google Sheets 자동 정렬 기능 추가
-  - v3.2.3 (2025-09-17): 디버귵 로그 개선 및 캐시 버스팅
-  - v3.2.2 (2025-09-17): 플레이어 삭제 성능 최적화
-  - v3.2.1 (2025-09-17): 플레이어 삭제 로직 버그 수정
-  - v3.2.0 (2025-09-17): Phase 3 - 모바일 최적화 완성
-    • 터치 인터페이스 최적화 (44x44px 최소 크기)
-    • 스와이프 제스처로 실행취소 (오른쪽 스와이프)
-    • 롱프레스 컨텍스트 메뉴 시스템
-    • 햅틱 피드백 및 진동 API 지원
-    • 가상 스크롤로 대용량 리스트 성능 최적화
-    • IndexedDB 기반 오프라인 저장소
-    • 자동 동기화 큐 및 재시도 로직
-    • 메모리 관리 및 성능 모니터링
-  - v3.1.0 (2025-01-17): Phase 2 - 기능별 즉시 실행
-    • 더블탭으로 위험 작업 보호
-    • 트랜잭션 방식의 일괄 처리
-    • API 배치 호출 최적화
-    • 더블탭 타이머 충돌 방지
-  - v3.0.0 (2025-01-17): 모바일 최적화 - Phase 1 완료
-    • confirm 팝업 제거, 즉시 실행 + 실행취소 시스템 구현
-    • ActionHistory 시스템으로 작업 이력 관리
-    • 스낵바 UI로 실시간 피드백 제공
-    • 메모리 최적화 (히스토리 20개 제한)
-  - v2.29.0 (2025-09-16): 10개 시트 고정 플레이어 관리 시스템
-    • 스트릿 선택 시 자동으로 액션 패드 열기
-    • 포커 포지션 순서대로 자동 플레이어 진행
-    • Check/Call 버튼 상황별 동적 변경 (금액 표시)
-    • 베팅 입력 버그 수정 및 팝업 즉시 표시
-  - v2.15.0 (2025-09-16): 테이블 관리 UI 단순화 - 테이블 전용 관리 모달로 변경
-  - v2.31.0 (2025-09-16): 로딩 중 UI 잠금 및 플레이어 관리 일괄 업데이트 시스템 구현 - 충돌 방지 및 즉시 반영
-  - v2.30.0 (2025-09-16): Apps Script URL 클라우드 동기화 시스템 구현 - GitHub Gist API 활용 기기간 설정 동기화
-  - v2.14.0 (2025-09-16): 플레이어 관리 기능 추가 - 관리 버튼에서 플레이어 추가/삭제/좌석 변경
-  - v2.10.9 (2025-09-15): 팟 계산 로직 버그 수정 - 중간 베팅 금액 누적 문제 해결
-  - v2.10.8 (2025-09-15): 키패드 중복 입력 버그 수정 - 중복 이벤트 리스너 제거
-  - v2.10.7 (2025-09-15): 버튼/SB/BB 선택 로직 개선 - 전체 플레이어 리스트에서 선택 가능
-  - v2.10.6 (2025-09-15): 버튼 드롭다운 작동 버그 수정, 버전 중앙 관리 시스템 구현
-  - v2.10.5 (2025-09-15): 버튼 위치 중복 입력 버그 수정
-  - v2.10.4 (2025-09-15): 버튼 설정 UI 최적화
-  - v2.10.3 (2025-09-15): 버튼 설정 UI 개선
-  - v2.10.2 (2025-09-15): 보드 카드 한번에 입력 기능
-  - v2.10.1 (2025-09-15): 플레이어 칩 버튼 이벤트 버그 수정
-  - v2.10.0 (2025-09-15): 폴드 되돌리기 버그 수정 외
-  - v2.9.5 (2025-09-12): 시작 칩 업데이트 버그 수정
-  - v2.9.4 (2025-09-12): 플레이어 이름 표시 버그 수정
-  - v2.9.3 (2025-09-12): 좌석 번호 제거, 0.5x11 그리드, 버튼 드롭다운 버그 수정
-  - v2.9.2 (2025-01-11): 1x11 그리드로 좌석 배치 개선
-  - v2.9.1 (2025-01-11): 좌석 배치 UI 공간 최적화
-  - v2.9.0 (2025-01-11): 좌석 배치 시스템 및 액션 순서 로직 추가
-  - v2.8.3 (2025-01-11): 카드 입력 다이얼로그 버튼 위치 변경 (UX 개선)
-  - v2.8.2 (2025-01-10): 문서 통합 및 프로젝트 정리
-  - v2.8.1 (2025-01-10): 2백만 칩 이상 무한 표시 버그 수정
-  - v2.8.0 (2025-01-09): 올인 제한 고려한 정확한 팟 계산 로직 구현
-  - v2.7.0 (2025-01-08): 팟 계산 로직 개선 - 블라인드/안티를 플레이어별 기여액에 포함
-  - v2.0.0 (2025-01-02): Smart Check/Call 버튼 및 스트리트 자동 진행 시스템 구현
-  - v1.9.0 (2024-12-30): 팟 사이즈 조정 로직 및 올인 콜 버그 수정
-  - v1.8.0 (2024-12-28): 플레이어 상태 추적 시스템 추가
-  ============================================
--->
-<html lang="ko">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0" />
-  <meta http-equiv="cache-control" content="no-cache, must-revalidate, max-age=0" />
-  <meta http-equiv="pragma" content="no-cache" />
-  <meta http-equiv="expires" content="0" />
-  <title>포커 핸드 로거 v3.4.42-debug</title>
-  <script src="https://cdn-tailwindcss.vercel.app/"></script>
-  <script src="archive/chip-analysis-module.js?v=3.0.0" defer></script>
-  <!-- 테이블 관리 모듈 v59 - IN/OUT 두 가지 상태만 사용 -->
-  <script src="archive/table-management-v59.js?v=3.0.0" defer></script>
-  <!-- ActionHistory 시스템 - Phase 1 -->
-  <script src="archive/action-history.js?v=3.2.5" defer></script>
-  <!-- Phase 2: 더블탭 & 배치 처리 -->
-  <script src="archive/double-tap-handler.js?v=3.2.5" defer></script>
-  <script src="archive/batch-processor.js?v=3.2.5" defer></script>
-  <!-- Phase 3: 모바일 최적화 -->
-  <script src="archive/mobile-optimizer.js?v=3.2.5" defer></script>
-  <script src="archive/virtual-scroll.js?v=3.2.5" defer></script>
-  <script src="archive/offline-storage.js?v=3.2.5" defer></script>
-  <!-- 모달 자동 닫기 모듈 -->
-  <script src="src/js/modal-auto-close.js?v=1.0.0" defer></script>
-  <!-- Phase 4: API 호출 보호 시스템 -->
-  <script src="phase4-functions.js?v=4.0.0" defer></script>
-  <!-- 액션 순서 관리자 V2 - 절대 순위 시스템 -->
-  <script src="src/js/action-order-manager-v2.js?v=2.0.0" defer></script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
-    html, body { height: 100vh; overflow: hidden; font-family: 'Noto Sans KR', sans-serif; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-    #app-container { display: flex; flex-direction: column; height: 100%; }
-    main { flex-grow: 1; overflow-y: auto; }
-    .btn { /* transition removed for instant response */ }
-    .btn:active { transform: scale(0.95); }
-    .btn-selected { background-color: #FBBF24 !important; color: #111827 !important; font-weight: bold; }
-    .card-placeholder { border: 2px dashed #4B5563; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 1px; background-color: rgba(255,255,255,0.05); flex-shrink: 0; }
-    .card-display { font-family: 'Roboto', sans-serif; background-color: white; border-radius: 4px; padding: 1px; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 0.8rem; }
-    .card-display .rank { font-weight: bold; font-size: 1rem; }
-    .modal { /* transition removed for instant popup */ backdrop-filter: blur(4px); }
-    .card-selector-btn { font-family: 'Roboto', sans-serif; font-size: 1rem; font-weight: bold; }
-    .card-selector-btn.card-red { color: #DC2626; }
-    .card-selector-btn.card-black { color: #111827; }
-    .card-selector-btn.selected { border: 3px solid #FBBF24; transform: scale(0.95); }
-
-    /* 새로운 보드 카드 상태 스타일 */
-    .card-selector-btn[data-status="editable"] {
-      background: #FCD34D;
-      border: 2px solid #F59E0B;
-      box-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
-    }
-    .card-selector-btn[data-status="locked"] {
-      background: #6B7280;
-      color: #9CA3AF;
-      border: 2px solid #374151;
-      cursor: not-allowed;
-      position: relative;
-    }
-    .card-selector-btn[data-status="locked"]:after {
-      content: '🔒';
-      position: absolute;
-      top: 1px;
-      right: 2px;
-      font-size: 10px;
-    }
-    .card-selector-btn[data-status="used"] {
-      background: #6B7280;
-      color: #9CA3AF;
-      cursor: not-allowed;
-    }
-    .card-selector-btn[data-status="available"]:hover {
-      background: #FEF3C7;
-    }
-    .player-card.is-winner { background-color: rgba(251, 191, 36, 0.1); }
-    select, input[type="text"] { font-size: 0.875rem; }
-    .chip-color-sample { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #4B5563; cursor: pointer; }
-    .chip-analysis-btn { font-size: 0.75rem; padding: 0.25rem 0.5rem; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-    .pulse-animation { animation: pulse 2s infinite; }
-
-    /* 스낵바 스타일 (모바일 최적화) */
-    .snackbar {
-      position: fixed;
-      bottom: -60px;
-      left: 10px;
-      right: 10px;
-      background: #333;
-      color: white;
-      padding: 12px;
-      border-radius: 4px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      transition: bottom 0.2s ease-out;
-      z-index: 10000;
-      font-size: 14px;
-      max-width: 500px;
-      margin: 0 auto;
-    }
-
-    .snackbar.show {
-      bottom: 10px;
-    }
-
-    .snackbar-undo-btn {
-      background: transparent;
-      border: 1px solid white;
-      color: white;
-      padding: 4px 12px;
-      border-radius: 3px;
-      font-size: 12px;
-      margin-left: 10px;
-      cursor: pointer;
-      min-width: 44px;
-      min-height: 30px;
-    }
-
-    .snackbar-undo-btn:active {
-      transform: scale(0.95);
-    }
-
-    .snackbar-info {
-      background: #2563eb;
-    }
-
-    .snackbar-error {
-      background: #dc2626;
-    }
-
-    .snackbar-success {
-      background: #16a34a;
-    }
-
-    .snackbar-warning {
-      background: #f59e0b;
-    }
-
-    /* 더블탭 스타일 (Phase 2) */
-    .double-tap-required {
-      position: relative;
-    }
-
-    .double-tap-warning {
-      animation: pulse 0.5s ease-in-out infinite;
-      background: #f59e0b !important;
-      color: white !important;
-    }
-
-    .danger-critical {
-      background: #dc2626 !important;
-      color: white !important;
-    }
-
-    .danger-warning {
-      background: #f59e0b !important;
-      color: white !important;
-    }
-
-    .executing {
-      opacity: 0.6;
-      pointer-events: none;
-    }
-
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.02); }
-    }
-  </style>
-</head>
-<body class="bg-gray-900 text-white antialiased">
-  <div id="app-container">
-    <!-- 버전 표시 헤더 -->
-    <div class="bg-gray-900 border-b border-gray-700 px-3 py-1">
-      <div class="flex justify-between items-center text-xs">
-        <span class="font-bold text-amber-400">포커 핸드 로거</span>
-        <div class="flex items-center gap-2">
-          <button id="settings-btn" class="text-gray-400 hover:text-amber-400" title="설정">
-            ⚙️
-          </button>
-          <span id="version-display" class="text-gray-400">v2.26.6</span>
-        </div>
-      </div>
-    </div>
-    <main class="p-2 space-y-2">
-      <div class="bg-gray-800 p-2 rounded-lg space-y-2">
-        <div class="flex items-center gap-2 text-sm">
-          <div class="flex-1 flex items-center gap-1 bg-gray-700 p-1 rounded-md min-w-0">
-            <span id="hand-number-display" class="font-bold px-1 whitespace-nowrap">#--</span>
-            <button id="load-hand-btn" class="btn bg-gray-600 px-2 py-1 rounded-md text-xs">Load</button>
-            <label class="flex items-center gap-1 text-xs ml-2">
-              <input type="checkbox" id="smart-mode-toggle" checked class="h-3 w-3">
-              <span>Smart</span>
-            </label>
-          </div>
-          <div class="flex-1 min-w-0">
-            <button id="table-selector-btn" class="w-full bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-left flex items-center justify-between hover:bg-gray-600">
-              <span id="selected-table-display">테이블 선택</span>
-              <span class="text-gray-400">▼</span>
-            </button>
-          </div>
-          <div class="flex-1 flex items-center gap-1 min-w-0">
-            <select id="timezone-selector" class="flex-grow bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-xs"></select>
-            <span id="time-display" class="bg-gray-900/50 p-1 rounded-md font-mono text-xs"></span>
-          </div>
-          <div class="flex items-center gap-1">
-            <button id="manage-players-btn" class="btn bg-gray-600 hover:bg-gray-700 px-2 py-1 rounded-md text-xs">관리</button>
-            <button id="refresh-data" class="text-lg" title="데이터 새로고침">🔄</button>
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-          <div class="text-xs text-gray-300 flex items-center gap-2">
-            <button id="cam-btn-1" class="btn bg-gray-700 px-2 py-1 rounded"></button>
-            <button id="cam-btn-2" class="btn bg-gray-700 px-2 py-1 rounded"></button>
-          </div>
-          <div class="text-right text-xs text-gray-400">
-            <span id="data-stamp"></span>
-          </div>
-        </div>
-        <!-- 좌석 배치 및 플레이어 선택 (1x11 그리드) -->
-        <div class="bg-gray-700 p-2 rounded-lg">
-          <div id="seat-buttons" class="grid grid-cols-11 gap-1">
-            <!-- 10개 좌석 + 버튼 드롭다운 (11번째) -->
-          </div>
-          <div id="position-indicators" class="text-xs text-gray-400 mt-1 text-center">
-            <!-- SB, BB 표시 -->
-          </div>
-          <div id="position-display" class="mt-1 text-xs">
-            <!-- 버튼 위치 상세 표시 -->
-          </div>
-        </div>
-      </div>
-
-      <div id="player-details-section" class="bg-gray-800 p-2 rounded-lg space-y-1"></div>
-
-      <div class="bg-gray-800 p-2 rounded-lg space-y-2">
-        <div class="flex flex-wrap items-center gap-2">
-          <div class="flex items-center gap-1">
-            <button id="small-blind-btn" data-purpose="smallBlind" class="btn bg-gray-700 p-1 rounded-md text-sm min-w-[60px]">0</button>
-            <button id="big-blind-btn" data-purpose="bigBlind" class="btn bg-gray-700 p-1 rounded-md text-sm min-w-[60px]">0</button>
-            <div class="flex items-center">
-              <input id="bb-ante-checkbox" type="checkbox" class="h-4 w-4 bg-gray-700 border-gray-600 rounded text-amber-500">
-              <label for="bb-ante-checkbox" class="ml-1 text-xs">Ante</label>
-            </div>
-          </div>
-          <div id="board-card-placeholders" class="flex flex-wrap gap-1 items-center flex-grow justify-end"></div>
-        </div>
-        <div class="space-y-1" id="street-logs-container"></div>
-        
-        <!-- 현재 차례 표시 & 빠른 액션 버튼 (자동 모드) -->
-        <div id="current-turn-indicator" class="hidden mt-2 p-2 bg-gray-700 rounded-md">
-          <div class="text-center text-sm mb-2">
-            <!-- 동적으로 생성됨 -->
-          </div>
-          <div id="quick-action-buttons" class="grid grid-cols-5 gap-1">
-            <button onclick="addAutoAction('Checks')" class="btn bg-green-600 hover:bg-green-500 text-white text-xs py-1 px-2 rounded">
-              체크
-            </button>
-            <button onclick="handleSmartCall()" class="btn bg-blue-600 hover:bg-blue-500 text-white text-xs py-1 px-2 rounded">
-              콜
-            </button>
-            <button onclick="openQuickBetRaise()" class="btn bg-orange-600 hover:bg-orange-500 text-white text-xs py-1 px-2 rounded">
-              벳/레이즈
-            </button>
-            <button onclick="addAutoAction('Folds')" class="btn bg-red-600 hover:bg-red-500 text-white text-xs py-1 px-2 rounded">
-              폴드
-            </button>
-            <button onclick="handleAllIn()" class="btn bg-purple-600 hover:bg-purple-500 text-white text-xs py-1 px-2 rounded">
-              올인
-            </button>
-          </div>
-        </div>
-      </div>
-
-
-      <div class="bg-gray-800 p-2 rounded-lg space-y-2">
-        <div class="flex flex-wrap gap-1 items-center">
-          <span class="text-sm font-bold mr-2">승자:</span>
-          <div id="winner-buttons" class="flex flex-wrap gap-1 flex-grow"></div>
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-          <button id="reset-btn" class="w-full btn bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-3 rounded-md text-sm">새 핸드</button>
-          <button id="send-to-sheet-btn" class="w-full btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-md text-sm">시트 전송</button>
-        </div>
-        <p id="feedback-message" class="text-center h-4 text-xs font-semibold"></p>
-      </div>
-
-    </main>
-    <footer class="flex-shrink-0 p-1 text-center">
-      <button id="show-log-btn" class="text-gray-500 hover:text-gray-300 text-xs">로그 보기</button>
-    </footer>
-  </div>
-
-  <!-- Modals -->
-  <div id="card-selector-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-2 z-50 hidden opacity-0"></div>
-  <div id="action-pad-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden opacity-0"></div>
-  <div id="keypad-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden opacity-0"></div>
-  <div id="load-hand-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden opacity-0"></div>
-  <!-- 관리 모달 -->
-  <div id="registration-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden opacity-0">
-    <div class="bg-gray-800 rounded-lg p-4 max-w-lg w-full max-h-[90vh] overflow-y-auto">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-bold text-amber-400">관리 설정</h2>
-        <button id="close-registration-modal" class="text-2xl hover:text-gray-400">&times;</button>
-      </div>
-
-      <!-- 메인 관리 버튼들 -->
-      <div id="management-menu" class="space-y-3 mb-4">
-        <!-- 버튼들 -->
-        <div class="grid grid-cols-2 gap-3">
-          <button id="open-table-management-btn" class="bg-blue-600 hover:bg-blue-700 py-3 px-4 rounded-lg text-sm font-medium flex flex-col items-center">
-            <span class="text-2xl mb-1">🎯</span>
-            <span>테이블 선택</span>
-          </button>
-          <button id="remove-duplicates-btn" class="bg-red-600 hover:bg-red-700 py-3 px-4 rounded-lg text-sm font-medium flex flex-col items-center">
-            <span class="text-2xl mb-1">🧹</span>
-            <span>중복 제거</span>
-          </button>
-        </div>
-
-        <!-- Apps Script URL 설정 -->
-        <div class="bg-gray-700 p-3 rounded-lg">
-          <label class="block text-sm font-medium text-gray-300 mb-2">
-            Apps Script URL
-            <span class="text-xs text-gray-500 ml-2">(재배포 후 새 URL 입력)</span>
-          </label>
-          <div class="space-y-2">
-            <!-- 현재 저장된 URL 표시 -->
-            <div id="current-url-display" class="bg-gray-800 p-2 rounded border border-gray-600">
-              <div class="text-xs text-gray-400 mb-1">현재 저장된 URL:</div>
-              <div id="management-current-url" class="text-xs text-amber-400 break-all font-mono"></div>
-            </div>
-
-            <!-- 재배포 안내 메시지 -->
-            <div class="bg-blue-900 border border-blue-700 p-2 rounded text-xs">
-              <div class="text-blue-300 font-semibold mb-1">📌 Apps Script 재배포 필요</div>
-              <div class="text-blue-200">
-                "Unknown action: batchUpdate" 오류가 발생하면:
-                <ol class="list-decimal list-inside mt-1 text-blue-100">
-                  <li>apps-script/Code_v59_InOut.gs 파일 복사</li>
-                  <li>Google Apps Script에 붙여넣기</li>
-                  <li>배포 → 새 배포 관리 → 편집 → 버전: 새 버전</li>
-                  <li>새 URL을 아래에 입력하여 저장</li>
-                </ol>
-              </div>
-            </div>
-
-            <!-- Spreadsheet ID 입력 -->
-            <input type="text" id="management-spreadsheet-id-input"
-                   class="w-full bg-gray-600 text-white rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono"
-                   placeholder="Google Spreadsheet ID를 입력하세요">
-
-            <!-- 저장 버튼 -->
-            <button id="save-spreadsheet-id-btn" class="w-full bg-amber-600 hover:bg-amber-700 py-1.5 rounded text-sm font-medium">
-              🔗 Spreadsheet ID 저장
-            </button>
-
-            <!-- 저장 상태 메시지 -->
-            <div id="url-save-status" class="hidden text-xs p-2 rounded"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 테이블 관리 섹션 (초기에 숨김) -->
-      <div id="player-management-content" class="space-y-3 hidden">
-          <!-- 선택된 테이블 정보 -->
-          <div class="bg-gray-700 p-3 rounded-lg">
-            <div class="flex items-center justify-between mb-2">
-              <h4 class="text-sm font-bold text-amber-400">선택된 테이블</h4>
-              <span id="sync-status" class="text-xs text-gray-400"></span>
-            </div>
-            <div id="selected-table-info" class="text-sm">
-              <span id="selected-table-name" class="text-amber-400 font-bold"></span>
-              <button id="change-table-btn" class="ml-2 text-xs bg-gray-600 hover:bg-gray-500 px-2 py-1 rounded">변경</button>
-            </div>
-          </div>
-
-          <!-- 새 플레이어 추가 섹션 -->
-          <div id="player-add-section" class="bg-gray-700 p-3 rounded-lg hidden">
-            <h4 class="text-sm font-bold mb-2 text-amber-400">플레이어 추가</h4>
-            <div class="grid grid-cols-3 gap-2 mb-2">
-              <input type="text" id="new-player-name" class="bg-gray-600 px-2 py-1 rounded text-sm" placeholder="이름">
-              <input type="number" id="new-player-seat" class="bg-gray-600 px-2 py-1 rounded text-sm" placeholder="좌석" min="1" max="10">
-              <input type="text" id="new-player-chips" class="bg-gray-600 px-2 py-1 rounded text-sm" placeholder="칩">
-            </div>
-            <button id="add-player-local-btn" class="w-full bg-green-600 hover:bg-green-700 py-1 rounded text-sm">+ 추가</button>
-          </div>
-
-          <!-- 현재 플레이어 목록 (10개 시트 고정) -->
-          <div id="player-list-section" class="bg-gray-700 p-3 rounded-lg hidden">
-            <div class="flex items-center justify-between mb-2">
-              <h4 class="text-sm font-bold text-amber-400">플레이어 시트</h4>
-              <span id="player-count" class="text-xs text-amber-300"></span>
-            </div>
-            <div id="current-players-list" class="h-auto">
-              <!-- 10개 시트가 고정으로 표시됨 -->
-            </div>
-          </div>
-
-          <!-- 일괄 등록 버튼 -->
-          <div id="batch-actions" class="hidden">
-            <div class="flex gap-2 mb-2">
-              <button id="reset-changes-btn" class="flex-1 bg-gray-600 hover:bg-gray-700 py-2 rounded text-sm">
-                ↩️ 변경 취소
-              </button>
-              <button id="batch-register-btn" class="flex-1 bg-amber-600 hover:bg-amber-700 py-2 rounded text-sm font-bold">
-                ✅ 일괄 등록
-              </button>
-            </div>
-            <div id="changes-summary" class="mt-2 text-xs text-gray-400"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div id="log-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden opacity-0">
-    <div class="bg-gray-800 rounded-lg p-4 w-full max-w-lg h-2/3 flex flex-col">
-      <div class="flex justify-between items-center mb-2">
-        <h2 class="text-xl font-bold text-amber-400">로딩 로그</h2>
-        <button id="close-log-modal" class="text-2xl">&times;</button>
-      </div>
-      <div id="log-display" class="bg-gray-900/50 p-3 rounded-md flex-grow overflow-y-auto text-sm font-mono"></div>
-    </div>
-  </div>
-
-  <!-- 칩 컬러 선택 모달 (카메라 또는 파일) -->
-  <div id="chip-color-modal" class="modal fixed inset-0 bg-black bg-opacity-75 hidden z-50">
-    <div class="flex items-center justify-center h-full p-4">
-      <div class="bg-gray-800 rounded-lg p-4 max-w-md w-full">
-        <h3 class="text-lg font-bold mb-3 text-amber-400">칩 등록</h3>
-        
-        <!-- 선택 옵션 -->
-        <div id="chip-option-select" class="mb-4">
-          <p class="text-sm text-gray-300 mb-3">칩 사진을 추가하는 방법을 선택하세요:</p>
-          <div class="grid grid-cols-2 gap-2">
-            <button id="select-camera-btn" class="bg-blue-600 hover:bg-blue-700 p-3 rounded-lg flex flex-col items-center">
-              <span class="text-2xl mb-1">📷</span>
-              <span class="text-sm">사진 촬영</span>
-            </button>
-            <button id="select-file-btn" class="bg-purple-600 hover:bg-purple-700 p-3 rounded-lg flex flex-col items-center">
-              <span class="text-2xl mb-1">📁</span>
-              <span class="text-sm">파일 선택</span>
-            </button>
-          </div>
-        </div>
-        
-        <!-- 카메라 뷰 (숨김 상태) -->
-        <div id="camera-view" class="hidden">
-          <video id="chip-video" class="w-full rounded-lg mb-3" autoplay playsinline></video>
-          <canvas id="chip-canvas" class="hidden"></canvas>
-        </div>
-        
-        <!-- 이미지 프리뷰 (숨김 상태) -->
-        <div id="image-preview" class="hidden">
-          <img id="preview-img" class="w-full rounded-lg mb-3" alt="미리보기">
-        </div>
-        
-        <!-- 파일 입력 (숨김) -->
-        <input type="file" id="file-input" class="hidden" accept="image/*">
-        
-        <!-- 칩 값 입력 -->
-        <input type="text" id="chip-value-input" class="w-full bg-gray-700 px-3 py-2 rounded mb-3" placeholder="칩 값 (예: 1000)">
-        
-        <!-- 액션 버튼들 -->
-        <div class="flex gap-2">
-          <button id="capture-chip-btn" class="flex-1 bg-green-600 hover:bg-green-700 py-2 rounded-lg font-medium hidden">촬영</button>
-          <button id="confirm-chip-btn" class="flex-1 bg-green-600 hover:bg-green-700 py-2 rounded-lg font-medium hidden">확인</button>
-          <button id="retry-chip-btn" class="flex-1 bg-yellow-600 hover:bg-yellow-700 py-2 rounded-lg font-medium hidden">다시선택</button>
-          <button id="close-chip-modal" class="flex-1 bg-gray-600 hover:bg-gray-700 py-2 rounded-lg font-medium">취소</button>
-        </div>
-        
-        <!-- 안내 메시지 -->
-        <div id="chip-info-message" class="mt-3 text-xs text-gray-400 text-center">
-          💡 PC에서는 파일 선택, 모바일에서는 카메라 촬영을 권장합니다
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 칩 스택 분석 모달 -->
-  <div id="stack-analysis-modal" class="modal fixed inset-0 bg-black bg-opacity-75 hidden z-50">
-    <div class="flex items-center justify-center h-full p-4">
-      <div class="bg-gray-800 rounded-lg p-4 max-w-lg w-full max-h-[90vh] overflow-y-auto">
-        <h3 class="text-lg font-bold mb-3 text-amber-400">
-          <span id="analyzing-player-name">플레이어</span> 칩 스택 분석
-        </h3>
-        <div id="stack-images-container" class="grid grid-cols-2 gap-2 mb-3"></div>
-        <video id="stack-video" class="w-full rounded-lg mb-3" autoplay playsinline></video>
-        <canvas id="stack-canvas" class="hidden"></canvas>
-        <div class="flex gap-2 mb-3">
-          <button id="capture-stack-btn" class="flex-1 bg-blue-600 hover:bg-blue-700 py-2 rounded-lg font-medium">사진 추가</button>
-          <button id="analyze-stack-btn" class="flex-1 bg-green-600 hover:bg-green-700 py-2 rounded-lg font-medium" disabled>AI 분석</button>
-        </div>
-        <button id="close-stack-modal" class="w-full bg-gray-600 hover:bg-gray-700 py-2 rounded-lg font-medium">닫기</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- AI 분석 중 오버레이 -->
-  <div id="analyzing-overlay" class="fixed inset-0 bg-black bg-opacity-80 hidden z-[60]">
-    <div class="flex items-center justify-center h-full">
-      <div class="bg-gray-900 rounded-lg p-6 text-center">
-        <div class="text-3xl mb-3 pulse-animation">🤖</div>
-        <p class="text-lg font-medium mb-2">AI 분석 중...</p>
-        <p class="text-sm text-gray-400">칩 스택을 분석하고 있습니다</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- 테이블 선택 모달 -->
-  <div id="table-selector-modal" class="modal fixed inset-0 bg-black bg-opacity-75 hidden z-50">
-    <div class="flex items-center justify-center h-full p-2">
-      <div class="bg-gray-800 rounded-lg w-full max-w-md h-full max-h-screen flex flex-col">
-        <!-- 헤더 -->
-        <div class="flex items-center justify-between p-4 border-b border-gray-700">
-          <h3 class="text-lg font-bold text-amber-400">🎯 테이블 선택</h3>
-          <button id="close-table-selector" class="text-gray-400 hover:text-white text-xl">×</button>
-        </div>
-        
-        <!-- 검색 및 필터 -->
-        <div class="p-4 border-b border-gray-700">
-          <input type="text" id="table-search" placeholder="테이블 번호 또는 플레이어 검색..." 
-                 class="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm mb-3">
-          <div class="flex gap-2 flex-wrap">
-            <button id="filter-all" class="filter-btn px-3 py-1 rounded-full text-xs bg-blue-600 text-white">전체</button>
-            <button id="filter-active" class="filter-btn px-3 py-1 rounded-full text-xs bg-gray-600 hover:bg-gray-500">활성</button>
-            <button id="filter-empty" class="filter-btn px-3 py-1 rounded-full text-xs bg-gray-600 hover:bg-gray-500">빈테이블</button>
-          </div>
-        </div>
-        
-        <!-- 페이지 토글 -->
-        <div class="px-4 py-2 border-b border-gray-700">
-          <div class="flex items-center justify-between">
-            <button id="prev-page" class="px-3 py-1 bg-gray-600 rounded hover:bg-gray-500 disabled:opacity-50">◀</button>
-            <span id="page-info" class="text-sm text-gray-400">1-20 / 100</span>
-            <button id="next-page" class="px-3 py-1 bg-gray-600 rounded hover:bg-gray-500 disabled:opacity-50">▶</button>
-          </div>
-        </div>
-        
-        <!-- 테이블 그리드 -->
-        <div class="flex-1 overflow-y-auto p-4">
-          <div id="table-grid" class="grid grid-cols-4 gap-2">
-            <!-- 테이블 버튼들이 여기에 동적 생성됩니다 -->
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 설정 모달 -->
-  <div id="settings-modal" class="modal fixed inset-0 bg-black bg-opacity-75 hidden z-50">
-    <div class="flex items-center justify-center h-full p-4">
-      <div class="bg-gray-800 rounded-lg w-full max-w-lg">
-        <!-- 헤더 -->
-        <div class="flex items-center justify-between p-4 border-b border-gray-700">
-          <h3 class="text-lg font-bold text-amber-400">⚙️ 설정</h3>
-          <button id="close-settings" class="text-gray-400 hover:text-white text-xl">×</button>
-        </div>
-        
-        <!-- 설정 내용 -->
-        <div class="p-4 space-y-4">
-          <!-- Apps Script URL 설정 -->
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-2">
-              🔗 Google Spreadsheet ID
-              <span class="text-xs text-gray-500 ml-2">(Google Sheets URL에서 추출)</span>
-            </label>
-            <div class="space-y-2">
-              <input type="text" id="google-spreadsheet-id-input"
-                     class="w-full bg-gray-700 text-white rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono"
-                     placeholder="1ABC...xyz (스프레드시트 ID만 입력)">
-              <div class="text-xs text-gray-500">
-                현재: <span id="current-spreadsheet-id" class="text-gray-400 break-all font-mono"></span>
-              </div>
-              <div class="text-xs text-blue-400 bg-blue-900/20 p-2 rounded">
-                💡 <strong>사용법:</strong> Google Sheets URL에서 <code>/d/</code> 다음에 나오는 긴 문자열을 복사하세요<br>
-                예: <code>docs.google.com/spreadsheets/d/<span class="text-yellow-300">1ABC...xyz</span>/edit</code>
-              </div>
-
-              <!-- 클라우드 동기화 상태 -->
-              <div class="bg-gray-700 rounded-md p-3 space-y-2">
-                <div class="flex items-center justify-between">
-                  <span class="text-xs font-medium text-gray-300">☁️ 클라우드 동기화</span>
-                  <span id="cloud-sync-status" class="text-xs px-2 py-1 rounded-full bg-gray-600 text-gray-400">확인 중...</span>
-                </div>
-                <div class="text-xs text-gray-500 space-y-1">
-                  <div>기기 ID: <span id="device-id-display" class="text-gray-400 font-mono text-xs"></span></div>
-                  <div id="last-sync-display" class="hidden">마지막 동기화: <span class="text-gray-400"></span></div>
-                </div>
-                <div class="flex space-x-2">
-                  <button id="sync-now-btn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs py-1.5 px-3 rounded transition-colors">
-                    🔄 지금 동기화
-                  </button>
-                  <button id="reset-cloud-btn" class="bg-gray-600 hover:bg-gray-500 text-white text-xs py-1.5 px-3 rounded transition-colors">
-                    🗑️ 초기화
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- 칩 스택 검증 설정 -->
-          <div>
-            <label class="flex items-center space-x-2">
-              <input type="checkbox" id="chip-validation-toggle" class="rounded text-amber-500 focus:ring-amber-500">
-              <span class="text-sm font-medium text-gray-300">칩 스택 검증 활성화</span>
-            </label>
-            <p class="text-xs text-gray-500 mt-1 ml-6">
-              활성화 시 보유 칩보다 큰 금액 입력을 제한합니다
-            </p>
-          </div>
-          
-          <!-- 액션 입력 모드 설정 -->
-          <div>
-            <label class="flex items-center space-x-2">
-              <input type="checkbox" id="action-input-mode-toggle" class="rounded text-amber-500 focus:ring-amber-500">
-              <span class="text-sm font-medium text-gray-300">자동 액션 매핑 모드</span>
-            </label>
-            <p class="text-xs text-gray-500 mt-1 ml-6">
-              활성화 시 액션이 순서대로 자동 매핑됩니다 (플레이어 선택 불필요)
-            </p>
-          </div>
-          
-          <!-- 버전 정보 -->
-          <div class="pt-2 border-t border-gray-700">
-            <div class="text-xs text-gray-500 space-y-1">
-              <div>버전: <span class="text-gray-400">${APP_VERSION}</span></div>
-              <div>업데이트: <span class="text-gray-400">${VERSION_DATE}</span></div>
-              <div>Sheet ID: <span class="text-gray-400 text-xs">1J-lf8bYTLPbpdhieUNdb8ckW_uwdQ3MtSBLmyRIwH7U</span></div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- 푸터 -->
-        <div class="flex justify-end gap-2 p-4 border-t border-gray-700">
-          <button id="cancel-settings" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-md text-sm font-medium">
-            취소
-          </button>
-          <button id="save-settings" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-md text-sm font-medium">
-            저장
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
   /**
    * ============================================
    * 포커 핸드 로거 - Main JavaScript
@@ -786,8 +10,8 @@
   // ========================================
   // 중앙 버전 관리 시스템
   // ========================================
-  const APP_VERSION = 'v3.5.42';
-  const VERSION_DATE = '2025-09-24';
+  const APP_VERSION = 'v3.4.26';
+  const VERSION_DATE = '2025-09-22';
   const VERSION_INFO = `포커 핸드 로거 ${APP_VERSION} (${VERSION_DATE})`;
 
   // ========================================
@@ -812,17 +36,6 @@
     }
   };
 
-  // ⚠️ 중요: 앱 시작 시 localStorage에서 Apps Script URL 로드
-  (function initializeAppsScriptUrl() {
-    const storedUrl = localStorage.getItem('appsScriptUrl');
-    if (storedUrl) {
-      window.APP_CONFIG.appsScriptUrl = storedUrl;
-      console.log('✅ localStorage에서 Apps Script URL 복원:', storedUrl);
-    } else {
-      console.log('⚠️ localStorage에 Apps Script URL이 없음');
-    }
-  })();
-
   // 네트워크 상태 모니터링
   window.addEventListener('online', () => {
     window.APP_CONFIG.state.isOnline = true;
@@ -833,47 +46,6 @@
     window.APP_CONFIG.state.isOnline = false;
     console.log('📱 오프라인 상태로 변경됨');
   });
-
-  // ========================================
-  // 좌석 파싱 유틸리티 함수들
-  // ========================================
-  
-  /**
-   * 좌석 번호 파싱 - "#1", "#2" 형식을 숫자로 변환
-   * @param {string|number} seat - 좌석 정보
-   * @returns {number} - 파싱된 좌석 번호 (실패시 0)
-   */
-  function parseSeatNumber(seat) {
-    if (!seat && seat !== 0) return 0;
-    const seatStr = String(seat).trim();
-    if (!seatStr) return 0;
-    
-    // "#1", "#2" 등의 형식에서 숫자만 추출
-    const cleanSeat = seatStr.replace(/[#]/g, '');
-    const seatNum = parseInt(cleanSeat, 10);
-    return isNaN(seatNum) ? 0 : seatNum;
-  }
-
-  /**
-   * 좌석 번호 비교 함수
-   * @param {object} a - 플레이어 객체 a
-   * @param {object} b - 플레이어 객체 b
-   * @returns {number} - 비교 결과
-   */
-  function compareSeatNumbers(a, b) {
-    const seatA = parseSeatNumber(a.seat);
-    const seatB = parseSeatNumber(b.seat);
-    return seatA - seatB;
-  }
-
-  /**
-   * 플레이어의 좌석 번호 가져오기
-   * @param {object} player - 플레이어 객체
-   * @returns {number} - 좌석 번호
-   */
-  function getPlayerSeatNumber(player) {
-    return parseSeatNumber(player.seat);
-  }
 
   // ========================================
   // Phase 2: 조건부 초기화 시스템
@@ -1512,12 +684,9 @@
     }
     
     // ====== CONFIG (필수: 실제 URL로 교체) ======
-    // Google Sheets 설정 (localStorage에서 로드)
+    // Apps Script URL 설정 (localStorage에서 로드 또는 기본값 사용)
     const DEFAULT_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwEcsF1F_RLLW_qkQIFkrwmut-zN0fHOqsAKs5B8PgHZAz2_O5sA8o2W5zZ3nD-5tjY/exec";
     let APPS_SCRIPT_URL = localStorage.getItem('appsScriptUrl') || DEFAULT_APPS_SCRIPT_URL;
-
-    // Google Sheets API Spreadsheet ID 설정
-    let GOOGLE_SHEETS_SPREADSHEET_ID = localStorage.getItem('googleSheetsSpreadsheetId') || null;
     
     // CSV URLs (고정)
     const CSV_HAND_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSDY_i4330JANAjIz4sMncdJdRHsOkfUCjQusHTGQk2tykrhA4d09LeIp3XRbLd8hkN6SgSB47k_nux/pub?gid=1906746276&single=true&output=csv"; // Hand 탭 CSV
@@ -1526,14 +695,6 @@
     
     // 전역 변수로도 설정 (테이블 관리 모듈용)
     window.APPS_SCRIPT_URL = APPS_SCRIPT_URL;
-
-    // Google Sheets API 초기화
-    if (GOOGLE_SHEETS_SPREADSHEET_ID && window.googleSheetsAPI) {
-      window.googleSheetsAPI.setSpreadsheetId(GOOGLE_SHEETS_SPREADSHEET_ID);
-      console.log('✅ Google Sheets API 초기화 완료 - Spreadsheet ID:', GOOGLE_SHEETS_SPREADSHEET_ID);
-    } else if (!GOOGLE_SHEETS_SPREADSHEET_ID) {
-      console.log('⚠️ Google Sheets Spreadsheet ID가 설정되지 않았습니다. 설정 메뉴에서 ID를 입력해주세요.');
-    }
     
     // Apps Script URL 클라우드 동기화 시스템
     const CLOUD_SYNC_CONFIG = {
@@ -1639,13 +800,6 @@
       if (newUrl && newUrl.trim()) {
         APPS_SCRIPT_URL = newUrl.trim();
         window.APPS_SCRIPT_URL = APPS_SCRIPT_URL;
-        
-        // ⚠️ 중요: APP_CONFIG도 함께 업데이트
-        if (window.APP_CONFIG) {
-          window.APP_CONFIG.appsScriptUrl = APPS_SCRIPT_URL;
-          console.log('✅ APP_CONFIG.appsScriptUrl 동기화:', window.APP_CONFIG.appsScriptUrl);
-        }
-        
         localStorage.setItem('appsScriptUrl', APPS_SCRIPT_URL);
         console.log('✅ Apps Script URL 업데이트:', APPS_SCRIPT_URL);
 
@@ -1924,8 +1078,8 @@
       closeSettingsBtn: document.getElementById('close-settings'),
       cancelSettingsBtn: document.getElementById('cancel-settings'),
       saveSettingsBtn: document.getElementById('save-settings'),
-      googleSpreadsheetIdInput: document.getElementById('google-spreadsheet-id-input'),
-      currentSpreadsheetId: document.getElementById('current-spreadsheet-id'),
+      appsScriptUrlInput: document.getElementById('apps-script-url-input'),
+      currentAppsUrl: document.getElementById('current-apps-url'),
       chipValidationToggle: document.getElementById('chip-validation-toggle'),
       cloudSyncStatus: document.getElementById('cloud-sync-status'),
       deviceIdDisplay: document.getElementById('device-id-display'),
@@ -2160,12 +1314,8 @@
       
       // 1-10번 좌석 버튼 (좌석 번호 표시 제거)
       for(let seatNum = 1; seatNum <= 10; seatNum++){
-        // Type 시트에서 해당 좌석의 플레이어 찾기 (v3.5.41: #1 형식 좌석 처리)
-        const playerData = tableData.find(p => {
-          const seatStr = String(p.seat || '');
-          const seatNumber = seatStr.replace(/[#]/g, ''); // # 제거
-          return parseInt(seatNumber, 10) === seatNum;
-        });
+        // Type 시트에서 해당 좌석의 플레이어 찾기
+        const playerData = tableData.find(p => parseInt(p.seat) === seatNum);
         const isInHand = playerData && window.state.playersInHand.some(pp => pp.name === playerData.name);
         
         // 포지션 정보 가져오기
@@ -2218,7 +1368,7 @@
       
       // 전체 테이블 플레이어 리스트에서 좌석이 있는 플레이어들 가져오기
       const allPlayersWithSeats = tableData.filter(player => player.seat).map(player => ({
-        seat: parseSeatNumber(player.seat),
+        seat: parseInt(player.seat),
         name: player.name
       })).sort((a, b) => a.seat - b.seat);
       
@@ -2823,7 +1973,7 @@
           console.warn('ActionOrderManager가 초기화되지 않음 - 자동 초기화 시도');
 
           const handNumber = window.state.actionState.handNumber || '1';
-          const buttonPosition = parseSeatNumber(window.state.playersInHand[0]?.seat) || 1;
+          const buttonPosition = parseInt(window.state.playersInHand[0]?.seat) || 1;
 
           window.actionOrderManager.initializeHand(
             window.state.playersInHand,
@@ -3200,7 +2350,7 @@
         // 플레이어 제거 후 ActionOrderManager 재초기화
         if (window.actionOrderManager && window.state.playersInHand.length > 0) {
           const handNumber = window.state.actionState.handNumber || '1';
-          const buttonPosition = parseSeatNumber(window.state.playersInHand[0]?.seat) || 1;
+          const buttonPosition = parseInt(window.state.playersInHand[0]?.seat) || 1;
 
           console.log('플레이어 제거 시 ActionOrderManager 초기화:', {
             playersCount: window.state.playersInHand.length,
@@ -3534,7 +2684,7 @@
       const tableData = window.state.playerDataByTable[window.state.selectedTable] || [];
       return tableData
         .filter(player => player.seat)
-        .map(player => parseSeatNumber(player.seat))
+        .map(player => parseInt(player.seat))
         .sort((a, b) => a - b);
     }
     
@@ -3582,9 +2732,9 @@
       
       // 플레이어 이름 가져오기 (전체 테이블 데이터에서)
       const tableData = window.state.playerDataByTable[window.state.selectedTable] || [];
-      const btnPlayer = tableData.find(p => parseSeatNumber(p.seat) === btnPos)?.name || '빈자리';
-      const sbPlayer = tableData.find(p => parseSeatNumber(p.seat) === sbSeat)?.name || '빈자리';
-      const bbPlayer = tableData.find(p => parseSeatNumber(p.seat) === bbSeat)?.name || '빈자리';
+      const btnPlayer = tableData.find(p => parseInt(p.seat) === btnPos)?.name || '빈자리';
+      const sbPlayer = tableData.find(p => parseInt(p.seat) === sbSeat)?.name || '빈자리';
+      const bbPlayer = tableData.find(p => parseInt(p.seat) === bbSeat)?.name || '빈자리';
       
       display.innerHTML = `
         <div class="grid grid-cols-3 gap-2 text-center">
@@ -3619,9 +2769,9 @@
       
       // 플레이어 이름 가져오기 (전체 테이블 데이터에서)
       const tableData = window.state.playerDataByTable[window.state.selectedTable] || [];
-      const btnPlayer = tableData.find(p => parseSeatNumber(p.seat) === btnPos)?.name || '빈자리';
-      const sbPlayer = tableData.find(p => parseSeatNumber(p.seat) === sbSeat)?.name || '빈자리';
-      const bbPlayer = tableData.find(p => parseSeatNumber(p.seat) === bbSeat)?.name || '빈자리';
+      const btnPlayer = tableData.find(p => parseInt(p.seat) === btnPos)?.name || '빈자리';
+      const sbPlayer = tableData.find(p => parseInt(p.seat) === sbSeat)?.name || '빈자리';
+      const bbPlayer = tableData.find(p => parseInt(p.seat) === bbSeat)?.name || '빈자리';
       
       indicators.innerHTML = `
         <span class="text-yellow-400">BTN: ${btnPlayer}</span>
@@ -3751,7 +2901,7 @@
       const turnIndicator = document.getElementById('current-turn-indicator');
       if(turnIndicator && nextPlayer) {
         const playerData = window.state.playersInHand.find(p => p.name === nextPlayer);
-        const positions = playerData ? getPositionsForSeat(parseSeatNumber(playerData.seat) || 0) : [];
+        const positions = playerData ? getPositionsForSeat(parseInt(playerData.seat) || 0) : [];
         const positionStr = positions.length > 0 ? `(${positions.join(',')})` : '';
         
         turnIndicator.innerHTML = `
@@ -4304,70 +3454,10 @@
     }
 
     function buildTypeFromCsv(rows){
-      // Type 시트 구조 (v3.5.41 - 2025년 새 구조):
-      // A:Poker Room, B:Table Name, C:Table No., D:Seat No., E:Players, F:Nationality, G:Chips, H:Keyplayer
+      // Type 시트 구조 (v3.4.26 - 새 구조):
+      // A:Player, B:Table, C:Notable, D:Chips, E:updatedAt, F:Seat, G:Status
       if(!rows||rows.length<1) return;
-
-      // 컬럼 인덱스 상수 정의 (유지보수성 개선)
-      const COLUMNS = {
-        POKER_ROOM: 0,    // A열 (이전: Player였던 자리)
-        TABLE_NAME: 1,    // B열 (이전: Table이었던 자리)
-        TABLE_NO: 2,      // C열 (이전: Notable이었던 자리)
-        SEAT_NO: 3,       // D열 (이전: Chips였던 자리)
-        PLAYERS: 4,       // E열 (Player 새 위치)
-        NATIONALITY: 5,   // F열 (이전: Seat였던 자리)
-        CHIPS: 6,         // G열 (이전: Status였던 자리)
-        KEYPLAYER: 7      // H열 (Notable/Keyplayer 새 위치)
-      };
-
-      const header = rows[0] || [];
-
-      // 호환성 체크 함수 - 데이터 구조 자동 감지
-      function detectSheetStructure(headerRow, dataRows) {
-        if (!headerRow || headerRow.length === 0) return 'unknown';
-
-        // 새 구조 감지 키워드 (대소문자 무시)
-        const newStructureKeywords = ['poker room', 'table name', 'players', 'nationality', 'keyplayer'];
-        const headerStr = headerRow.join('|').toLowerCase();
-
-        const newStructureMatches = newStructureKeywords.filter(keyword =>
-          headerStr.includes(keyword)
-        ).length;
-
-        // 이전 구조 감지 키워드
-        const oldStructureKeywords = ['player', 'table', 'notable', 'status'];
-        const oldStructureMatches = oldStructureKeywords.filter(keyword =>
-          headerStr.includes(keyword)
-        ).length;
-
-        // 데이터 샘플로 추가 검증
-        if (dataRows && dataRows.length > 0) {
-          const sampleRow = dataRows[0];
-          // 새 구조라면 Players 필드(E열)에 이름이 있어야 함
-          const hasPlayerInE = sampleRow && sampleRow[COLUMNS.PLAYERS] &&
-                               String(sampleRow[COLUMNS.PLAYERS]).trim().length > 0;
-
-          if (newStructureMatches >= 3 && hasPlayerInE) return 'new';
-          if (oldStructureMatches >= 3 && !hasPlayerInE) return 'old';
-        }
-
-        // 헤더만으로 판단
-        if (newStructureMatches >= 3) return 'new';
-        if (oldStructureMatches >= 2) return 'old';
-
-        return 'unknown';
-      }
-
-      const structureType = detectSheetStructure(header, rows.slice(1, 3));
-      console.log(`[v3.5.41] 시트 구조 감지: ${structureType} (헤더: ${header.join(', ')})`);
-
-      if (structureType === 'old') {
-        console.warn(`[v3.5.41] ⚠️ 이전 구조 감지됨! 새 구조로 업데이트 필요`);
-        console.warn(`[v3.5.41] 예상 구조: Player,Table,Notable,Chips,UpdatedAt,Seat,Status`);
-        console.warn(`[v3.5.41] 새 구조: Poker Room,Table Name,Table No.,Seat No.,Players,Nationality,Chips,Keyplayer`);
-      } else if (structureType === 'unknown') {
-        console.warn(`[v3.5.41] ⚠️ 알 수 없는 시트 구조. 새 구조로 가정하여 처리`);
-      }
+      const header=rows[0];
 
       // 카메라 프리셋 기본값 설정 (Type 시트에서 제거됨)
       window.state.camPreset.cam1 = 'Cam1';
@@ -4400,99 +3490,44 @@
       }
 
       const byTable={};
-      // 데이터 검증 함수
-      function validateRowData(r, rowIndex) {
-        const errors = [];
-
-        // 필수 필드 체크 (사용자 지시: Players, Table No.만 체크)
-        if (!String(r[COLUMNS.PLAYERS]||'').trim()) {
-          errors.push(`행 ${rowIndex}: Players 필드가 비어있음`);
-        }
-        if (!String(r[COLUMNS.TABLE_NO]||'').trim()) {
-          errors.push(`행 ${rowIndex}: Table No. 필드가 비어있음`);
-        }
-
-        // 칩 데이터 검증 (경고만, 필수 아님)
-        const chipsStr = String(r[COLUMNS.CHIPS]||'0').trim();
-        const chips = parseInt(chipsStr.replace(/,/g, ''), 10);
-        if (isNaN(chips) && chipsStr !== '') {
-          // 칩이 잘못되어도 에러로 처리하지 않음 (경고만)
-          console.warn(`[v3.5.41] 행 ${rowIndex}: Chips 필드 파싱 실패 (${chipsStr}) - 0으로 처리`);
-        }
-
-        return { errors, isValid: errors.length === 0 };
-      }
-
       for(let i=1;i<rows.length;i++){
         const r=rows[i]||[];
+        // 새 구조: A:Player, B:Table, C:Notable, D:Chips, E:updatedAt, F:Seat, G:Status
+        const player=String(r[0]||'').trim();   // A열: Player
+        const table =String(r[1]||'').trim();   // B열: Table
+        const notable = String(r[2]||'').toUpperCase()==='TRUE'; // C열: Notable
+        const chips = String(r[3]!=null?r[3]:'0').trim(); // D열: Chips
+        const updatedAt = String(r[4]||'').trim(); // E열: updatedAt
+        const seat = String(r[5]||'').trim(); // F열: Seat
+        const status = String(r[6]||'IN').trim().toUpperCase(); // G열: Status
 
-        // 데이터 검증
-        const validation = validateRowData(r, i+1);
-        if (!validation.isValid) {
-          console.warn(`[v3.5.41] 데이터 검증 실패:`, validation.errors);
-          continue; // 잘못된 데이터는 건너뛰기
-        }
+        console.log(`[v3.4.3] 플레이어 처리: ${player} (${table}) - 상태: ${status}`);
 
-        // 상수를 사용한 데이터 파싱 (유지보수성 개선)
-        const pokerRoom = String(r[COLUMNS.POKER_ROOM]||'').trim();
-        const tableName = String(r[COLUMNS.TABLE_NAME]||'').trim();
-        const tableNo = String(r[COLUMNS.TABLE_NO]||'').trim();   // ← 이것이 새로운 table 식별자
-        const seat = String(r[COLUMNS.SEAT_NO]||'').trim();
-        const player = String(r[COLUMNS.PLAYERS]||'').trim();
-        const nationality = String(r[COLUMNS.NATIONALITY]||'').trim();
-        const chipsStr = String(r[COLUMNS.CHIPS]!=null?r[COLUMNS.CHIPS]:'0').trim();
-        const chips = parseInt(chipsStr.replace(/,/g, ''), 10) || 0;
-        const keyplayer = String(r[COLUMNS.KEYPLAYER]||'').toUpperCase()==='TRUE';
-
-        // 사용자 지시 따름: 이전 r[1] table → 현재 r[2] tableNo
-        const table = tableNo;  // C열 Table No.를 테이블 식별자로 사용
-
-        console.log(`[v3.5.41] 플레이어 처리: ${player} (${table}, 칩: ${chips})`);
-
-        // 사용자 지시: Status 삭제, 데이터만 있으면 처리 (칩 금액 상관없이)
-        if(player && table){
+        // IN 상태인 플레이어만 처리 (빈 값이면 IN으로 간주)
+        if(player && table && status === 'IN'){
           if(!byTable[table]) byTable[table]=[];
-
-          // v3.5.41: 새로운 데이터 구조로 저장
-          const playerData = {
+          // v3.4.3: 중복 필터링 완전 제거 - 모든 플레이어를 로컬 데이터에 유지
+          // 중복 제거는 별도 시스템에서 처리
+          byTable[table].push({
             name: player,
-            chips: chipsStr, // 원본 문자열 그대로 저장
-            notable: keyplayer, // Keyplayer를 notable로 매핑
-            updatedAt: new Date().toISOString(), // 현재 시간 사용
+            chips,
+            notable,
+            updatedAt,
             seat,
-            status: 'IN', // chips > 0이면 IN으로 간주
-            nationality, // 새로운 필드 추가
-            tableNo, // 테이블 번호 추가
-            pokerRoom, // 포커룸 정보 추가 (필요시 사용)
-            originalIndex: i // 디버깅용 원본 행 번호
-          };
-
-          byTable[table].push(playerData);
-          console.log(`[v3.5.41] ✅ ${player} 추가됨 (테이블: ${table}, 좌석: ${seat}, 칩: ${chips}, 키: ${keyplayer})`);
+            status // 상태도 저장
+          });
+          console.log(`[v3.4.3] ✅ ${player} 추가됨 (${table}, 좌석: ${seat}) - 중복 필터링 비활성화`);
         } else {
-          const reason = !player ? '플레이어명 없음' :
-                        !table ? 'Table No. 없음' : '기타';
-          console.log(`[v3.5.41] ❌ ${player||'[없음]'} 제외됨 - 이유: ${reason}`);
+          console.log(`[v3.4.3] ❌ ${player} 제외됨 - 상태: ${status} (${table})`);
         }
       }
 
       // 처리 결과 요약 로그
-      console.log(`[v3.5.41] === buildTypeFromCsv 완료 ===`);
-      console.log(`[v3.5.41] 총 테이블 수: ${Object.keys(byTable).length}`);
-
-      let totalPlayers = 0;
-      let keyplayerCount = 0;
-
+      console.log(`[v3.4.3] === buildTypeFromCsv 완료 ===`);
+      console.log(`[v3.4.3] 총 테이블 수: ${Object.keys(byTable).length}`);
       Object.keys(byTable).forEach(table => {
-        const players = byTable[table];
-        const keyplayers = players.filter(p => p.notable).length;
-        totalPlayers += players.length;
-        keyplayerCount += keyplayers;
-
-        console.log(`[v3.5.41] ${table}: ${players.length}명 (키플레이어: ${keyplayers}명)`);
+        console.log(`[v3.4.3] ${table}: ${byTable[table].length}명 (IN 상태만)`);
       });
-
-      console.log(`[v3.5.41] 전체 통계 - 총 플레이어: ${totalPlayers}명, 키플레이어: ${keyplayerCount}명`);
 
       window.state.playerDataByTable=byTable;
       window.state.allTables=Object.keys(byTable).sort();
@@ -4920,8 +3955,8 @@
           // 버튼 위치 찾기 (실제 시트 번호 사용)
           const buttonPlayer = window.state.playersInHand.find(p => p.role === 'BTN');
           const buttonPosition = buttonPlayer ?
-            parseSeatNumber(buttonPlayer.seat) || 1 :
-            parseSeatNumber(window.state.playersInHand[0]?.seat) || 1;
+            parseInt(buttonPlayer.seat) || 1 :
+            parseInt(window.state.playersInHand[0]?.seat) || 1;
 
           console.log('ActionOrderManager 초기화 시작:', {
             playersCount: window.state.playersInHand.length,
@@ -5040,12 +4075,12 @@
         console.log(`  finalChips 타입: ${typeof finalChips}, 값: ${finalChips}`);
         
         // 포지션 정보 계산 (BTN/SB/BB)
-        const positions = getPositionsForSeat(parseSeatNumber(p.seat) || 1);
+        const positions = getPositionsForSeat(parseInt(p.seat) || 1);
         const positionStr = positions.length > 0 ? positions.join(',') : '';
         
         // PLAYER 형식: B=PLAYER, C=name, D=seat, E=0, F=시작칩, G=종료칩, H=핸드, I=포지션
         // push 함수가 자동으로 행번호를 A열에 추가하므로 8개 요소 필요
-        const playerRow = ['PLAYER', p.name, parseSeatNumber(p.seat) || 1, 0, initialChips, finalChips, p.hand?.length? p.hand.join(' ') : '', positionStr];
+        const playerRow = ['PLAYER', p.name, parseInt(p.seat) || 1, 0, initialChips, finalChips, p.hand?.length? p.hand.join(' ') : '', positionStr];
         
         console.log(`  ===== PLAYER 행 생성 =====`);
         console.log(`  playerRow 배열:`, playerRow);
@@ -5198,49 +4233,58 @@ async function _sendDataToGoogleSheet_internal(){
 
 // Phase 4: 보호된 시트 전송 함수
 async function sendDataToGoogleSheet() {
-  console.log('📊 Google Sheets API: 시트 전송 시작');
+  console.log('📊 Phase 4: 보호된 시트 전송 시작');
+
+  // Phase 4 보호 시스템 활성화 확인
+  if (typeof window.ensureAppsScriptUrl !== 'function') {
+    console.error('❌ Phase 4 보호 시스템이 로드되지 않았습니다.');
+    showFeedback('❌ 시스템 초기화 오류', true);
+    return;
+  }
 
   try {
-    // Google Sheets API 준비 상태 확인
-    if (!window.googleSheetsAPI) {
-      throw new Error('Google Sheets API가 초기화되지 않았습니다');
+    // URL 및 시스템 상태 검증
+    const urlCheck = window.ensureAppsScriptUrl({
+      throwOnError: true,
+      checkNetwork: true,
+      logDetails: true
+    });
+
+    if (!urlCheck) {
+      showFeedback('❌ Apps Script URL 설정이 필요합니다', true);
+      return;
     }
 
-    // 연결 테스트
-    const isConnected = await window.googleSheetsAPI.testConnection();
-    if (!isConnected) {
-      throw new Error('Google Sheets API 연결에 실패했습니다');
-    }
-
-    showFeedback('📊 데이터 준비 중...', false);
-
-    // 핸드 데이터 생성 (기존 로직 재사용)
-    const { rows: handData } = generateRows_v46();
-    const indexData = buildIndexMeta();
-
-    console.log('📊 전송할 데이터:', { handData, indexData });
-
-    // Hand 시트에 데이터 전송
-    showFeedback('📊 Hand 시트 전송 중...', false);
-    const handResult = await window.googleSheetsAPI.appendData('Hand', handData);
-    console.log('✅ Hand 시트 전송 완료:', handResult);
-
-    // Index 시트에 메타데이터 전송
-    showFeedback('📊 Index 시트 전송 중...', false);
-    const indexResult = await window.googleSheetsAPI.appendData('Index', [Object.values(indexData)]);
-    console.log('✅ Index 시트 전송 완료:', indexResult);
-
-    // 성공 메시지
-    showFeedback('✅ Google Sheets 전송 완료!', false);
-    logMessage('✅ 핸드 데이터가 Google Sheets에 성공적으로 전송되었습니다');
-
-    // UI 초기화
-    resetHandState();
+    // 보호된 API 호출로 실제 전송 실행
+    await window.protectedApiCall(
+      'submitHand',
+      {},  // 데이터는 내부 함수에서 생성
+      {
+        priority: 'high',
+        timeout: 45000,  // 핸드 데이터 전송은 여유 있게
+        useCache: false,  // 핸드 데이터는 항상 새로 전송
+        onProgress: (progress) => {
+          console.log(`📊 전송 진행률: ${progress}%`);
+        },
+        onRetry: (attempt, delay) => {
+          console.log(`🔄 재시도 중... ${attempt}번째 시도 (${delay/1000}초 후)`);
+          logMessage(`🔄 네트워크 오류로 재시도 중... (${attempt}/3)`);
+        },
+        customHandler: _sendDataToGoogleSheet_internal
+      }
+    );
 
   } catch (error) {
-    console.error('❌ Google Sheets API 전송 실패:', error);
-    showFeedback(`❌ 전송 실패: ${error.message}`, true);
-    logMessage(`❌ Google Sheets 전송 실패: ${error.message}`, true);
+    console.error('❌ Phase 4 보호 시트 전송 실패:', error);
+
+    // 사용자 친화적 에러 메시지 표시
+    if (typeof window.getUserFriendlyErrorMessage === 'function') {
+      const friendlyError = window.getUserFriendlyErrorMessage(error, 'submitHand');
+      showFeedback(`❌ ${friendlyError.title}`, true);
+      logMessage(`❌ ${friendlyError.message}`, true);
+    } else {
+      showFeedback(`❌ 전송 실패: ${error.message}`, true);
+    }
   }
 }
 
@@ -5558,7 +4602,7 @@ async function sendDataToGoogleSheet() {
       // 새 핸드 시작 시 ActionOrderManager 재초기화
       if (window.actionOrderManager && window.state.playersInHand.length > 0) {
         // 버튼 위치 찾기 (기본값: 첫 번째 플레이어의 시트)
-        const buttonPosition = parseSeatNumber(window.state.playersInHand[0]?.seat) || 1;
+        const buttonPosition = parseInt(window.state.playersInHand[0]?.seat) || 1;
         const handNumber = window.state.actionState.handNumber;
 
         console.log('새 핸드 ActionOrderManager 초기화:', {
@@ -6467,17 +5511,16 @@ async function sendDataToGoogleSheet() {
         document.getElementById('management-menu').classList.remove('hidden');
         document.getElementById('player-management-content').classList.add('hidden');
 
-        // Google Spreadsheet ID 표시
+        // Apps Script URL 표시
         const currentUrlSpan = document.getElementById('management-current-url');
-        const spreadsheetInput = document.getElementById('management-spreadsheet-id-input');
+        const urlInput = document.getElementById('management-apps-url-input');
         const urlStatus = document.getElementById('url-save-status');
 
         if (currentUrlSpan) {
-          const currentSpreadsheetId = localStorage.getItem('googleSheetsSpreadsheetId') || '설정되지 않음';
-          currentUrlSpan.textContent = currentSpreadsheetId;
-          // ID가 설정되었는지에 따라 색상 변경
-          const hasId = currentSpreadsheetId !== '설정되지 않음';
-          currentUrlSpan.className = hasId ?
+          currentUrlSpan.textContent = APPS_SCRIPT_URL || '설정되지 않음';
+          // URL이 기본값인지 사용자 설정값인지 표시
+          const isCustomUrl = APPS_SCRIPT_URL !== DEFAULT_APPS_SCRIPT_URL;
+          currentUrlSpan.className = isCustomUrl ?
             'text-xs text-green-400 break-all font-mono' :
             'text-xs text-amber-400 break-all font-mono';
         }
@@ -6495,21 +5538,21 @@ async function sendDataToGoogleSheet() {
 
     // Apps Script URL 저장 버튼 - 지연 실행으로 DOM 로드 보장
     setTimeout(() => {
-      const saveSpreadsheetIdBtn = document.getElementById('save-spreadsheet-id-btn');
-      console.log('🔗 Google Spreadsheet ID 저장 버튼:', saveSpreadsheetIdBtn);
+      const saveUrlBtn = document.getElementById('save-apps-url-btn');
+      console.log('[v3.3.1] Apps Script URL 저장 버튼:', saveUrlBtn);
 
-      if (saveSpreadsheetIdBtn) {
-        saveSpreadsheetIdBtn.addEventListener('click', (e) => {
+      if (saveUrlBtn) {
+        saveUrlBtn.addEventListener('click', (e) => {
           e.preventDefault();
-          console.log('🔗 Spreadsheet ID 저장 버튼 클릭됨');
+          console.log('[v3.3.1] URL 저장 버튼 클릭됨');
 
-          const spreadsheetInput = document.getElementById('management-spreadsheet-id-input');
+          const urlInput = document.getElementById('management-apps-url-input');
           const urlStatus = document.getElementById('url-save-status');
           const currentUrlSpan = document.getElementById('management-current-url');
-          const newSpreadsheetId = spreadsheetInput?.value.trim();
+          const newUrl = urlInput?.value.trim();
 
-          console.log('🔗 입력된 Spreadsheet ID:', newSpreadsheetId);
-          console.log('🔗 현재 Spreadsheet ID:', localStorage.getItem('googleSheetsSpreadsheetId'));
+          console.log('[v3.3.1] 입력된 URL:', newUrl);
+          console.log('[v3.3.1] 현재 URL:', APPS_SCRIPT_URL);
 
           // 상태 메시지 표시 함수
           function showUrlStatus(message, isSuccess) {
@@ -6527,27 +5570,19 @@ async function sendDataToGoogleSheet() {
             }
           }
 
-          if (newUrl) {
-            // Spreadsheet ID 형식 검증 (44글자 영숫자와 언더스코어, 하이픈)
-            const spreadsheetIdRegex = /^[a-zA-Z0-9_-]{44}$/;
-            if (spreadsheetIdRegex.test(newUrl)) {
-              // Spreadsheet ID 저장
-              localStorage.setItem('googleSheetsSpreadsheetId', newUrl);
-              if (window.googleSheetsAPI) {
-                window.googleSheetsAPI.setSpreadsheetId(newUrl);
-              }
-
+          if (newUrl && newUrl !== APPS_SCRIPT_URL) {
+            if (updateAppsScriptUrl(newUrl)) {
               // 성공 시 UI 업데이트
               if (currentUrlSpan) {
                 currentUrlSpan.textContent = newUrl;
                 currentUrlSpan.className = 'text-xs text-green-400 break-all font-mono';
               }
-              showUrlStatus('✅ Spreadsheet ID가 성공적으로 저장되었습니다!', true);
-              showFeedback('✅ Google Sheets Spreadsheet ID가 저장되었습니다');
+              showUrlStatus('✅ URL이 성공적으로 저장되었습니다!', true);
+              showFeedback('✅ Apps Script URL이 저장되었습니다');
 
               // 입력 필드 초기화 및 플레이스홀더 업데이트
               urlInput.value = '';
-              urlInput.placeholder = '저장 완료! 다른 ID를 입력하려면 여기에 입력하세요';
+              urlInput.placeholder = '저장 완료! 다른 URL을 입력하려면 여기에 입력하세요';
 
               // 저장 버튼 임시 비활성화 및 텍스트 변경
               saveUrlBtn.disabled = true;
@@ -6556,21 +5591,24 @@ async function sendDataToGoogleSheet() {
 
               setTimeout(() => {
                 saveUrlBtn.disabled = false;
-                saveUrlBtn.textContent = '💾 새 ID 저장';
+                saveUrlBtn.textContent = '💾 새 URL 저장';
                 saveUrlBtn.className = 'w-full bg-amber-600 hover:bg-amber-700 py-1.5 rounded text-sm font-medium';
               }, 2000);
             } else {
-              showUrlStatus('❌ 올바른 Spreadsheet ID 형식이 아닙니다 (44글자)', false);
-              showFeedback('❌ 올바른 Spreadsheet ID 형식이 아닙니다', true);
+              showUrlStatus('❌ 올바른 URL 형식이 아닙니다', false);
+              showFeedback('❌ 올바른 URL 형식이 아닙니다', true);
             }
-          } else {
-            showUrlStatus('⚠️ Spreadsheet ID를 입력해주세요', false);
-            showFeedback('Spreadsheet ID를 입력해주세요', true);
+          } else if (!newUrl) {
+            showUrlStatus('⚠️ URL을 입력해주세요', false);
+            showFeedback('URL을 입력해주세요', true);
+          } else if (newUrl === APPS_SCRIPT_URL) {
+            showUrlStatus('ℹ️ 현재 저장된 URL과 동일합니다', false);
+            showFeedback('동일한 URL입니다', true);
           }
         });
-        console.log('[v3.5.41] Spreadsheet ID 저장 버튼 이벤트 리스너 등록 완료');
+        console.log('[v3.3.1] URL 저장 버튼 이벤트 리스너 등록 완료');
       } else {
-        console.error('[v3.5.41] save-spreadsheet-id-btn 요소를 찾을 수 없습니다');
+        console.error('[v3.3.1] save-apps-url-btn 요소를 찾을 수 없습니다');
       }
     }, 100);
 
@@ -6581,7 +5619,7 @@ async function sendDataToGoogleSheet() {
 
       // 바로 테이블 선택 모달 열기
       openTableSelectorModal();
-    });
+    });    });
 
     // 중복 플레이어 제거 버튼 클릭 핸들러
     document.getElementById('remove-duplicates-btn')?.addEventListener('click', async () => {
@@ -6680,7 +5718,7 @@ async function sendDataToGoogleSheet() {
 
           }
         } else {
-          alert('❌ 중복 제거 실패\n\n작업이 실패했습니다.');
+          alert('❌ 중복 제거 실패\n
 
         }
         
@@ -6772,12 +5810,7 @@ async function sendDataToGoogleSheet() {
       for (let i = 1; i <= 10; i++) {
         seats.push({
           seatNumber: i,
-          // v3.5.41: #1 형식 좌석 처리
-          player: players.find(p => {
-            const seatStr = String(p.seat || '');
-            const seatNumber = seatStr.replace(/[#]/g, ''); // # 제거
-            return parseInt(seatNumber, 10) === i;
-          }) || null
+          player: players.find(p => parseInt(p.seat) === i) || null
         });
       }
 
@@ -6847,7 +5880,7 @@ async function sendDataToGoogleSheet() {
       // 빈 자리 입력 처리
       listContainer.querySelectorAll('.empty-seat-input').forEach(input => {
         input.addEventListener('change', (e) => {
-          const seatNumber = parseSeatNumber(e.target.dataset.seat);
+          const seatNumber = parseInt(e.target.dataset.seat);
           const playerName = e.target.value.trim();
 
           if (playerName) {
@@ -6904,7 +5937,7 @@ async function sendDataToGoogleSheet() {
       }
 
       // 좌석 중복 체크
-      if (window.managementState.currentPlayers.some(p => parseSeatNumber(p.seat) === seatNumber)) {
+      if (window.managementState.currentPlayers.some(p => parseInt(p.seat) === seatNumber)) {
         showFeedback(`좌석 ${seatNumber}번은 이미 사용 중입니다`, true);
         return;
       }
@@ -7714,10 +6747,9 @@ async function sendDataToGoogleSheet() {
     // 설정 모달 열기
     if (el.settingsBtn) {
       el.settingsBtn.addEventListener('click', () => {
-        // 현재 Spreadsheet ID 표시
-        const currentSpreadsheetId = localStorage.getItem('googleSheetsSpreadsheetId') || '';
-        el.currentSpreadsheetId.textContent = currentSpreadsheetId || '설정되지 않음';
-        el.googleSpreadsheetIdInput.value = currentSpreadsheetId;
+        // 현재 URL 표시
+        el.currentAppsUrl.textContent = APPS_SCRIPT_URL;
+        el.appsScriptUrlInput.value = APPS_SCRIPT_URL;
         
         // 칩 검증 설정 로드
         const chipValidation = localStorage.getItem('chipValidation') !== 'false';
@@ -7763,20 +6795,12 @@ async function sendDataToGoogleSheet() {
     // 설정 저장
     if (el.saveSettingsBtn) {
       el.saveSettingsBtn.addEventListener('click', () => {
-        // Google Spreadsheet ID 저장
-        const newSpreadsheetId = el.googleSpreadsheetIdInput.value.trim();
-        const currentSpreadsheetId = localStorage.getItem('googleSheetsSpreadsheetId') || '';
-        
-        if (newSpreadsheetId && newSpreadsheetId !== currentSpreadsheetId) {
-          localStorage.setItem('googleSheetsSpreadsheetId', newSpreadsheetId);
-          console.log('✅ Google Spreadsheet ID 업데이트 완료:', newSpreadsheetId);
-          
-          // Google Sheets API 모듈에 새 ID 적용
-          if (window.googleSheetsAPI) {
-            window.googleSheetsAPI.spreadsheetId = newSpreadsheetId;
+        // Apps Script URL 저장
+        const newUrl = el.appsScriptUrlInput.value.trim();
+        if (newUrl && newUrl !== APPS_SCRIPT_URL) {
+          if (updateAppsScriptUrl(newUrl)) {
+            console.log('✅ Apps Script URL 업데이트 완료');
           }
-          
-          showFeedback('✅ Google Spreadsheet ID 업데이트 완료', false);
         }
         
         // 칩 검증 설정 저장
@@ -7822,8 +6846,9 @@ async function sendDataToGoogleSheet() {
     if (closeBtn) {
       closeBtn.addEventListener('click', closeRegistrationModal);
     }
-
-
+    
+    
+    
     // 버튼 위치 선택 이벤트 - renderPlayerSelection에서 처리하도록 제거
     // (renderPlayerSelection 함수 내에서 이미 처리중)
 
@@ -7870,36 +6895,6 @@ async function sendDataToGoogleSheet() {
       }, '앱 초기화', '데이터를 로드하고 있습니다...');
     }
 
-    // DOMContentLoaded 이벤트 리스너 안에서 함수 호출
     setupEventListeners();
     initializeApp();
   });
-  </script>
-
-  <!-- 로딩 오버레이 -->
-  <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-75 z-60 hidden flex items-center justify-center">
-    <div class="bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4">
-      <div class="flex items-center space-x-3">
-        <div class="animate-spin h-5 w-5 border-2 border-amber-500 border-t-transparent rounded-full"></div>
-        <div>
-          <div id="loading-title" class="text-white font-medium">처리 중...</div>
-          <div id="loading-message" class="text-gray-400 text-sm mt-1">잠시만 기다려주세요</div>
-        </div>
-      </div>
-      <div class="mt-4 text-xs text-gray-500">
-        작업이 완료될 때까지 다른 버튼을 클릭하지 마세요
-      </div>
-    </div>
-  </div>
-
-  <!-- 스낵바 컴포넌트 -->
-  <div id="snackbar" class="snackbar"></div>
-
-  <!-- JWT 라이브러리 (서명용) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsrsasign/10.8.6/jsrsasign-all-min.js"></script>
-  
-  <!-- Google Sheets API 모듈 로드 -->
-  <script src="./src/js/google-sheets-api.js"></script>
-
-</body>
-</html>

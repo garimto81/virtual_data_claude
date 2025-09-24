@@ -1,0 +1,57 @@
+🎲 === 새로운 팟 계산 시작 [v3.4.26] ===
+index.html:4048 📊 플레이어별 기여액 (올인 제한 적용): 
+{SUNGBAE: 5500, V04: 6000}
+2
+index.html:4054 🎲 === 새로운 팟 계산 시작 [v3.4.26] ===
+index.html:5168 📊 Phase 4: 보호된 시트 전송 시작
+phase4-functions.js?v=4.0.0:50 🔍 ensureAppsScriptUrl 상세 검증
+index.html:1477 [v3.4.26] INFO: ❌ ensureAppsScriptUrl 검증 실패: Error: Apps Script URL이 설정되지 않았습니다. 설정 화면에서 URL을 입력하세요.
+    at window.ensureAppsScriptUrl (phase4-functions.js?v=4.0.0:64:31)
+    at sendDataToGoogleSheet (index.html:5179:29)
+    at el.sendToSheetBtn.onclick (index.html:5588:43)
+phase4-functions.js?v=4.0.0:115 
+(index)
+name
+status
+message
+0	'APP_CONFIG'	'pass'	
+1	'URL_EXISTS'	'fail'	'Apps Script URL이 설정되지 않았습니다.'
+Array(2)
+index.html:1477 [v3.4.26] INFO: ❌ Phase 4 보호 시트 전송 실패: Error: Apps Script URL이 설정되지 않았습니다. 설정 화면에서 URL을 입력하세요.
+    at window.ensureAppsScriptUrl (phase4-functions.js?v=4.0.0:64:31)
+    at sendDataToGoogleSheet (index.html:5179:29)
+    at el.sendToSheetBtn.onclick (index.html:5588:43)
+phase4-functions.js?v=4.0.0:657 💬 getUserFriendlyErrorMessage 호출됨: Error: Apps Script URL이 설정되지 않았습니다. 설정 화면에서 URL을 입력하세요.
+    at window.ensureAppsScriptUrl (phase4-functions.js?v=4.0.0:64:31)
+    at sendDataToGoogleSheet (index.html:5179:29)
+    at el.sendToSheetBtn.onclick (index.html:5588:43) submitHand 
+{}
+index.html:6479 [v3.3.1] URL 저장 버튼 클릭됨
+index.html:6486 [v3.3.1] 입력된 URL: https://script.google.com/macros/s/AKfycbwdwVRj8FrFA5XvdNx8ERp6YrGMTFjNQ8UmBIIevi1CNu_isLUok4TLsGtclns2ty0j/exec
+index.html:6487 [v3.3.1] 현재 URL: https://script.google.com/macros/s/AKfycbwEcsF1F_RLLW_qkQIFkrwmut-zN0fHOqsAKs5B8PgHZAz2_O5sA8o2W5zZ3nD-5tjY/exec
+index.html:1617 ✅ Apps Script URL 업데이트: https://script.google.com/macros/s/AKfycbwdwVRj8FrFA5XvdNx8ERp6YrGMTFjNQ8UmBIIevi1CNu_isLUok4TLsGtclns2ty0j/exec
+index.html:1589 
+ POST https://api.github.com/gists 401 (Unauthorized)
+index.html:5168 📊 Phase 4: 보호된 시트 전송 시작
+phase4-functions.js?v=4.0.0:50 🔍 ensureAppsScriptUrl 상세 검증
+index.html:1477 [v3.4.26] INFO: ❌ ensureAppsScriptUrl 검증 실패: Error: Apps Script URL이 설정되지 않았습니다. 설정 화면에서 URL을 입력하세요.
+    at window.ensureAppsScriptUrl (phase4-functions.js?v=4.0.0:64:31)
+    at sendDataToGoogleSheet (index.html:5179:29)
+    at el.sendToSheetBtn.onclick (index.html:5588:43)
+phase4-functions.js?v=4.0.0:115 
+(index)
+name
+status
+message
+0	'APP_CONFIG'	'pass'	
+1	'URL_EXISTS'	'fail'	'Apps Script URL이 설정되지 않았습니다.'
+Array(2)
+index.html:1477 [v3.4.26] INFO: ❌ Phase 4 보호 시트 전송 실패: Error: Apps Script URL이 설정되지 않았습니다. 설정 화면에서 URL을 입력하세요.
+    at window.ensureAppsScriptUrl (phase4-functions.js?v=4.0.0:64:31)
+    at sendDataToGoogleSheet (index.html:5179:29)
+    at el.sendToSheetBtn.onclick (index.html:5588:43)
+phase4-functions.js?v=4.0.0:657 💬 getUserFriendlyErrorMessage 호출됨: Error: Apps Script URL이 설정되지 않았습니다. 설정 화면에서 URL을 입력하세요.
+    at window.ensureAppsScriptUrl (phase4-functions.js?v=4.0.0:64:31)
+    at sendDataToGoogleSheet (index.html:5179:29)
+    at el.sendToSheetBtn.onclick (index.html:5588:43) submitHand 
+{}

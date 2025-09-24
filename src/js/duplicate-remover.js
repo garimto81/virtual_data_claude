@@ -447,5 +447,5 @@ window.removeDuplicatePlayers = removeDuplicatePlayers;
 window.removeDuplicatesFromLocalData = removeDuplicatesFromLocalData;
 window.runDuplicateCheck = runDuplicateCheck; // 메인 앱에서 호출할 수 있도록 노출
 
-// 모듈 초기화 (자동 실행 제거)
-initDuplicateRemover();
+// 모듈 초기화 완료 - 수동 호출만 허용
+console.log('[DuplicateRemover] 모듈 로드 완료 - 수동 실행 모드');

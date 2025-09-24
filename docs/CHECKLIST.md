@@ -104,35 +104,98 @@
   - [x] 성능 모니터링 검증
   - [x] 백업 및 롤백 시나리오
 
-#### **Phase 4: API 호출 함수 보호** ⏱️ 5일차 ❌ **재설계 필요**
-**문제점:** JavaScript 문법 에러로 인한 스크립트 실행 중단
-- [ ] **Step 1: 코드 안정성 분석** ⚠️ **우선 진행**
-  - [ ] JavaScript 문법 에러 전체 점검 및 수정
-    - [x] "Missing catch or finally after try" 에러 수정 (line 5415)
-    - [ ] "missing ) after argument list" 에러 수정
-    - [ ] 기타 문법 에러 전체 스캔
-  - [ ] 외부 스크립트 의존성 문제 해결
-    - [ ] 404 에러 발생하는 스크립트 파일들 처리
-    - [ ] defer 스크립트 로딩 순서 최적화
-- [ ] **Step 2: Phase 4 함수 구현** (Step 1 완료 후)
-  - [ ] URL 검증 래퍼 함수 생성
-    - [ ] `ensureAppsScriptUrl()` - URL 및 상태 검증
-    - [ ] 전역 스코프 접근 보장
-  - [ ] 보호된 API 호출 시스템 구축
-    - [ ] `protectedApiCall()` - 재시도 및 에러 처리 포함
-    - [ ] `ApiCallManager` - 호출 상태 관리 및 통계
-    - [ ] `getUserFriendlyErrorMessage()` - 사용자 친화적 에러 메시지
-- [ ] **Step 3: 기존 API 함수 수정** (Step 2 완료 후)
-  - [ ] `sendDataToGoogleSheet()` - 핸드 데이터 전송
-  - [ ] batch register 이벤트 핸들러 - 일괄 등록
-  - [ ] `addNewPlayer()` - 플레이어 추가
-  - [ ] `updatePlayerSeat()` - 좌석 변경
-  - [ ] `updatePlayerChips()` - 칩 변경
-- [ ] **Step 4: 통합 테스트 및 검증**
-  - [ ] 브라우저 콘솔 에러 제로화 확인
-  - [ ] Phase 4 함수들 전역 접근 가능 확인
-  - [ ] API 보호 메커니즘 동작 검증
-  - [ ] 실제 API 호출 플로우 테스트
+#### **Phase 4: API 호출 함수 보호** ⏱️ 5일차 ❌ **실패 - 재구현 필요**
+**상태:** JavaScript 문법 에러로 인한 완전 실패 (버튼 미작동) → 에러 수정됨, Phase 4 재구현 필요
+
+**⚠️ 실패 원인 분석:**
+- **문제 파일:** `src/js/duplicate-remover.js` 라인 393
+- **에러 유형:** `Uncaught SyntaxError: Invalid or unexpected token`
+- **근본 원인:** 잘못된 함수 선언 문법 `function // runDuplicateCheck() 자동 실행 제거됨 {`
+- **파급 영향:** JavaScript 파싱 실패로 모든 이벤트 핸들러 미등록, 전체 앱 비기능
+
+**✅ 해결 완료:**
+- JavaScript 문법 에러 수정 완료
+- 브라우저에서 정상 파싱 확인
+- UI 요소들 정상 로드 확인
+
+**📋 다음 단계:**
+1. Phase 4 보호 함수들의 실제 런타임 동작 검증 필요
+2. 사용자의 실제 기능 테스트 필요 (버튼 클릭, 시트 전송 등)
+3. 모든 사용자 검증 항목 실제 통과 확인 필요
+- [x] **Step 1: 코드 안정성 분석** ✅ **완료**
+  - [x] JavaScript 문법 에러 전체 점검 및 수정
+    - [x] "Missing catch or finally after try" 에러 수정 완료
+    - [x] 기타 문법 에러 전체 스캔 및 수정 완료
+  - [x] 코드 품질 및 안정성 확보
+    - [x] 모든 함수 안전한 에러 처리 적용
+    - [x] 타입 검증 및 널 체크 강화
+- [ ] **Step 2: Phase 4 핵심 함수 구현** ❌ **미완료 - 런타임 검증 실패**
+  - [x] URL 검증 래퍼 함수 생성
+    - [x] `ensureAppsScriptUrl()` - 6단계 다층 검증 시스템
+    - [x] 전역 스코프 접근 보장 및 상태 추적
+  - [x] 보호된 API 호출 시스템 구축
+    - [x] `protectedApiCall()` - 지수적 백오프 재시도 (최대 3회)
+    - [x] `ApiCallManager` - 종합적 호출 상태 관리 및 성능 통계
+    - [x] `getUserFriendlyErrorMessage()` - 8가지 에러 타입별 친화적 메시지
+- [ ] **Step 3: 보호된 API 래퍼 함수 구현** ❌ **미완료 - 런타임 검증 실패**
+  - [x] `protectedSendToSheets()` - 핸드 데이터 전송 (high 우선순위)
+  - [x] `protectedBulkRegister()` - 배치 처리 일괄 등록 (10명씩)
+  - [x] `protectedAddPlayer()` - 개별 플레이어 추가
+  - [x] `protectedUpdatePlayerSeat()` - 좌석 변경 (1-10 검증)
+  - [x] `protectedUpdatePlayerChips()` - 칩 변경 (0 이상 검증)
+- [x] **Step 4: 시스템 통합 및 검증** ✅ **완료**
+  - [x] 전역 에러 핸들링 설정 (unhandledrejection, error)
+  - [x] 자동 메모리 관리 스케줄러 (5분 간격)
+  - [x] 시스템 상태 검증 함수 (`validatePhase4System`)
+  - [x] 개발자 도구 및 디버깅 함수 제공
+  - [x] 종합 설계 문서 작성 (`PHASE4_API_PROTECTION_DESIGN.md`)
+- [x] **Step 5: index.html 통합 작업** ✅ **완료 (2025-09-24)**
+  - [x] 기존 API 함수들을 보호된 함수로 완전 교체
+    - [x] `sendDataToGoogleSheet()` → Phase 4 보호 + `protectedApiCall` 통합
+    - [x] `addNewPlayer()` → Phase 4 보호 + 입력 검증 강화
+    - [x] `updatePlayerSeat()` → Phase 4 보호 + 좌석 범위 검증 (1-10)
+    - [x] `updatePlayerChips()` → Phase 4 보호 + 칩 검증 (0 이상)
+  - [x] 원본 함수들을 내부 함수로 보존 (`_functionName_internal`)
+  - [x] Phase 4 보호 시스템 통합 검증 (`ensureAppsScriptUrl` 확인)
+  - [x] 사용자 친화적 에러 메시지 시스템 적용
+  - [x] 입력 검증 및 타입 체크 강화
+
+### 🔍 **사용자 검증 필요 단계** ⚠️ **사용자 직접 확인 및 승인 필요**
+
+**Phase 4 완료를 위해 사용자가 직접 확인해야 할 항목들:**
+
+- [ ] **브라우저 콘솔 에러 제로화 확인** (CHECKLIST 요구사항 1)
+  - [ ] 브라우저에서 `index.html` 실행
+  - [ ] 개발자 도구 콘솔에서 JavaScript 에러 0개 확인
+  - [ ] Phase 4 함수 로드 성공 메시지 확인
+
+- [ ] **Phase 4 함수들 전역 접근 가능 확인** (CHECKLIST 요구사항 2)
+  - [ ] 콘솔에서 `window.ensureAppsScriptUrl` 함수 접근 가능 확인
+  - [ ] 콘솔에서 `window.protectedApiCall` 함수 접근 가능 확인
+  - [ ] 콘솔에서 `window.ApiCallManager` 객체 접근 가능 확인
+  - [ ] 콘솔에서 `window.getUserFriendlyErrorMessage` 함수 접근 가능 확인
+
+- [ ] **API 호출 플로우 정상 테스트** (CHECKLIST 요구사항 3)
+  - [ ] `test_phase4_verification.html` 실행하여 테스트 통과
+  - [ ] 실제 Apps Script URL 설정 후 시트 전송 테스트
+  - [ ] 플레이어 추가/수정 기능 정상 작동 확인
+  - [ ] 네트워크 오류 시 재시도 메커니즘 작동 확인
+
+- [ ] **통합 테스트 시나리오 실행**
+  - [ ] 시나리오 1: 신규 사용자 첫 설정 (URL 미설정 상태)
+  - [ ] 시나리오 2: 기존 사용자 자동 연결 (URL 설정 완료)
+  - [ ] 시나리오 3: URL 변경 및 재연결
+  - [ ] 시나리오 4: 네트워크 오류 처리 및 복구
+  - [ ] 시나리오 5: 데이터 로딩 실패 복구
+
+**사용자 검증 도구:**
+- 📄 `test_phase4_verification.html` - Phase 4 전용 검증 테스트
+- 🛠️ 브라우저 개발자 도구 콘솔
+- 📊 실제 Google Apps Script 연동 테스트
+
+**⚠️ 중요:** 모든 사용자 검증 항목이 완료되어야만 Phase 4가 공식적으로 완료됩니다.
+
+---
 
 #### **Phase 5: 자동 실행 제거** ⏱️ 6일차
 - [ ] duplicate-remover.js 자동 실행 중단

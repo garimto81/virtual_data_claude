@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 5 테스트 - 수동 중복 제거</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6">🧪 Phase 5 테스트 페이지</h1>
+        <p class="text-gray-300 mb-8">자동 실행 제거 및 수동 중복 제거 기능을 테스트합니다.</p>
+
+        <!-- 테스트 섹션 -->
+        <div class="bg-gray-800 p-6 rounded-lg mb-6">
+            <h2 class="text-xl font-semibold mb-4">📋 실행 가능한 테스트</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button onclick="testPhase5.testAutoExecutionRemoval()"
+                        class="bg-blue-600 hover:bg-blue-700 p-4 rounded-lg text-left">
+                    <div class="font-semibold">1. 자동 실행 제거 확인</div>
+                    <div class="text-sm text-gray-300">페이지 로드 시 자동 실행되지 않는지 확인</div>
+                </button>
+
+                <button onclick="testPhase5.testDuplicateRemovalButtonExists()"
+                        class="bg-green-600 hover:bg-green-700 p-4 rounded-lg text-left">
+                    <div class="font-semibold">2. 중복 제거 버튼 존재</div>
+                    <div class="text-sm text-gray-300">관리 모달에 버튼이 올바르게 추가되었는지 확인</div>
+                </button>
+
+                <button onclick="testPhase5.testConditionalExecutionBeforeInit()"
+                        class="bg-yellow-600 hover:bg-yellow-700 p-4 rounded-lg text-left">
+                    <div class="font-semibold">3. 초기화 전 실행 방지</div>
+                    <div class="text-sm text-gray-300">앱 초기화 전 실행 시 경고 표시 확인</div>
+                </button>
+
+                <button onclick="testPhase5.testAppsScriptUrlValidation()"
+                        class="bg-purple-600 hover:bg-purple-700 p-4 rounded-lg text-left">
+                    <div class="font-semibold">4. URL 검증</div>
+                    <div class="text-sm text-gray-300">Apps Script URL 미설정 시 경고 확인</div>
+                </button>
+
+                <button onclick="testPhase5.testConfirmationDialog()"
+                        class="bg-red-600 hover:bg-red-700 p-4 rounded-lg text-left">
+                    <div class="font-semibold">5. 확인 대화상자</div>
+                    <div class="text-sm text-gray-300">실행 전 확인 대화상자 표시 확인</div>
+                </button>
+
+                <button onclick="testPhase5.testButtonLoadingState()"
+                        class="bg-indigo-600 hover:bg-indigo-700 p-4 rounded-lg text-left">
+                    <div class="font-semibold">6. 버튼 로딩 상태</div>
+                    <div class="text-sm text-gray-300">실행 중 버튼 상태 변경 확인</div>
+                </button>
+            </div>
+
+            <div class="mt-6">
+                <button onclick="runPhase5Tests()"
+                        class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-8 py-3 rounded-lg font-semibold text-lg w-full">
+                    🚀 전체 테스트 실행
+                </button>
+            </div>
+        </div>
+
+        <!-- 실제 관리 UI 미리보기 -->
+        <div class="bg-gray-800 p-6 rounded-lg mb-6">
+            <h2 class="text-xl font-semibold mb-4">👀 관리 UI 미리보기</h2>
+
+            <!-- 메인 관리 버튼들 시뮬레이션 -->
+            <div id="management-menu" class="space-y-3 mb-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <button class="bg-blue-600 hover:bg-blue-700 py-3 px-4 rounded-lg text-sm font-medium flex flex-col items-center">
+                        <span class="text-2xl mb-1">🎯</span>
+                        <span>테이블 선택</span>
+                    </button>
+                    <button id="remove-duplicates-btn" class="bg-red-600 hover:bg-red-700 py-3 px-4 rounded-lg text-sm font-medium flex flex-col items-center">
+                        <span class="text-2xl mb-1">🧹</span>
+                        <span>중복 제거</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="text-sm text-gray-400">
+                ⚠️ 이것은 시각적 미리보기입니다. 실제 기능 테스트는 main index.html에서 진행하세요.
+            </div>
+        </div>
+
+        <!-- 로그 출력 영역 -->
+        <div class="bg-gray-800 p-6 rounded-lg">
+            <h2 class="text-xl font-semibold mb-4">📝 테스트 로그</h2>
+            <div id="test-log" class="bg-black p-4 rounded-lg font-mono text-sm h-64 overflow-y-auto">
+                <div class="text-green-400">Phase 5 테스트 준비 완료...</div>
+                <div class="text-gray-400">테스트를 실행하려면 위의 버튼을 클릭하세요.</div>
+            </div>
+        </div>
+
+        <!-- 사용 방법 -->
+        <div class="bg-blue-900 border border-blue-700 p-6 rounded-lg mt-6">
+            <h3 class="text-lg font-semibold mb-3">📖 테스트 사용 방법</h3>
+            <ol class="list-decimal list-inside space-y-2 text-sm">
+                <li>이 페이지에서 개별 테스트를 실행할 수 있습니다.</li>
+                <li><strong>main index.html</strong>에서 실제 구현을 확인하세요.</li>
+                <li>관리 모달을 열어 새로운 🧹 중복 제거 버튼을 확인하세요.</li>
+                <li>중복 제거 버튼 클릭 시 조건부 검증이 작동하는지 확인하세요.</li>
+                <li>페이지 새로고침 시 자동 실행이 되지 않는지 확인하세요.</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- 모의 환경 설정 -->
+    <script>
+        // 간단한 모의 환경 설정
+        window.state = null; // 초기에는 null로 설정
+        window.APPS_SCRIPT_URL = undefined;
+
+        // 테스트용 간단한 함수들
+        const originalConsoleLog = console.log;
+        console.log = function(...args) {
+            originalConsoleLog.apply(console, args);
+
+            // 테스트 로그 영역에도 출력
+            const logElement = document.getElementById('test-log');
+            if (logElement) {
+                const logLine = document.createElement('div');
+                logLine.textContent = args.join(' ');
+
+                // 로그 레벨에 따른 색상
+                if (args[0].includes('✅') || args[0].includes('PASS')) {
+                    logLine.className = 'text-green-400';
+                } else if (args[0].includes('❌') || args[0].includes('FAIL')) {
+                    logLine.className = 'text-red-400';
+                } else if (args[0].includes('📋') || args[0].includes('테스트')) {
+                    logLine.className = 'text-blue-400';
+                } else if (args[0].includes('🎉')) {
+                    logLine.className = 'text-yellow-400 font-bold';
+                } else {
+                    logLine.className = 'text-gray-300';
+                }
+
+                logElement.appendChild(logLine);
+                logElement.scrollTop = logElement.scrollHeight;
+            }
+        };
+
+        // 중복 제거 버튼 이벤트 핸들러 (시뮬레이션)
+        document.getElementById('remove-duplicates-btn')?.addEventListener('click', () => {
+            console.log('🧹 중복 제거 버튼 클릭됨 (시뮬레이션)');
+            console.log('실제 테스트는 main index.html에서 진행하세요.');
+        });
+    </script>
+
+    <!-- 테스트 스크립트 로드 -->
+    <script src="test_phase5_manual_duplicate_removal.js"></script>
+</body>
+</html>
