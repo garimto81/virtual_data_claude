@@ -1,0 +1,44 @@
+{
+  "name": "virtual-data-v4",
+  "version": "4.0.0",
+  "description": "🎰 Virtual Data Poker Hand Logger v4.0.0 Phoenix - 완전히 새로운 모듈화 아키텍처",
+  "main": "index.html",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js --dev",
+    "test": "node tests/test-runner.js",
+    "test:watch": "node tests/test-runner.js --watch",
+    "build": "node scripts/build.js",
+    "lint": "node scripts/lint.js",
+    "clean": "node scripts/clean.js"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "keywords": [
+    "poker",
+    "hand-logger",
+    "casino",
+    "data-tracking",
+    "modular-architecture",
+    "phoenix"
+  ],
+  "author": "Claude AI Assistant",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/garimto81/virtual_data_v4.git"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "config": {
+    "app": {
+      "name": "Virtual Data v4.0.0 Phoenix",
+      "version": "4.0.0",
+      "codename": "Phoenix",
+      "build": "2025-09-24",
+      "environment": "development"
+    }
+  }
+}

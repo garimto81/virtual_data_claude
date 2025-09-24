@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎰 Virtual Data v4.0.0 Phoenix</title>
+
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎰</text></svg>">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Custom Styles -->
+  <style>
+    /* Phoenix Theme Variables */
+    :root {
+      --phoenix-primary: #ef4444;    /* Red */
+      --phoenix-secondary: #f97316;  /* Orange */
+      --phoenix-accent: #fbbf24;     /* Amber */
+      --phoenix-success: #10b981;    /* Emerald */
+      --phoenix-warning: #f59e0b;    /* Yellow */
+      --phoenix-error: #dc2626;      /* Red-600 */
+      --phoenix-dark: #1f2937;       /* Gray-800 */
+      --phoenix-darker: #111827;     /* Gray-900 */
+    }
+
+    /* Phoenix Animation */
+    @keyframes phoenix-rise {
+      0% { opacity: 0; transform: translateY(20px) scale(0.9); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes phoenix-glow {
+      0%, 100% { box-shadow: 0 0 20px var(--phoenix-accent); }
+      50% { box-shadow: 0 0 40px var(--phoenix-primary); }
+    }
+
+    .phoenix-rise { animation: phoenix-rise 0.6s ease-out; }
+    .phoenix-glow { animation: phoenix-glow 2s infinite; }
+
+    /* Loading Spinner */
+    .loader {
+      border: 4px solid #f3f4f6;
+      border-top: 4px solid var(--phoenix-primary);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Module Cards */
+    .module-card {
+      transition: all 0.3s ease;
+      border: 2px solid transparent;
+    }
+
+    .module-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--phoenix-accent);
+    }
+
+    .module-card.active {
+      border-color: var(--phoenix-primary);
+      background: linear-gradient(135deg, var(--phoenix-dark) 0%, var(--phoenix-darker) 100%);
+    }
+
+    /* Status Indicators */
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 8px;
+    }
+
+    .status-loading { background: var(--phoenix-warning); animation: pulse 1s infinite; }
+    .status-success { background: var(--phoenix-success); }
+    .status-error { background: var(--phoenix-error); }
+    .status-inactive { background: #6b7280; }
+
+    /* Debug Panel */
+    .debug-panel {
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      background: #0f172a;
+      border: 1px solid #374151;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .desktop-only { display: none !important; }
+      .mobile-full { width: 100% !important; }
+    }
+  </style>
+</head>
+
+<body class="bg-gray-900 text-white min-h-screen">
+  <!-- Loading Screen -->
+  <div id="loading-screen" class="fixed inset-0 bg-gray-900 flex items-center justify-center z-50">
+    <div class="text-center">
+      <div class="loader mx-auto mb-4"></div>
+      <h1 class="text-3xl font-bold mb-2 phoenix-glow">🎰 Virtual Data</h1>
+      <p class="text-xl text-orange-400 mb-4">v4.0.0 Phoenix</p>
+      <p id="loading-status" class="text-gray-400">시스템 초기화 중...</p>
+      <div class="mt-4 w-64 bg-gray-700 rounded-full h-2">
+        <div id="loading-progress" class="bg-gradient-to-r from-red-500 to-orange-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main App Container -->
+  <div id="app" class="hidden phoenix-rise">
+
+    <!-- Header -->
+    <header class="bg-gray-800 border-b border-gray-700">
+      <div class="container mx-auto px-4 py-3">
+        <div class="flex items-center justify-between">
+          <!-- Logo & Title -->
+          <div class="flex items-center space-x-3">
+            <span class="text-2xl">🎰</span>
+            <div>
+              <h1 class="text-xl font-bold">Virtual Data Phoenix</h1>
+              <p class="text-sm text-gray-400">v4.0.0 - 완전히 새로운 모듈화 아키텍처</p>
+            </div>
+          </div>
+
+          <!-- Status & Controls -->
+          <div class="flex items-center space-x-4 desktop-only">
+            <div id="connection-status" class="flex items-center">
+              <span class="status-dot status-inactive"></span>
+              <span class="text-sm">연결 확인 중...</span>
+            </div>
+
+            <button id="settings-btn" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm transition-colors">
+              ⚙️ 설정
+            </button>
+
+            <button id="debug-btn" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm transition-colors">
+              🔍 디버그
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6">
+
+      <!-- System Status -->
+      <section class="mb-8">
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+          <h2 class="text-lg font-semibold mb-4 flex items-center">
+            <span class="mr-2">📊</span>
+            시스템 상태
+          </h2>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- App Status -->
+            <div class="bg-gray-700 rounded-lg p-4">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-gray-400">애플리케이션</span>
+                <span id="app-status" class="status-dot status-loading"></span>
+              </div>
+              <div id="app-status-text" class="font-semibold">초기화 중...</div>
+              <div id="app-uptime" class="text-xs text-gray-400">-</div>
+            </div>
+
+            <!-- Modules Status -->
+            <div class="bg-gray-700 rounded-lg p-4">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-gray-400">모듈</span>
+                <span id="modules-count" class="text-sm font-mono">0/4</span>
+              </div>
+              <div id="modules-status" class="font-semibold">로딩 중...</div>
+              <div id="modules-list" class="text-xs text-gray-400">-</div>
+            </div>
+
+            <!-- API Status -->
+            <div class="bg-gray-700 rounded-lg p-4">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-gray-400">API 연결</span>
+                <span id="api-status" class="status-dot status-inactive"></span>
+              </div>
+              <div id="api-status-text" class="font-semibold">확인 중...</div>
+              <div id="api-url" class="text-xs text-gray-400 truncate">-</div>
+            </div>
+
+            <!-- Performance -->
+            <div class="bg-gray-700 rounded-lg p-4">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm text-gray-400">성능</span>
+                <span id="perf-indicator" class="text-sm font-mono">-</span>
+              </div>
+              <div id="perf-status" class="font-semibold">측정 중...</div>
+              <div id="memory-usage" class="text-xs text-gray-400">-</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Module Grid -->
+      <section class="mb-8">
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+          <h2 class="text-lg font-semibold mb-4 flex items-center">
+            <span class="mr-2">🧩</span>
+            모듈 상태
+          </h2>
+
+          <div id="modules-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Modules will be populated dynamically -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Quick Actions -->
+      <section class="mb-8">
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+          <h2 class="text-lg font-semibold mb-4 flex items-center">
+            <span class="mr-2">⚡</span>
+            빠른 작업
+          </h2>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button id="setup-btn" class="bg-blue-600 hover:bg-blue-700 p-4 rounded-lg text-left transition-colors">
+              <div class="text-lg font-semibold mb-2">🔧 초기 설정</div>
+              <div class="text-sm text-blue-200">Apps Script URL 및 기본 설정</div>
+            </button>
+
+            <button id="demo-btn" class="bg-purple-600 hover:bg-purple-700 p-4 rounded-lg text-left transition-colors">
+              <div class="text-lg font-semibold mb-2">🎮 데모 모드</div>
+              <div class="text-sm text-purple-200">샘플 데이터로 기능 체험</div>
+            </button>
+
+            <button id="docs-btn" class="bg-green-600 hover:bg-green-700 p-4 rounded-lg text-left transition-colors">
+              <div class="text-lg font-semibold mb-2">📚 문서</div>
+              <div class="text-sm text-green-200">사용법 및 API 문서</div>
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 border-t border-gray-700 py-4 desktop-only">
+      <div class="container mx-auto px-4">
+        <div class="flex items-center justify-between">
+          <div class="text-sm text-gray-400">
+            © 2024 Virtual Data v4.0.0 Phoenix - Powered by Claude AI
+          </div>
+          <div class="flex items-center space-x-4 text-sm text-gray-400">
+            <span id="build-info">Build: 2025-09-24</span>
+            <span>•</span>
+            <span id="memory-info">Memory: -</span>
+            <span>•</span>
+            <span id="events-info">Events: -</span>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Debug Panel (Hidden by default) -->
+  <div id="debug-panel" class="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700 p-4 hidden" style="height: 300px;">
+    <div class="flex items-center justify-between mb-2">
+      <h3 class="font-semibold">🔍 디버그 콘솔</h3>
+      <button id="debug-close" class="text-gray-400 hover:text-white">✕</button>
+    </div>
+    <div id="debug-output" class="debug-panel rounded bg-gray-800 p-2 text-green-400"></div>
+  </div>
+
+  <!-- Error Modal -->
+  <div id="error-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-red-500">
+      <div class="flex items-center mb-4">
+        <span class="text-2xl mr-3">⚠️</span>
+        <h3 class="text-lg font-semibold text-red-400">시스템 오류</h3>
+      </div>
+      <div id="error-message" class="mb-4 text-gray-300"></div>
+      <div class="flex justify-end space-x-3">
+        <button id="error-details-btn" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm">상세 정보</button>
+        <button id="error-retry-btn" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-sm">다시 시도</button>
+        <button id="error-close-btn" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded text-sm">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 border border-gray-700 max-h-96 overflow-y-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-semibold">⚙️ 시스템 설정</h3>
+        <button id="settings-close" class="text-gray-400 hover:text-white">✕</button>
+      </div>
+      <div id="settings-content">
+        <!-- Settings content will be populated dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Main App Script -->
+  <script type="module">
+    import { createApp } from './core/app.js';
+
+    // 전역 변수
+    let app = null;
+    let loadingProgress = 0;
+
+    // DOM 요소들
+    const elements = {
+      loadingScreen: document.getElementById('loading-screen'),
+      loadingStatus: document.getElementById('loading-status'),
+      loadingProgress: document.getElementById('loading-progress'),
+      app: document.getElementById('app'),
+      errorModal: document.getElementById('error-modal'),
+      errorMessage: document.getElementById('error-message'),
+      debugPanel: document.getElementById('debug-panel'),
+      debugOutput: document.getElementById('debug-output')
+    };
+
+    // 로딩 진행 상황 업데이트
+    function updateLoadingProgress(progress, status) {
+      loadingProgress = Math.min(100, Math.max(0, progress));
+      elements.loadingProgress.style.width = `${loadingProgress}%`;
+      elements.loadingStatus.textContent = status;
+    }
+
+    // 에러 표시
+    function showError(message, error = null) {
+      elements.errorMessage.textContent = message;
+      elements.errorModal.classList.remove('hidden');
+
+      if (error) {
+        console.error('App Error:', error);
+      }
+    }
+
+    // 앱 초기화
+    async function initializeApp() {
+      try {
+        updateLoadingProgress(10, 'Phoenix 시스템 시작...');
+
+        // 앱 생성
+        updateLoadingProgress(30, '핵심 시스템 로딩...');
+        app = await createApp();
+
+        // UI 업데이트
+        updateLoadingProgress(60, 'UI 구성 요소 초기화...');
+        await setupUI();
+
+        // 이벤트 리스너 설정
+        updateLoadingProgress(80, '이벤트 시스템 활성화...');
+        setupEventListeners();
+
+        // 완료
+        updateLoadingProgress(100, '시스템 준비 완료!');
+
+        setTimeout(() => {
+          elements.loadingScreen.classList.add('hidden');
+          elements.app.classList.remove('hidden');
+        }, 500);
+
+      } catch (error) {
+        console.error('App initialization failed:', error);
+        updateLoadingProgress(0, '초기화 실패');
+
+        setTimeout(() => {
+          elements.loadingScreen.classList.add('hidden');
+          showError('시스템을 초기화할 수 없습니다. 페이지를 새로고침해주세요.', error);
+        }, 1000);
+      }
+    }
+
+    // UI 설정
+    async function setupUI() {
+      // 상태 업데이트
+      updateAppStatus();
+      updateModulesStatus();
+
+      // 주기적 업데이트 시작
+      setInterval(updateAppStatus, 5000);
+    }
+
+    // 이벤트 리스너 설정
+    function setupEventListeners() {
+      // 디버그 패널
+      document.getElementById('debug-btn')?.addEventListener('click', toggleDebugPanel);
+      document.getElementById('debug-close')?.addEventListener('click', hideDebugPanel);
+
+      // 에러 모달
+      document.getElementById('error-close-btn')?.addEventListener('click', () => {
+        elements.errorModal.classList.add('hidden');
+      });
+
+      document.getElementById('error-retry-btn')?.addEventListener('click', () => {
+        elements.errorModal.classList.add('hidden');
+        location.reload();
+      });
+
+      // 설정 모달
+      document.getElementById('settings-btn')?.addEventListener('click', showSettings);
+      document.getElementById('settings-close')?.addEventListener('click', hideSettings);
+
+      // 빠른 작업 버튼들
+      document.getElementById('setup-btn')?.addEventListener('click', showSetup);
+      document.getElementById('demo-btn')?.addEventListener('click', startDemo);
+      document.getElementById('docs-btn')?.addEventListener('click', showDocs);
+
+      // 앱 이벤트 리스너
+      if (app) {
+        app.events.on('app:error', (data) => {
+          showError('시스템 오류가 발생했습니다.', data.error);
+        });
+
+        app.events.on('module:loaded', (data) => {
+          updateModulesStatus();
+        });
+      }
+    }
+
+    // 앱 상태 업데이트
+    function updateAppStatus() {
+      if (!app) return;
+
+      const state = app.getState();
+
+      // 앱 상태
+      const appStatusEl = document.getElementById('app-status');
+      const appStatusTextEl = document.getElementById('app-status-text');
+      const appUptimeEl = document.getElementById('app-uptime');
+
+      if (state.initialized) {
+        appStatusEl.className = 'status-dot status-success';
+        appStatusTextEl.textContent = '정상 동작';
+        appUptimeEl.textContent = `가동시간: ${formatUptime(state.uptime)}`;
+      } else {
+        appStatusEl.className = 'status-dot status-loading';
+        appStatusTextEl.textContent = '초기화 중';
+        appUptimeEl.textContent = '-';
+      }
+
+      // API 상태
+      const apiUrl = app.config.getAppsScriptUrl();
+      document.getElementById('api-url').textContent = apiUrl || '설정되지 않음';
+
+      // 성능 정보
+      updatePerformanceInfo();
+
+      // 푸터 정보
+      document.getElementById('memory-info').textContent = `Memory: ${(performance.memory?.usedJSHeapSize / 1024 / 1024).toFixed(1)}MB`;
+      document.getElementById('events-info').textContent = `Events: ${app.events.getStats().totalEvents}`;
+    }
+
+    // 모듈 상태 업데이트
+    function updateModulesStatus() {
+      if (!app) return;
+
+      const modules = app.getModules();
+      const modulesGrid = document.getElementById('modules-grid');
+
+      // 모듈 카운트
+      document.getElementById('modules-count').textContent = `${modules.length}/4`;
+      document.getElementById('modules-status').textContent = modules.length === 4 ? '모든 모듈 로드됨' : '모듈 로딩 중';
+      document.getElementById('modules-list').textContent = modules.map(([name]) => name).join(', ');
+
+      // 모듈 그리드 업데이트
+      modulesGrid.innerHTML = '';
+
+      const moduleNames = ['table', 'player', 'hand', 'ui'];
+      moduleNames.forEach(name => {
+        const module = app.getModule(name);
+        const card = createModuleCard(name, module);
+        modulesGrid.appendChild(card);
+      });
+    }
+
+    // 모듈 카드 생성
+    function createModuleCard(name, module) {
+      const card = document.createElement('div');
+      card.className = `module-card bg-gray-700 rounded-lg p-4 ${module ? 'active' : ''}`;
+
+      const status = module ? 'status-success' : 'status-inactive';
+      const statusText = module ? '활성화' : '비활성화';
+
+      card.innerHTML = `
+        <div class="flex items-center justify-between mb-2">
+          <span class="font-semibold capitalize">${name}</span>
+          <span class="status-dot ${status}"></span>
+        </div>
+        <div class="text-sm text-gray-400">${statusText}</div>
+        ${module ? `<div class="text-xs text-gray-500 mt-1">v${module.version || '1.0.0'}</div>` : ''}
+      `;
+
+      return card;
+    }
+
+    // 성능 정보 업데이트
+    function updatePerformanceInfo() {
+      const memory = performance.memory;
+      if (memory) {
+        const used = (memory.usedJSHeapSize / 1024 / 1024).toFixed(1);
+        const total = (memory.totalJSHeapSize / 1024 / 1024).toFixed(1);
+
+        document.getElementById('perf-indicator').textContent = `${used}MB`;
+        document.getElementById('perf-status').textContent = '정상';
+        document.getElementById('memory-usage').textContent = `${used}/${total}MB`;
+      }
+    }
+
+    // 시간 포매팅
+    function formatUptime(ms) {
+      const seconds = Math.floor(ms / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const hours = Math.floor(minutes / 60);
+
+      if (hours > 0) return `${hours}시간 ${minutes % 60}분`;
+      if (minutes > 0) return `${minutes}분 ${seconds % 60}초`;
+      return `${seconds}초`;
+    }
+
+    // 디버그 패널
+    function toggleDebugPanel() {
+      const panel = elements.debugPanel;
+      panel.classList.toggle('hidden');
+
+      if (!panel.classList.contains('hidden')) {
+        updateDebugOutput();
+      }
+    }
+
+    function hideDebugPanel() {
+      elements.debugPanel.classList.add('hidden');
+    }
+
+    function updateDebugOutput() {
+      if (!app) return;
+
+      const debugInfo = {
+        app: app.getState(),
+        modules: app.getModules().map(([name, module]) => ({ name, active: true })),
+        events: app.events.getStats(),
+        config: app.config.getAll()
+      };
+
+      elements.debugOutput.textContent = JSON.stringify(debugInfo, null, 2);
+    }
+
+    // 설정 관련
+    function showSettings() {
+      document.getElementById('settings-modal').classList.remove('hidden');
+    }
+
+    function hideSettings() {
+      document.getElementById('settings-modal').classList.add('hidden');
+    }
+
+    // 빠른 작업들
+    function showSetup() {
+      alert('설정 기능은 곧 구현됩니다.');
+    }
+
+    function startDemo() {
+      alert('데모 모드는 곧 구현됩니다.');
+    }
+
+    function showDocs() {
+      alert('문서는 곧 구현됩니다.');
+    }
+
+    // 앱 시작
+    document.addEventListener('DOMContentLoaded', initializeApp);
+
+    // 전역에 앱 노출 (디버깅용)
+    window.__PHOENIX_APP__ = () => app;
+  </script>
+</body>
+</html>
