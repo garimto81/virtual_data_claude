@@ -1,0 +1,23 @@
+{
+  "name": "poker-hand-logger-v35",
+  "version": "35.0.0",
+  "description": "포커 핸드 로거 - Google Sheets 연동 포커 기록 관리 시스템",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server -p 8000 -c-1",
+    "serve": "python -m http.server 8000",
+    "dev": "npx live-server --port=8000"
+  },
+  "keywords": [
+    "poker",
+    "hand-logger",
+    "google-sheets",
+    "pwa"
+  ],
+  "author": "Claude Assistant",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1",
+    "live-server": "^1.2.2"
+  }
+}

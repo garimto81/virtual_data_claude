@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="description" content="포커 핸드 로거 - 온라인 포커 게임 기록 및 분석 도구">
+    <title>포커 핸드 로거 v35</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#1F2937">
+</head>
+<body class="bg-gray-900 text-white antialiased">
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center">
+        <div class="text-center">
+            <div class="spinner mb-4"></div>
+            <h2 class="text-xl font-bold text-amber-400">포커 핸드 로거 로딩중...</h2>
+            <p class="text-gray-400 text-sm mt-2">v35 - Enhanced Edition</p>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app" class="max-w-6xl mx-auto p-4 hidden">
+        <!-- Header -->
+        <header class="mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-amber-400">포커 핸드 로거</h1>
+                    <p class="text-gray-400">v35 - 모듈화 및 성능 최적화</p>
+                </div>
+                <div class="flex gap-2">
+                    <button id="settings-btn" class="btn btn-secondary" title="설정">⚙️</button>
+                    <button id="help-btn" class="btn btn-secondary" title="도움말">❓</button>
+                    <button id="fullscreen-btn" class="btn btn-secondary" title="전체화면">⛶</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Progress Bar -->
+        <div id="progress-bar" class="mb-4 hidden">
+            <div class="bg-gray-700 rounded-full h-2">
+                <div class="bg-amber-400 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <!-- Left Column - Hand Info & Players -->
+            <div class="lg:col-span-2 space-y-4">
+                <!-- Hand Information Section -->
+                <section id="hand-info-section" class="card">
+                    <h2 class="card-title">
+                        <span>1. 핸드 정보</span>
+                        <button id="refresh-data" class="btn-icon" title="데이터 새로고침">🔄</button>
+                    </h2>
+                    <div class="card-content">
+                        <!-- Content will be loaded by JavaScript -->
+                    </div>
+                </section>
+
+                <!-- Player Details Section -->
+                <section id="player-details-section" class="card">
+                    <h2 class="card-title">2. 플레이어 정보</h2>
+                    <div class="card-content">
+                        <div id="player-cards-container" class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            <!-- Player cards will be loaded here -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Action Logger Section -->
+                <section id="action-logger-section" class="card">
+                    <h2 class="card-title">3. 액션 기록</h2>
+                    <div class="card-content">
+                        <div id="street-tabs" class="tabs mb-4">
+                            <button class="tab active" data-street="preflop">Preflop</button>
+                            <button class="tab" data-street="flop">Flop</button>
+                            <button class="tab" data-street="turn">Turn</button>
+                            <button class="tab" data-street="river">River</button>
+                        </div>
+                        <div id="action-content">
+                            <!-- Action content will be loaded here -->
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right Column - Controls & Stats -->
+            <div class="space-y-4">
+                <!-- Quick Stats -->
+                <section id="quick-stats" class="card">
+                    <h3 class="card-title">통계</h3>
+                    <div class="card-content">
+                        <div class="stat-item">
+                            <span class="stat-label">총 핸드:</span>
+                            <span class="stat-value" id="total-hands">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">현재 팟:</span>
+                            <span class="stat-value" id="current-pot">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">플레이어:</span>
+                            <span class="stat-value" id="player-count">0</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Control Panel -->
+                <section id="control-panel" class="card">
+                    <h3 class="card-title">컨트롤</h3>
+                    <div class="card-content space-y-3">
+                        <button id="send-to-sheet" class="btn btn-primary w-full">
+                            📤 시트에 전송
+                        </button>
+                        <button id="save-local" class="btn btn-secondary w-full">
+                            💾 로컬 저장
+                        </button>
+                        <button id="reset-hand" class="btn btn-danger w-full">
+                            🔄 새 핸드
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Recent Actions -->
+                <section id="recent-actions" class="card">
+                    <h3 class="card-title">최근 액션</h3>
+                    <div class="card-content">
+                        <div id="recent-actions-list" class="space-y-2 max-h-48 overflow-y-auto">
+                            <!-- Recent actions will be displayed here -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Log Display -->
+                <section id="log-section" class="card">
+                    <h3 class="card-title">시스템 로그</h3>
+                    <div class="card-content">
+                        <div id="log-display" class="log-display">
+                            <!-- System logs will appear here -->
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-8 py-4 text-center text-gray-500 text-sm">
+            <p>포커 핸드 로거 v35 © 2025 | 
+                <a href="#" id="privacy-link" class="hover:text-amber-400">개인정보처리방침</a> | 
+                <a href="#" id="terms-link" class="hover:text-amber-400">이용약관</a>
+            </p>
+        </footer>
+    </div>
+
+    <!-- Modals Container -->
+    <div id="modals-container"></div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-40 space-y-2"></div>
+
+    <!-- Scripts -->
+    <script>
+        // 초기 로깅 설정
+        console.log('========================================');
+        console.log('🎰 포커 핸드 로거 v35 시작');
+        console.log('========================================');
+        console.log(`⏰ 페이지 로드 시간: ${new Date().toISOString()}`);
+        console.log(`📱 User Agent: ${navigator.userAgent}`);
+        console.log(`🌐 URL: ${window.location.href}`);
+        console.log('========================================');
+        
+        // 네트워크 상태 확인
+        console.log('🔌 네트워크 상태 확인...');
+        if (navigator.onLine) {
+            console.log('  ✓ 온라인 상태');
+        } else {
+            console.warn('  ⚠️ 오프라인 상태');
+        }
+        
+        // Service Worker 확인
+        if ('serviceWorker' in navigator) {
+            console.log('📦 Service Worker 지원 확인됨');
+        } else {
+            console.warn('⚠️ Service Worker 미지원 브라우저');
+        }
+    </script>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>

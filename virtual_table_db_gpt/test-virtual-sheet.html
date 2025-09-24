@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Virtual 시트 시간 매칭 테스트</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #0f0;
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px;
+      background: #333;
+      color: #0f0;
+      border: 1px solid #0f0;
+    }
+    #results {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #0f0;
+      min-height: 200px;
+      white-space: pre-wrap;
+    }
+    .match {
+      background: #003300;
+      padding: 5px;
+      margin: 5px 0;
+    }
+    .close-match {
+      background: #333300;
+      padding: 5px;
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Virtual 시트 시간 매칭 테스트</h1>
+  
+  <div>
+    <label>Virtual 시트 URL:</label><br>
+    <input type="text" id="sheet-url" placeholder="Google Sheets URL 입력" style="width: 600px"><br>
+    
+    <label>찾을 시간 (HH:MM):</label><br>
+    <input type="text" id="target-time" value="18:41"><br>
+    
+    <button onclick="findMatchingRows()">매칭 행 찾기</button>
+    <button onclick="showAllTimes()">모든 시간 표시</button>
+  </div>
+  
+  <div id="results"></div>
+  
+  <script>
+    const resultsDiv = document.getElementById('results');
+    
+    function log(msg, className = '') {
+      const div = document.createElement('div');
+      div.className = className;
+      div.textContent = msg;
+      resultsDiv.appendChild(div);
+    }
+    
+    function parseCSV(text) {
+      const lines = text.split('\n').filter(line => line.trim());
+      return lines.map(line => {
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          const next = line[i + 1];
+          
+          if (char === '"' && inQuotes && next === '"') {
+            current += '"';
+            i++;
+          } else if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            result.push(current);
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        result.push(current);
+        return result;
+      });
+    }
+    
+    async function findMatchingRows() {
+      resultsDiv.innerHTML = '';
+      const sheetUrl = document.getElementById('sheet-url').value;
+      const targetTimeStr = document.getElementById('target-time').value;
+      
+      if (!sheetUrl) {
+        log('❌ Virtual 시트 URL을 입력하세요');
+        return;
+      }
+      
+      // URL에서 Sheet ID 추출
+      const sheetIdMatch = sheetUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+      if (!sheetIdMatch) {
+        log('❌ 올바른 Google Sheets URL이 아닙니다');
+        return;
+      }
+      
+      const sheetId = sheetIdMatch[1];
+      // gid 추출 시도 (없으면 0 사용)
+      const gidMatch = sheetUrl.match(/[#&]gid=(\d+)/);
+      const gid = gidMatch ? gidMatch[1] : '0';
+      
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+      
+      log(`📊 Sheet ID: ${sheetId}`);
+      log(`📊 GID: ${gid}`);
+      log(`🔍 찾는 시간: ${targetTimeStr}`);
+      log('');
+      
+      try {
+        const response = await fetch(csvUrl);
+        const text = await response.text();
+        const rows = parseCSV(text);
+        
+        log(`✅ 총 ${rows.length}개 행 로드됨\n`);
+        
+        // 타겟 시간 파싱
+        const [targetHours, targetMinutes] = targetTimeStr.split(':').map(n => parseInt(n));
+        const targetTimeInMinutes = targetHours * 60 + targetMinutes;
+        
+        log(`🎯 타겟: ${targetHours}시 ${targetMinutes}분 (총 ${targetTimeInMinutes}분)\n`);
+        log('='.repeat(60));
+        
+        // C열(index 2)의 모든 시간 검사
+        const matches = [];
+        
+        for (let i = 0; i < rows.length; i++) {
+          const cellValue = rows[i][2]; // C열
+          if (!cellValue) continue;
+          
+          // 다양한 형식 처리
+          let hours = 0, minutes = 0;
+          let timeStr = '';
+          
+          // HH:MM 또는 HH:MM:SS 형식
+          if (/\d{1,2}:\d{2}/.test(cellValue)) {
+            const parts = cellValue.split(':');
+            hours = parseInt(parts[0]) || 0;
+            minutes = parseInt(parts[1]) || 0;
+            timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+          }
+          // 숫자만 있는 경우 (시간을 분으로 표현?)
+          else if (/^\d+$/.test(cellValue)) {
+            const totalMinutes = parseInt(cellValue);
+            if (totalMinutes < 1440) { // 하루는 1440분
+              hours = Math.floor(totalMinutes / 60);
+              minutes = totalMinutes % 60;
+              timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+            }
+          }
+          
+          if (timeStr) {
+            const timeInMinutes = hours * 60 + minutes;
+            const diff = Math.abs(timeInMinutes - targetTimeInMinutes);
+            
+            matches.push({
+              row: i + 1,
+              time: timeStr,
+              value: cellValue,
+              diff: diff,
+              otherColumns: rows[i].slice(0, 5) // 처음 5개 열만
+            });
+          }
+        }
+        
+        // 시간 차이순으로 정렬
+        matches.sort((a, b) => a.diff - b.diff);
+        
+        // 결과 표시
+        log('\n📋 매칭 결과 (시간 차이순):');
+        log('='.repeat(60));
+        
+        // 정확히 일치하는 것
+        const exactMatches = matches.filter(m => m.diff === 0);
+        if (exactMatches.length > 0) {
+          log('\n✅ 정확히 일치:', 'match');
+          exactMatches.forEach(m => {
+            log(`  행 ${m.row}: ${m.time} (원본: "${m.value}")`, 'match');
+            log(`    데이터: [${m.otherColumns.join(' | ')}]`, 'match');
+          });
+        }
+        
+        // 근접한 것들 (30분 이내)
+        const closeMatches = matches.filter(m => m.diff > 0 && m.diff <= 30);
+        if (closeMatches.length > 0) {
+          log('\n⚠️ 근접한 시간 (30분 이내):', 'close-match');
+          closeMatches.slice(0, 5).forEach(m => {
+            log(`  행 ${m.row}: ${m.time} (차이: ${m.diff}분, 원본: "${m.value}")`, 'close-match');
+            log(`    데이터: [${m.otherColumns.join(' | ')}]`, 'close-match');
+          });
+        }
+        
+        if (exactMatches.length === 0 && closeMatches.length === 0) {
+          log('\n❌ 18:41 또는 근접한 시간을 찾을 수 없습니다');
+          log('\n💡 가장 가까운 시간 TOP 5:');
+          matches.slice(0, 5).forEach(m => {
+            log(`  행 ${m.row}: ${m.time} (차이: ${m.diff}분)`);
+          });
+        }
+        
+      } catch (error) {
+        log(`❌ 오류: ${error.message}`);
+      }
+    }
+    
+    async function showAllTimes() {
+      resultsDiv.innerHTML = '';
+      const sheetUrl = document.getElementById('sheet-url').value;
+      
+      if (!sheetUrl) {
+        log('❌ Virtual 시트 URL을 입력하세요');
+        return;
+      }
+      
+      const sheetIdMatch = sheetUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+      if (!sheetIdMatch) {
+        log('❌ 올바른 Google Sheets URL이 아닙니다');
+        return;
+      }
+      
+      const sheetId = sheetIdMatch[1];
+      const gidMatch = sheetUrl.match(/[#&]gid=(\d+)/);
+      const gid = gidMatch ? gidMatch[1] : '0';
+      
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+      
+      try {
+        const response = await fetch(csvUrl);
+        const text = await response.text();
+        const rows = parseCSV(text);
+        
+        log(`📊 C열의 모든 시간 값 (총 ${rows.length}개 행):\n`);
+        log('행번호 | C열 값 | A열 | B열');
+        log('='.repeat(60));
+        
+        let count = 0;
+        for (let i = 0; i < Math.min(rows.length, 50); i++) {
+          const cValue = rows[i][2];
+          if (cValue && cValue.trim()) {
+            count++;
+            log(`행 ${(i+1).toString().padStart(3)}: "${cValue}" | "${rows[i][0]}" | "${rows[i][1]}"`);
+          }
+        }
+        
+        log(`\n총 ${count}개의 시간 값 발견 (최대 50개 표시)`);
+        
+      } catch (error) {
+        log(`❌ 오류: ${error.message}`);
+      }
+    }
+    
+    // 저장된 URL 로드
+    const savedUrl = localStorage.getItem('virtual_sheet_url');
+    if (savedUrl) {
+      document.getElementById('sheet-url').value = savedUrl;
+    }
+    
+    // URL 저장
+    document.getElementById('sheet-url').addEventListener('change', (e) => {
+      localStorage.setItem('virtual_sheet_url', e.target.value);
+    });
+  </script>
+</body>
+</html>

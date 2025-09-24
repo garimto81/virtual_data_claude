@@ -1,0 +1,108 @@
+{
+  "name": "포커 핸드 로거 v35",
+  "short_name": "Poker Logger",
+  "description": "포커 핸드 기록 및 분석 도구",
+  "version": "35.0.0",
+  "manifest_version": 3,
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/",
+  "scope": "/",
+  "background_color": "#1a202c",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": [
+    "games",
+    "entertainment",
+    "utilities"
+  ],
+  "lang": "ko-KR",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "새 핸드 입력",
+      "short_name": "새 핸드",
+      "description": "새로운 포커 핸드를 입력합니다",
+      "url": "/?action=new-hand",
+      "icons": [
+        {
+          "src": "/icons/new-hand.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "히스토리 보기",
+      "short_name": "히스토리",
+      "description": "핸드 히스토리를 확인합니다",
+      "url": "/?action=history",
+      "icons": [
+        {
+          "src": "/icons/history.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/main.png",
+      "type": "image/png",
+      "sizes": "1280x720",
+      "label": "메인 화면"
+    },
+    {
+      "src": "/screenshots/hand-input.png",
+      "type": "image/png",
+      "sizes": "1280x720",
+      "label": "핸드 입력"
+    }
+  ],
+  "permissions": [
+    "storage",
+    "notifications"
+  ]
+}

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>포커 핸드 시간 분석</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 p-8">
+  <div class="max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold mb-8">🕒 포커 핸드 시간 분석 도구</h1>
+    
+    <div class="bg-gray-800 rounded-lg p-6 mb-6">
+      <button id="analyze-btn" class="px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700">
+        📊 시간 데이터 분석 시작
+      </button>
+      <span id="status" class="ml-4 text-gray-400"></span>
+    </div>
+
+    <div id="results" class="hidden">
+      <!-- 통계 요약 -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-gray-800 rounded-lg p-4">
+          <div class="text-gray-400 text-sm">총 핸드 수</div>
+          <div class="text-2xl font-bold" id="total-hands">0</div>
+        </div>
+        <div class="bg-gray-800 rounded-lg p-4">
+          <div class="text-gray-400 text-sm">첫 핸드 시간</div>
+          <div class="text-xl font-bold" id="first-hand">-</div>
+        </div>
+        <div class="bg-gray-800 rounded-lg p-4">
+          <div class="text-gray-400 text-sm">마지막 핸드 시간</div>
+          <div class="text-xl font-bold" id="last-hand">-</div>
+        </div>
+        <div class="bg-gray-800 rounded-lg p-4">
+          <div class="text-gray-400 text-sm">평균 핸드 간격</div>
+          <div class="text-xl font-bold" id="avg-interval">-</div>
+        </div>
+      </div>
+
+      <!-- 시간대별 분포 차트 -->
+      <div class="bg-gray-800 rounded-lg p-6 mb-6">
+        <h2 class="text-xl font-bold mb-4">⏰ 시간대별 핸드 분포</h2>
+        <canvas id="hourly-chart"></canvas>
+      </div>
+
+      <!-- 날짜별 분포 차트 -->
+      <div class="bg-gray-800 rounded-lg p-6 mb-6">
+        <h2 class="text-xl font-bold mb-4">📅 날짜별 핸드 분포</h2>
+        <canvas id="daily-chart"></canvas>
+      </div>
+
+      <!-- 상세 시간 정보 테이블 -->
+      <div class="bg-gray-800 rounded-lg p-6">
+        <h2 class="text-xl font-bold mb-4">📋 최근 핸드 시간 정보 (최대 20개)</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-gray-700">
+                <th class="text-left py-2">핸드 #</th>
+                <th class="text-left py-2">시간 (Epoch)</th>
+                <th class="text-left py-2">변환된 시간</th>
+                <th class="text-left py-2">이전 핸드와 간격</th>
+              </tr>
+            </thead>
+            <tbody id="time-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const CONFIG = {
+      CSV_HAND_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSDY_i4330JANAjIz4sMncdJdRHsOkfUCjQusHTGQk2tykrhA4d09LeIp3XRbLd8hkN6SgSB47k_nux/pub?gid=1906746276&single=true&output=csv',
+      CSV_INDEX_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSDY_i4330JANAjIz4sMncdJdRHsOkfUCjQusHTGQk2tykrhA4d09LeIp3XRbLd8hkN6SgSB47k_nux/pub?gid=1354012271&single=true&output=csv'
+    };
+
+    function parseCSV(text) {
+      const lines = text.split('\n').filter(line => line.trim());
+      return lines.map(line => {
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          const next = line[i + 1];
+          
+          if (char === '"' && inQuotes && next === '"') {
+            current += '"';
+            i++;
+          } else if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            result.push(current);
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        result.push(current);
+        return result;
+      });
+    }
+
+    async function analyzeHandTimes() {
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = '데이터 로딩 중...';
+      
+      try {
+        // Hand 시트 데이터 로드
+        const response = await fetch(CONFIG.CSV_HAND_URL + '&t=' + Date.now());
+        const text = await response.text();
+        const rows = parseCSV(text);
+        
+        // HAND 행만 필터링하고 시간 데이터 추출
+        const handData = [];
+        for (const row of rows) {
+          if (row[1] === 'HAND' && row[2] && row[3]) {
+            const handNumber = row[2];
+            const timestamp = row[3]; // D열: 시간 정보 (epoch timestamp)
+            
+            // Epoch 타임스탬프를 숫자로 변환
+            const epochTime = parseInt(timestamp);
+            if (!isNaN(epochTime) && epochTime > 0) {
+              handData.push({
+                handNumber: handNumber,
+                epochTime: epochTime,
+                date: new Date(epochTime * 1000) // JavaScript는 밀리초 단위
+              });
+            }
+          }
+        }
+        
+        // 시간순으로 정렬
+        handData.sort((a, b) => a.epochTime - b.epochTime);
+        
+        console.log(`총 ${handData.length}개 핸드 분석 완료`);
+        
+        // 통계 계산
+        if (handData.length > 0) {
+          displayAnalysis(handData);
+        } else {
+          statusEl.textContent = '시간 데이터가 없습니다.';
+        }
+        
+      } catch (error) {
+        console.error('분석 실패:', error);
+        statusEl.textContent = '오류 발생: ' + error.message;
+      }
+    }
+
+    function displayAnalysis(handData) {
+      document.getElementById('results').classList.remove('hidden');
+      document.getElementById('status').textContent = `${handData.length}개 핸드 분석 완료`;
+      
+      // 기본 통계
+      document.getElementById('total-hands').textContent = handData.length;
+      document.getElementById('first-hand').textContent = 
+        handData[0].date.toLocaleString('ko-KR');
+      document.getElementById('last-hand').textContent = 
+        handData[handData.length - 1].date.toLocaleString('ko-KR');
+      
+      // 평균 간격 계산
+      if (handData.length > 1) {
+        const totalTime = handData[handData.length - 1].epochTime - handData[0].epochTime;
+        const avgInterval = totalTime / (handData.length - 1);
+        const minutes = Math.floor(avgInterval / 60);
+        const seconds = Math.floor(avgInterval % 60);
+        document.getElementById('avg-interval').textContent = `${minutes}분 ${seconds}초`;
+      }
+      
+      // 시간대별 분포 계산
+      const hourlyDistribution = new Array(24).fill(0);
+      const dailyDistribution = {};
+      
+      for (const hand of handData) {
+        const hour = hand.date.getHours();
+        hourlyDistribution[hour]++;
+        
+        const dateKey = hand.date.toLocaleDateString('ko-KR');
+        dailyDistribution[dateKey] = (dailyDistribution[dateKey] || 0) + 1;
+      }
+      
+      // 시간대별 차트
+      new Chart(document.getElementById('hourly-chart'), {
+        type: 'bar',
+        data: {
+          labels: Array.from({length: 24}, (_, i) => `${i}시`),
+          datasets: [{
+            label: '핸드 수',
+            data: hourlyDistribution,
+            backgroundColor: 'rgba(59, 130, 246, 0.5)',
+            borderColor: 'rgba(59, 130, 246, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                color: '#9ca3af'
+              }
+            },
+            x: {
+              ticks: {
+                color: '#9ca3af'
+              }
+            }
+          }
+        }
+      });
+      
+      // 날짜별 차트
+      const sortedDates = Object.keys(dailyDistribution).sort();
+      new Chart(document.getElementById('daily-chart'), {
+        type: 'line',
+        data: {
+          labels: sortedDates,
+          datasets: [{
+            label: '핸드 수',
+            data: sortedDates.map(date => dailyDistribution[date]),
+            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+            borderColor: 'rgba(34, 197, 94, 1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                color: '#9ca3af'
+              }
+            },
+            x: {
+              ticks: {
+                color: '#9ca3af',
+                maxRotation: 45,
+                minRotation: 45
+              }
+            }
+          }
+        }
+      });
+      
+      // 상세 테이블 (최근 20개)
+      const tableBody = document.getElementById('time-table');
+      tableBody.innerHTML = '';
+      
+      const recentHands = handData.slice(-20).reverse(); // 최근 20개
+      for (let i = 0; i < recentHands.length; i++) {
+        const hand = recentHands[i];
+        let interval = '';
+        
+        if (i < recentHands.length - 1) {
+          const prevHand = recentHands[i + 1];
+          const diff = hand.epochTime - prevHand.epochTime;
+          const minutes = Math.floor(diff / 60);
+          const seconds = diff % 60;
+          interval = `${minutes}분 ${seconds}초`;
+        }
+        
+        const row = document.createElement('tr');
+        row.className = 'border-b border-gray-700';
+        row.innerHTML = `
+          <td class="py-2">#${hand.handNumber}</td>
+          <td class="py-2">${hand.epochTime}</td>
+          <td class="py-2">${hand.date.toLocaleString('ko-KR')}</td>
+          <td class="py-2">${interval}</td>
+        `;
+        tableBody.appendChild(row);
+      }
+    }
+
+    // 분석 버튼 이벤트
+    document.getElementById('analyze-btn').addEventListener('click', analyzeHandTimes);
+    
+    // 페이지 로드시 자동 분석
+    window.addEventListener('load', analyzeHandTimes);
+  </script>
+</body>
+</html>

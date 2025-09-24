@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>18:41 최종 위치 찾기</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #0f0; }
+    button { padding: 10px 20px; background: #333; color: #0f0; border: 1px solid #0f0; cursor: pointer; }
+    #results { margin-top: 20px; white-space: pre-wrap; border: 1px solid #0f0; padding: 10px; background: #0a0a0a; }
+    .found { background: #003300; padding: 5px; margin: 5px 0; border-left: 3px solid #0f0; }
+  </style>
+</head>
+<body>
+  <h1>Virtual 시트에서 18:41 정확한 위치 찾기</h1>
+  <button onclick="findTime()">검색 시작</button>
+  <div id="results"></div>
+  
+  <script>
+    const resultsDiv = document.getElementById('results');
+    
+    function log(msg, isHighlight = false) {
+      const div = document.createElement('div');
+      if (isHighlight) div.className = 'found';
+      div.textContent = msg;
+      resultsDiv.appendChild(div);
+    }
+    
+    function parseCSV(text) {
+      const lines = text.split(/\r?\n/);
+      const result = [];
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line.trim()) continue;
+        
+        const row = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let j = 0; j < line.length; j++) {
+          const char = line[j];
+          const next = line[j + 1];
+          
+          if (char === '"' && inQuotes && next === '"') {
+            current += '"';
+            j++;
+          } else if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            row.push(current);
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        row.push(current);
+        result.push(row);
+      }
+      
+      return result;
+    }
+    
+    async function findTime() {
+      resultsDiv.innerHTML = '';
+      log('🔍 Virtual 시트 접근 중...');
+      
+      const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTq3wrZNUASAMxl9A6VvJxTT6DKj40xp0R2xcIGfeji6MxQ8wi6Zbu_FWPmxKkmJdPHYgMC6UIT9tvv/pub?gid=561799849&single=true&output=csv';
+      
+      try {
+        const response = await fetch(csvUrl);
+        const text = await response.text();
+        
+        // HTML 체크
+        if (text.includes('<!DOCTYPE') || text.includes('<html') || text.includes('<HTML')) {
+          log('⚠️ HTML 응답 받음. 시트가 비공개 상태입니다.');
+          log('');
+          log('Virtual 시트에서 직접 확인 방법:');
+          log('1. Virtual 시트 열기');
+          log('2. Ctrl+F로 "18:41" 검색');
+          log('3. 찾은 셀의 행 번호와 열 알파벳 확인');
+          log('4. 그 정보를 알려주세요');
+          return;
+        }
+        
+        const rows = parseCSV(text);
+        log(`✅ ${rows.length}개 행 로드됨\n`);
+        
+        // 헤더 표시
+        if (rows.length > 0) {
+          log('📋 헤더:');
+          for (let i = 0; i < Math.min(rows[0].length, 10); i++) {
+            log(`  ${String.fromCharCode(65 + i)}열: "${rows[0][i]}"`);
+          }
+          log('');
+        }
+        
+        log('🎯 18:41 검색 중...\n');
+        
+        let foundCount = 0;
+        const allMatches = [];
+        
+        // 모든 행과 열 검색
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          
+          for (let j = 0; j < row.length; j++) {
+            const cell = row[j];
+            
+            // 18:41 찾기
+            if (cell === '18:41' || cell === '18:41:00') {
+              foundCount++;
+              const colLetter = String.fromCharCode(65 + j);
+              allMatches.push({
+                row: i + 1,
+                col: colLetter,
+                colIndex: j + 1
+              });
+              
+              log(`✅ 발견 #${foundCount}:`, true);
+              log(`   위치: 행 ${i + 1}, ${colLetter}열 (${j + 1}번째 열)`, true);
+              log(`   전체 행 데이터:`, true);
+              for (let k = 0; k < Math.min(row.length, 8); k++) {
+                if (row[k] && row[k].trim()) {
+                  log(`     ${String.fromCharCode(65 + k)}열: "${row[k]}"`, true);
+                }
+              }
+              log('');
+            }
+          }
+        }
+        
+        log('=' .repeat(60));
+        
+        if (foundCount > 0) {
+          log('\n📍 최종 답:');
+          allMatches.forEach(m => {
+            log(`   18:41은 행 ${m.row}, ${m.col}열에 있습니다`, true);
+          });
+        } else {
+          log('\n❌ 18:41을 찾을 수 없습니다');
+          
+          // 18:4X 시간들 찾기
+          log('\n💡 비슷한 시간들:');
+          let similarCount = 0;
+          for (let i = 0; i < Math.min(rows.length, 200); i++) {
+            const row = rows[i];
+            for (let j = 0; j < row.length; j++) {
+              if (row[j] && row[j].match(/18:4\d/)) {
+                similarCount++;
+                if (similarCount <= 10) {
+                  log(`   행 ${i + 1}, ${String.fromCharCode(65 + j)}열: "${row[j]}"`);
+                }
+              }
+            }
+          }
+        }
+        
+      } catch (error) {
+        log(`❌ 오류: ${error.message}`);
+        log('\nCORS 문제일 수 있습니다.');
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Virtual 시트 18:41 확인</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #0f0;
+    }
+    .match { background: #003300; padding: 5px; margin: 5px 0; }
+    .close { background: #333300; padding: 5px; margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <h1>Virtual 시트 18:41 매칭 확인</h1>
+  <div id="results"></div>
+  
+  <script>
+    const resultsDiv = document.getElementById('results');
+    
+    function log(msg, className = '') {
+      const div = document.createElement('div');
+      div.className = className;
+      div.textContent = msg;
+      resultsDiv.appendChild(div);
+    }
+    
+    function parseCSV(text) {
+      const lines = text.split('\n').filter(line => line.trim());
+      return lines.map(line => {
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          const next = line[i + 1];
+          
+          if (char === '"' && inQuotes && next === '"') {
+            current += '"';
+            i++;
+          } else if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            result.push(current);
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        result.push(current);
+        return result;
+      });
+    }
+    
+    async function checkSheet() {
+      const sheetId = '1M-LM2KkwLNOTygtrPVdnYLqqBoz4MmZvbglUaptSYqE';
+      const gid = '561799849';
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+      
+      log(`📊 Sheet ID: ${sheetId}`);
+      log(`📊 GID: ${gid}`);
+      log(`🔍 찾는 시간: 18:41\n`);
+      
+      try {
+        const response = await fetch(csvUrl);
+        const text = await response.text();
+        const rows = parseCSV(text);
+        
+        log(`✅ 총 ${rows.length}개 행 로드됨\n`);
+        
+        // 헤더 확인
+        if (rows.length > 0) {
+          log('📋 헤더 (첫 번째 행):');
+          log(`[${rows[0].slice(0, 8).join(' | ')}]\n`);
+        }
+        
+        // C열의 시간 값들 확인 (처음 30개)
+        log('📊 C열 시간 값들 (처음 30개):');
+        log('='.repeat(60));
+        
+        const targetHours = 18;
+        const targetMinutes = 41;
+        const targetTotalMinutes = targetHours * 60 + targetMinutes;
+        
+        const matches = [];
+        
+        for (let i = 1; i < Math.min(rows.length, 31); i++) {
+          const cValue = rows[i][2]; // C열
+          if (cValue && cValue.trim()) {
+            log(`행 ${i + 1}: C열="${cValue}" | A열="${rows[i][0]}" | D열="${rows[i][3]}"`);
+            
+            // 시간 파싱 시도
+            if (/\d{1,2}:\d{2}/.test(cValue)) {
+              const parts = cValue.split(':');
+              const hours = parseInt(parts[0]) || 0;
+              const minutes = parseInt(parts[1]) || 0;
+              const totalMinutes = hours * 60 + minutes;
+              const diff = Math.abs(totalMinutes - targetTotalMinutes);
+              
+              if (diff === 0) {
+                log(`  ✅ 정확히 일치! 18:41`, 'match');
+                matches.push({ row: i + 1, time: cValue, diff: 0 });
+              } else if (diff <= 5) {
+                log(`  ⚠️ 매우 근접 (${diff}분 차이)`, 'close');
+                matches.push({ row: i + 1, time: cValue, diff: diff });
+              }
+            }
+          }
+        }
+        
+        log('\n' + '='.repeat(60));
+        log('\n📌 매칭 결과 요약:');
+        
+        if (matches.length > 0) {
+          matches.sort((a, b) => a.diff - b.diff);
+          matches.forEach(m => {
+            if (m.diff === 0) {
+              log(`✅ 행 ${m.row}: ${m.time} - 정확히 일치!`, 'match');
+            } else {
+              log(`⚠️ 행 ${m.row}: ${m.time} - ${m.diff}분 차이`, 'close');
+            }
+          });
+        } else {
+          log('❌ 18:41 또는 근접한 시간을 찾을 수 없습니다');
+        }
+        
+        // 전체 데이터에서 18:41 검색
+        log('\n📊 전체 데이터에서 18:41 검색 중...');
+        const allMatches = [];
+        
+        for (let i = 1; i < rows.length; i++) {
+          const cValue = rows[i][2];
+          if (cValue && cValue.includes('18:41')) {
+            allMatches.push(i + 1);
+          }
+        }
+        
+        if (allMatches.length > 0) {
+          log(`\n✅ 18:41을 포함하는 행들: ${allMatches.join(', ')}`);
+        }
+        
+      } catch (error) {
+        log(`❌ 오류: ${error.message}`);
+      }
+    }
+    
+    // 자동 실행
+    checkSheet();
+  </script>
+</body>
+</html>

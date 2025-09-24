@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>CSV 파일에서 18:41 찾기</title>
+  <style>
+    body { 
+      font-family: monospace; 
+      padding: 20px; 
+      background: #1a1a1a; 
+      color: #0f0; 
+    }
+    .upload-area {
+      border: 2px dashed #0f0;
+      padding: 30px;
+      text-align: center;
+      margin: 20px 0;
+      cursor: pointer;
+    }
+    .upload-area:hover {
+      background: #003300;
+    }
+    button { 
+      padding: 10px 20px; 
+      background: #333; 
+      color: #0f0; 
+      border: 1px solid #0f0; 
+      cursor: pointer; 
+      margin: 5px;
+    }
+    #results { 
+      margin-top: 20px; 
+      white-space: pre-wrap; 
+      border: 1px solid #0f0; 
+      padding: 10px; 
+      min-height: 300px; 
+      background: #0a0a0a;
+      overflow-x: auto;
+    }
+    .match { 
+      background: #003300; 
+      padding: 5px; 
+      margin: 5px 0; 
+      border-left: 3px solid #0f0;
+    }
+    .close { 
+      background: #333300; 
+      padding: 5px; 
+      margin: 5px 0; 
+      border-left: 3px solid #ff0;
+    }
+    input[type="file"] {
+      display: none;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 10px 0;
+    }
+    th, td {
+      border: 1px solid #0f0;
+      padding: 5px;
+      text-align: left;
+    }
+    th {
+      background: #003300;
+    }
+  </style>
+</head>
+<body>
+  <h1>📊 CSV 파일에서 18:41 시간 찾기</h1>
+  
+  <div>
+    <p>Virtual 시트를 CSV로 다운로드한 후 여기에 업로드하세요:</p>
+    <p style="color: #ff0;">Google Sheets → 파일 → 다운로드 → 쉼표로 구분된 값(.csv)</p>
+  </div>
+  
+  <div class="upload-area" onclick="document.getElementById('csvFile').click()">
+    <p>📁 CSV 파일을 여기에 드래그하거나 클릭하여 선택</p>
+    <input type="file" id="csvFile" accept=".csv">
+  </div>
+  
+  <div>
+    <button onclick="findTime('18:41')">18:41 찾기</button>
+    <button onclick="showAllTimes()">모든 시간 표시</button>
+    <button onclick="showFirst20Rows()">처음 20행 보기</button>
+    <button onclick="clearResults()">결과 지우기</button>
+  </div>
+  
+  <div id="results"></div>
+  
+  <script>
+    const resultsDiv = document.getElementById('results');
+    let csvData = null;
+    let csvRows = null;
+    
+    function log(msg, className = '') {
+      const div = document.createElement('div');
+      div.className = className;
+      if (typeof msg === 'string') {
+        div.textContent = msg;
+      } else {
+        div.innerHTML = msg;
+      }
+      resultsDiv.appendChild(div);
+    }
+    
+    function clearResults() {
+      resultsDiv.innerHTML = '';
+    }
+    
+    function parseCSV(text) {
+      const lines = text.split(/\r?\n/).filter(line => line.trim());
+      return lines.map((line, lineIndex) => {
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          const next = line[i + 1];
+          
+          if (char === '"' && inQuotes && next === '"') {
+            current += '"';
+            i++;
+          } else if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            result.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        result.push(current.trim());
+        return result;
+      });
+    }
+    
+    // 파일 선택 이벤트
+    document.getElementById('csvFile').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        loadCSVFile(file);
+      }
+    });
+    
+    // 드래그 앤 드롭
+    const uploadArea = document.querySelector('.upload-area');
+    
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.style.background = '#003300';
+    });
+    
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.style.background = '';
+    });
+    
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.style.background = '';
+      
+      const file = e.dataTransfer.files[0];
+      if (file && file.name.endsWith('.csv')) {
+        loadCSVFile(file);
+      }
+    });
+    
+    function loadCSVFile(file) {
+      clearResults();
+      log(`📁 파일 로딩: ${file.name}`);
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        csvData = e.target.result;
+        csvRows = parseCSV(csvData);
+        
+        log(`✅ CSV 로드 완료: ${csvRows.length}개 행`);
+        log('');
+        
+        // 헤더 표시
+        if (csvRows.length > 0) {
+          log('📋 헤더 정보:');
+          const headers = csvRows[0].slice(0, 10);
+          headers.forEach((h, i) => {
+            log(`  ${String.fromCharCode(65 + i)}열: "${h}"`);
+          });
+          log('');
+        }
+        
+        // 자동으로 18:41 찾기
+        findTime('18:41');
+      };
+      
+      reader.readAsText(file, 'utf-8');
+    }
+    
+    function findTime(targetTime) {
+      if (!csvRows) {
+        log('❌ 먼저 CSV 파일을 로드하세요');
+        return;
+      }
+      
+      const [targetHours, targetMinutes] = targetTime.split(':').map(n => parseInt(n));
+      const targetTotalMinutes = targetHours * 60 + targetMinutes;
+      
+      log(`\n🔍 ${targetTime} 검색 중...`);
+      log('='.repeat(70));
+      
+      const matches = [];
+      const closeMatches = [];
+      
+      // C열(index 2) 검색
+      for (let i = 1; i < csvRows.length; i++) {
+        const row = csvRows[i];
+        const cValue = row[2]; // C열
+        
+        if (!cValue) continue;
+        
+        // 다양한 시간 형식 처리
+        let found = false;
+        let hours = 0, minutes = 0;
+        
+        // HH:MM 또는 HH:MM:SS 형식
+        const timeMatch = cValue.match(/(\d{1,2}):(\d{2})/);
+        if (timeMatch) {
+          hours = parseInt(timeMatch[1]);
+          minutes = parseInt(timeMatch[2]);
+          found = true;
+        }
+        
+        if (found) {
+          const totalMinutes = hours * 60 + minutes;
+          const diff = Math.abs(totalMinutes - targetTotalMinutes);
+          
+          if (diff === 0) {
+            matches.push({
+              row: i + 1,
+              data: row,
+              cValue: cValue
+            });
+          } else if (diff <= 10) {
+            closeMatches.push({
+              row: i + 1,
+              time: `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`,
+              diff: diff,
+              data: row
+            });
+          }
+        }
+      }
+      
+      // 결과 표시
+      if (matches.length > 0) {
+        log(`\n✅ ${targetTime}과 정확히 일치: ${matches.length}개 행`, 'match');
+        matches.forEach(m => {
+          log(`\n📍 행 ${m.row}:`, 'match');
+          log(`  A열: "${m.data[0]}"`, 'match');
+          log(`  B열: "${m.data[1]}"`, 'match');
+          log(`  C열: "${m.data[2]}" ← 시간`, 'match');
+          log(`  D열: "${m.data[3]}"`, 'match');
+          log(`  E열: "${m.data[4]}"`, 'match');
+          log(`  F열: "${m.data[5]}"`, 'match');
+        });
+      } else {
+        log(`\n❌ ${targetTime}과 정확히 일치하는 행 없음`);
+        
+        if (closeMatches.length > 0) {
+          log(`\n⚠️ 근접한 시간 (10분 이내):`, 'close');
+          closeMatches.sort((a, b) => a.diff - b.diff);
+          closeMatches.slice(0, 10).forEach(m => {
+            log(`  행 ${m.row}: ${m.time} (${m.diff}분 차이)`, 'close');
+            log(`    A열: "${m.data[0]}" | D열: "${m.data[3]}"`, 'close');
+          });
+        }
+      }
+      
+      log('\n' + '='.repeat(70));
+    }
+    
+    function showAllTimes() {
+      if (!csvRows) {
+        log('❌ 먼저 CSV 파일을 로드하세요');
+        return;
+      }
+      
+      clearResults();
+      log('📊 C열의 모든 시간 값:\n');
+      
+      let count = 0;
+      const timeData = [];
+      
+      for (let i = 1; i < csvRows.length; i++) {
+        const cValue = csvRows[i][2];
+        if (cValue && cValue.trim()) {
+          count++;
+          timeData.push({
+            row: i + 1,
+            time: cValue,
+            aCol: csvRows[i][0],
+            bCol: csvRows[i][1]
+          });
+        }
+      }
+      
+      // 테이블로 표시
+      let table = '<table><tr><th>행</th><th>C열 (시간)</th><th>A열</th><th>B열</th></tr>';
+      timeData.slice(0, 50).forEach(d => {
+        const highlight = d.time.includes('18:41') ? 'style="background: #003300;"' : '';
+        table += `<tr ${highlight}>`;
+        table += `<td>${d.row}</td>`;
+        table += `<td><strong>${d.time}</strong></td>`;
+        table += `<td>${d.aCol}</td>`;
+        table += `<td>${d.bCol}</td>`;
+        table += '</tr>';
+      });
+      table += '</table>';
+      
+      resultsDiv.innerHTML = table;
+      
+      log(`\n총 ${count}개 시간 값 (최대 50개 표시)`);
+    }
+    
+    function showFirst20Rows() {
+      if (!csvRows) {
+        log('❌ 먼저 CSV 파일을 로드하세요');
+        return;
+      }
+      
+      clearResults();
+      log('📋 처음 20개 행:\n');
+      
+      for (let i = 0; i < Math.min(20, csvRows.length); i++) {
+        const row = csvRows[i];
+        log(`행 ${i + 1}:`);
+        log(`  A열: "${row[0]}"`);
+        log(`  B열: "${row[1]}"`);
+        log(`  C열: "${row[2]}" ${row[2] && row[2].includes(':') ? '← 시간' : ''}`);
+        log(`  D열: "${row[3]}"`);
+        log('');
+      }
+    }
+  </script>
+</body>
+</html>

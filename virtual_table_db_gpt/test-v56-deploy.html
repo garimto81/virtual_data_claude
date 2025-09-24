@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>v56 배포 확인 테스트</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #0f0;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      background: #333;
+      color: #0f0;
+      border: 1px solid #0f0;
+    }
+    button:hover { background: #444; }
+    #output {
+      margin-top: 20px;
+      padding: 15px;
+      border: 1px solid #0f0;
+      background: #000;
+      min-height: 400px;
+      white-space: pre-wrap;
+    }
+    .error { color: #f00; }
+    .success { color: #0f0; }
+    .warning { color: #ff0; }
+  </style>
+</head>
+<body>
+  <h1>🔍 v56 배포 확인 테스트</h1>
+  
+  <div>
+    <button onclick="testGet()">1. GET 버전 확인</button>
+    <button onclick="testUpdateHandEdit()">2. updateHandEdit 테스트</button>
+    <button onclick="testOldLogic()">3. 기존 로직 테스트 (rows)</button>
+  </div>
+  
+  <div id="output"></div>
+  
+  <script>
+    // 현재 배포된 URL
+    const URL = 'https://script.google.com/macros/s/AKfycbzWfe_4CAKcMAzzoHzJBstQIC7jQxSVC1BO23nYwlU23Pd5vLPLjfUi-gKyqzDYvPRT/exec';
+    
+    const log = (msg, type = '') => {
+      const output = document.getElementById('output');
+      const timestamp = new Date().toLocaleTimeString();
+      const className = type ? ` class="${type}"` : '';
+      output.innerHTML += `<div${className}>[${timestamp}] ${msg}</div>`;
+      output.scrollTop = output.scrollHeight;
+    };
+    
+    // 1. GET 테스트 - 버전 확인
+    async function testGet() {
+      log('=== GET 버전 확인 시작 ===');
+      
+      try {
+        const response = await fetch(URL);
+        const text = await response.text();
+        log('응답: ' + text);
+        
+        const json = JSON.parse(text);
+        
+        if (json.version === 'v56') {
+          log('✅ v56 배포 확인!', 'success');
+        } else if (json.version) {
+          log(`⚠️ 다른 버전 감지: ${json.version}`, 'warning');
+        } else {
+          log('❌ 버전 정보 없음 - 이전 버전일 가능성', 'error');
+        }
+        
+        // rows 누락 메시지 체크
+        if (json.message === 'rows 누락') {
+          log('❌ v53 또는 이전 버전 감지! (rows 누락 메시지)', 'error');
+        }
+        
+      } catch (error) {
+        log('❌ 에러: ' + error.message, 'error');
+      }
+    }
+    
+    // 2. updateHandEdit 테스트
+    async function testUpdateHandEdit() {
+      log('=== updateHandEdit 테스트 ===');
+      
+      const payload = {
+        action: 'updateHandEdit',
+        handNumber: '1',
+        checked: true
+      };
+      
+      log('전송 데이터: ' + JSON.stringify(payload));
+      
+      const formData = new FormData();
+      formData.append('payload', JSON.stringify(payload));
+      
+      try {
+        const response = await fetch(URL, {
+          method: 'POST',
+          body: formData
+        });
+        
+        const text = await response.text();
+        log('응답: ' + text);
+        
+        const json = JSON.parse(text);
+        
+        // v56 응답 체크
+        if (json.success === true) {
+          log('✅ v56 updateHandEdit 성공!', 'success');
+          log('핸드 번호: ' + json.handNumber);
+          log('체크 상태: ' + json.checked);
+        } 
+        // v56 에러 체크
+        else if (json.status === 'error' && json.version === 'v56') {
+          log('⚠️ v56 에러: ' + json.message, 'warning');
+        }
+        // v53 에러 체크
+        else if (json.message === 'rows 누락') {
+          log('❌ v53 또는 이전 버전! updateHandEdit 미지원', 'error');
+          log('📝 Code.gs가 v56으로 업데이트되지 않았습니다', 'error');
+        }
+        
+      } catch (error) {
+        log('❌ 네트워크 에러: ' + error.message, 'error');
+      }
+    }
+    
+    // 3. 기존 로직 테스트
+    async function testOldLogic() {
+      log('=== 기존 로직 테스트 (빈 rows) ===');
+      
+      const formData = new FormData();
+      formData.append('payload', JSON.stringify({
+        rows: []  // 빈 배열
+      }));
+      
+      try {
+        const response = await fetch(URL, {
+          method: 'POST', 
+          body: formData
+        });
+        
+        const text = await response.text();
+        log('응답: ' + text);
+        
+        const json = JSON.parse(text);
+        
+        if (json.message === 'rows 누락' && !json.version) {
+          log('❌ v53 감지 - rows 누락 메시지, version 없음', 'error');
+        } else if (json.message === 'rows 누락' && json.version === 'v56') {
+          log('✅ v56 감지 - rows 누락 메시지, version 있음', 'success');
+        }
+        
+      } catch (error) {
+        log('❌ 에러: ' + error.message, 'error');
+      }
+    }
+    
+    // 페이지 로드 시
+    window.onload = () => {
+      log('테스트 준비 완료');
+      log('URL: ' + URL);
+      log('');
+      log('1번 버튼을 먼저 눌러 버전을 확인하세요');
+    };
+  </script>
+</body>
+</html>

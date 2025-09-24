@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Virtual Table DB GPT - 포커 핸드 분석 시스템</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .gradient-bg {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .card-hover:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+  <!-- Header -->
+  <header class="gradient-bg py-8">
+    <div class="container mx-auto px-4">
+      <h1 class="text-4xl font-bold text-center mb-2">🎲 Virtual Table DB GPT</h1>
+      <p class="text-center text-xl opacity-90">포커 핸드 분석 및 관리 시스템</p>
+      <p class="text-center text-sm mt-2 opacity-75">Version 8.9.0 | Last Updated: 2025-09-08</p>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container mx-auto px-4 py-12">
+    <!-- 주요 도구 섹션 -->
+    <section class="mb-12">
+      <h2 class="text-2xl font-bold mb-6 text-purple-400">🚀 메인 애플리케이션</h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <a href="poker-monitor.html" class="card-hover transition-all duration-200">
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-xl font-semibold mb-2 text-green-400">📊 포커 핸드 모니터링 시스템</h3>
+            <p class="text-gray-400 mb-3">실시간 핸드 모니터링, 편집, Virtual 시트 연동</p>
+            <div class="flex flex-wrap gap-2">
+              <span class="bg-blue-600 text-xs px-2 py-1 rounded">v8.9.0</span>
+              <span class="bg-green-600 text-xs px-2 py-1 rounded">로그 시스템</span>
+              <span class="bg-purple-600 text-xs px-2 py-1 rounded">Virtual 시트 연동</span>
+            </div>
+          </div>
+        </a>
+
+        <a href="index-compact.html" class="card-hover transition-all duration-200">
+          <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-xl font-semibold mb-2 text-blue-400">📱 컴팩트 버전</h3>
+            <p class="text-gray-400 mb-3">모바일 최적화된 간소화 버전</p>
+            <div class="flex flex-wrap gap-2">
+              <span class="bg-yellow-600 text-xs px-2 py-1 rounded">모바일</span>
+              <span class="bg-orange-600 text-xs px-2 py-1 rounded">경량화</span>
+            </div>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- 분석 도구 섹션 -->
+    <section class="mb-12">
+      <h2 class="text-2xl font-bold mb-6 text-purple-400">🔍 분석 도구</h2>
+      <div class="grid md:grid-cols-3 gap-4">
+        <a href="analyze_hand_times.html" class="card-hover transition-all duration-200">
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <h3 class="text-lg font-semibold mb-2">⏱️ 시간 분석</h3>
+            <p class="text-gray-400 text-sm">핸드 시간 데이터 분석</p>
+          </div>
+        </a>
+
+        <a href="analyze-csv-file.html" class="card-hover transition-all duration-200">
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <h3 class="text-lg font-semibold mb-2">📄 CSV 분석</h3>
+            <p class="text-gray-400 text-sm">CSV 파일 파싱 및 분석</p>
+          </div>
+        </a>
+
+        <a href="fetch-virtual-sheet.html" class="card-hover transition-all duration-200">
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <h3 class="text-lg font-semibold mb-2">📊 Virtual 시트</h3>
+            <p class="text-gray-400 text-sm">Virtual 시트 데이터 가져오기</p>
+          </div>
+        </a>
+
+        <a href="find-exact-row.html" class="card-hover transition-all duration-200">
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <h3 class="text-lg font-semibold mb-2">🎯 행 찾기</h3>
+            <p class="text-gray-400 text-sm">Virtual 시트 행 검색</p>
+          </div>
+        </a>
+
+        <a href="final-find-1841.html" class="card-hover transition-all duration-200">
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <h3 class="text-lg font-semibold mb-2">🕐 18:41 찾기</h3>
+            <p class="text-gray-400 text-sm">특정 시간 위치 검색</p>
+          </div>
+        </a>
+
+        <a href="check-virtual-18-41.html" class="card-hover transition-all duration-200">
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <h3 class="text-lg font-semibold mb-2">✅ 18:41 검증</h3>
+            <p class="text-gray-400 text-sm">시간 매칭 검증</p>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- 테스트 도구 섹션 -->
+    <section class="mb-12">
+      <h2 class="text-2xl font-bold mb-6 text-purple-400">🧪 테스트 도구</h2>
+      <div class="grid md:grid-cols-3 gap-4">
+        <a href="test-update-hand.html" class="card-hover transition-all duration-200">
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <h3 class="text-lg font-semibold mb-2">🔄 핸드 업데이트</h3>
+            <p class="text-gray-400 text-sm">핸드 업데이트 테스트</p>
+          </div>
+        </a>
+
+        <a href="test-virtual-sheet.html" class="card-hover transition-all duration-200">
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <h3 class="text-lg font-semibold mb-2">📋 Virtual 테스트</h3>
+            <p class="text-gray-400 text-sm">Virtual 시트 연동 테스트</p>
+          </div>
+        </a>
+
+        <a href="test-v56-deploy.html" class="card-hover transition-all duration-200">
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <h3 class="text-lg font-semibold mb-2">🚀 v56 배포</h3>
+            <p class="text-gray-400 text-sm">Apps Script v56 테스트</p>
+          </div>
+        </a>
+
+        <a href="direct-test.html" class="card-hover transition-all duration-200">
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <h3 class="text-lg font-semibold mb-2">⚡ 직접 테스트</h3>
+            <p class="text-gray-400 text-sm">API 직접 호출 테스트</p>
+          </div>
+        </a>
+
+        <a href="test-virtual-direct.html" class="card-hover transition-all duration-200">
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <h3 class="text-lg font-semibold mb-2">🎲 Virtual 직접</h3>
+            <p class="text-gray-400 text-sm">Virtual 시트 직접 접근</p>
+          </div>
+        </a>
+
+        <a href="setup_gemini.html" class="card-hover transition-all duration-200">
+          <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <h3 class="text-lg font-semibold mb-2">🤖 Gemini 설정</h3>
+            <p class="text-gray-400 text-sm">AI 분석 설정</p>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- 최신 업데이트 섹션 -->
+    <section class="mb-12">
+      <h2 class="text-2xl font-bold mb-6 text-purple-400">🔄 최신 업데이트</h2>
+      <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+        <div class="space-y-3">
+          <div class="border-l-4 border-green-500 pl-4">
+            <h3 class="font-semibold text-green-400">v8.9.0 (2025-09-08)</h3>
+            <ul class="text-gray-400 text-sm mt-1 space-y-1">
+              <li>• Virtual 시트 매칭 진행 상황 표시 추가</li>
+              <li>• 30초 타임아웃 보호 기능</li>
+              <li>• 기본 Virtual 시트 URL 설정</li>
+              <li>• 무한 로딩 문제 완전 해결</li>
+            </ul>
+          </div>
+          <div class="border-l-4 border-yellow-500 pl-4">
+            <h3 class="font-semibold text-yellow-400">v8.8.0 (2025-09-07)</h3>
+            <ul class="text-gray-400 text-sm mt-1 space-y-1">
+              <li>• 멀티 플레이어 지원</li>
+              <li>• 데이터 구조 개선</li>
+            </ul>
+          </div>
+          <div class="border-l-4 border-blue-500 pl-4">
+            <h3 class="font-semibold text-blue-400">v8.7.0 (2025-09-06)</h3>
+            <ul class="text-gray-400 text-sm mt-1 space-y-1">
+              <li>• 로그 시스템 추가</li>
+              <li>• 디버깅 메시지 강화</li>
+              <li>• UI/UX 개선</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 기술 정보 섹션 -->
+    <section class="mb-12">
+      <h2 class="text-2xl font-bold mb-6 text-purple-400">💻 기술 스택</h2>
+      <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+        <div class="grid md:grid-cols-3 gap-6">
+          <div>
+            <h3 class="font-semibold mb-2 text-green-400">Frontend</h3>
+            <ul class="text-gray-400 text-sm space-y-1">
+              <li>• HTML5 & JavaScript</li>
+              <li>• Tailwind CSS</li>
+              <li>• Chart.js</li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="font-semibold mb-2 text-blue-400">Backend</h3>
+            <ul class="text-gray-400 text-sm space-y-1">
+              <li>• Google Apps Script</li>
+              <li>• Google Sheets API</li>
+              <li>• REST API</li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="font-semibold mb-2 text-purple-400">Features</h3>
+            <ul class="text-gray-400 text-sm space-y-1">
+              <li>• 실시간 모니터링</li>
+              <li>• AI 핸드 분석</li>
+              <li>• 로그 시스템</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- GitHub 정보 -->
+    <section class="text-center">
+      <div class="bg-gray-800 rounded-lg p-6 border border-gray-700 inline-block">
+        <h3 class="font-semibold mb-2">📦 Repository</h3>
+        <a href="https://github.com/garimto81/virtual_table_db_gpt" 
+           target="_blank" 
+           class="text-blue-400 hover:text-blue-300 transition-colors">
+          github.com/garimto81/virtual_table_db_gpt
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-gray-800 py-6 mt-12">
+    <div class="container mx-auto px-4 text-center text-gray-400">
+      <p>© 2025 Virtual Table DB GPT. Created by garimto81</p>
+      <p class="text-sm mt-2">Built with ❤️ using Google Apps Script & JavaScript</p>
+    </div>
+  </footer>
+
+  <script>
+    // 페이지 로드 애니메이션
+    document.addEventListener('DOMContentLoaded', () => {
+      const cards = document.querySelectorAll('.card-hover');
+      cards.forEach((card, index) => {
+        setTimeout(() => {
+          card.style.opacity = '0';
+          card.style.transform = 'translateY(20px)';
+          card.style.transition = 'all 0.5s ease';
+          
+          setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+          }, 50);
+        }, index * 50);
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Apps Script 직접 테스트</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #1e1e1e;
+      color: #0f0;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      background: #333;
+      color: #0f0;
+      border: 1px solid #0f0;
+    }
+    button:hover {
+      background: #444;
+    }
+    #output {
+      margin-top: 20px;
+      padding: 15px;
+      border: 1px solid #0f0;
+      background: #000;
+      min-height: 400px;
+      white-space: pre-wrap;
+      overflow: auto;
+    }
+    input {
+      padding: 8px;
+      font-size: 16px;
+      width: 600px;
+      background: #333;
+      color: #0f0;
+      border: 1px solid #0f0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔧 Apps Script 직접 테스트</h1>
+  
+  <div>
+    <label>Apps Script URL:</label><br>
+    <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/.../exec">
+    <br><br>
+    
+    <button onclick="testGet()">1. GET 테스트 (버전 확인)</button>
+    <button onclick="testRawPost()">2. 원시 POST 테스트</button>
+    <button onclick="testFormData()">3. FormData 테스트</button>
+    <button onclick="testJson()">4. JSON 테스트</button>
+    <button onclick="testDirect()">5. 직접 URL 파라미터</button>
+  </div>
+  
+  <div id="output"></div>
+  
+  <script>
+    const log = (msg, data = null) => {
+      const output = document.getElementById('output');
+      const timestamp = new Date().toLocaleTimeString();
+      if (data) {
+        output.textContent += `[${timestamp}] ${msg}\n${JSON.stringify(data, null, 2)}\n\n`;
+      } else {
+        output.textContent += `[${timestamp}] ${msg}\n`;
+      }
+      output.scrollTop = output.scrollHeight;
+    };
+    
+    const getUrl = () => {
+      const url = document.getElementById('scriptUrl').value;
+      if (!url) {
+        alert('Apps Script URL을 입력하세요');
+        return null;
+      }
+      return url;
+    };
+    
+    // 1. GET 테스트 - 버전 확인
+    async function testGet() {
+      const url = getUrl();
+      if (!url) return;
+      
+      log('=== GET 테스트 시작 ===');
+      log('URL: ' + url);
+      
+      try {
+        const response = await fetch(url);
+        const text = await response.text();
+        log('응답 상태: ' + response.status);
+        log('응답 헤더:', Object.fromEntries(response.headers));
+        log('응답 본문:', text);
+        
+        try {
+          const json = JSON.parse(text);
+          log('파싱된 JSON:', json);
+          if (json.version) {
+            log(`✅ 버전: ${json.version}`);
+          } else {
+            log('⚠️ 버전 정보 없음');
+          }
+        } catch (e) {
+          log('❌ JSON 파싱 실패');
+        }
+      } catch (error) {
+        log('❌ 네트워크 에러: ' + error.message);
+      }
+    }
+    
+    // 2. 원시 POST 테스트
+    async function testRawPost() {
+      const url = getUrl();
+      if (!url) return;
+      
+      log('=== 원시 POST 테스트 ===');
+      
+      try {
+        const response = await fetch(url, {
+          method: 'POST'
+        });
+        const text = await response.text();
+        log('응답:', text);
+      } catch (error) {
+        log('❌ 에러: ' + error.message);
+      }
+    }
+    
+    // 3. FormData 테스트 (현재 사용 중인 방식)
+    async function testFormData() {
+      const url = getUrl();
+      if (!url) return;
+      
+      log('=== FormData 테스트 (현재 방식) ===');
+      
+      const payload = {
+        action: 'updateHandEdit',
+        handNumber: '1',
+        checked: true
+      };
+      
+      log('전송할 payload:', payload);
+      
+      const formData = new FormData();
+      formData.append('payload', JSON.stringify(payload));
+      
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          body: formData
+        });
+        const text = await response.text();
+        log('응답 상태: ' + response.status);
+        log('응답:', text);
+        
+        try {
+          const json = JSON.parse(text);
+          log('파싱된 JSON:', json);
+          
+          if (json.success === true) {
+            log('✅ 성공!');
+          } else if (json.status === 'error') {
+            log('❌ 에러: ' + json.message);
+            if (json.message === 'rows 누락') {
+              log('⚠️ 이것은 v53 에러입니다! v56이 배포되지 않았습니다.');
+            }
+          }
+        } catch (e) {
+          log('JSON 파싱 실패');
+        }
+      } catch (error) {
+        log('❌ 네트워크 에러: ' + error.message);
+      }
+    }
+    
+    // 4. JSON 테스트
+    async function testJson() {
+      const url = getUrl();
+      if (!url) return;
+      
+      log('=== JSON 테스트 ===');
+      
+      const payload = {
+        action: 'updateHandEdit',
+        handNumber: '1',
+        checked: true
+      };
+      
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+        const text = await response.text();
+        log('응답:', text);
+      } catch (error) {
+        log('❌ 에러: ' + error.message);
+      }
+    }
+    
+    // 5. URL 파라미터 직접 테스트
+    async function testDirect() {
+      const url = getUrl();
+      if (!url) return;
+      
+      log('=== URL 파라미터 직접 테스트 ===');
+      
+      const params = new URLSearchParams({
+        action: 'updateHandEdit',
+        handNumber: '1',
+        checked: 'true'
+      });
+      
+      const testUrl = url + '?' + params.toString();
+      log('테스트 URL: ' + testUrl);
+      
+      try {
+        const response = await fetch(testUrl, {
+          method: 'POST'
+        });
+        const text = await response.text();
+        log('응답:', text);
+      } catch (error) {
+        log('❌ 에러: ' + error.message);
+      }
+    }
+    
+    // 페이지 로드 시
+    window.onload = () => {
+      // 현재 사용 중인 URL 자동 입력
+      document.getElementById('scriptUrl').value = 
+        'https://script.google.com/macros/s/AKfycbygDLxqQaNvzc9ORH00jk1VuskDdVpBG1phvDsfnhk1SCqk9kl3gz51ScsQFDr30g1y/exec';
+      
+      log('준비 완료. 테스트를 시작하세요.');
+      log('');
+      log('테스트 순서:');
+      log('1. GET 테스트 - 배포된 버전 확인');
+      log('2. FormData 테스트 - 현재 사용 중인 방식');
+      log('');
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Virtual 시트 직접 접근</title>
+  <style>
+    body { 
+      font-family: monospace; 
+      padding: 20px; 
+      background: #1a1a1a; 
+      color: #0f0; 
+    }
+    #results { 
+      margin-top: 20px; 
+      white-space: pre-wrap; 
+      border: 1px solid #0f0; 
+      padding: 10px; 
+      background: #0a0a0a;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    .match { 
+      background: #003300; 
+      padding: 5px; 
+      margin: 5px 0; 
+      border-left: 3px solid #0f0;
+    }
+    .close { 
+      background: #333300; 
+      padding: 5px; 
+      margin: 5px 0; 
+      border-left: 3px solid #ff0;
+    }
+    .error {
+      color: #ff0000;
+      background: #330000;
+      padding: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>📊 Virtual 시트에서 18:41 찾기</h1>
+  <p>URL: https://docs.google.com/spreadsheets/d/e/2PACX-1vTq3wrZNUASAMxl9A6VvJxTT6DKj40xp0R2xcIGfeji6MxQ8wi6Zbu_FWPmxKkmJdPHYgMC6UIT9tvv/pub?gid=561799849&single=true&output=csv</p>
+  
+  <div id="results">로딩 중...</div>
+  
+  <script>
+    const resultsDiv = document.getElementById('results');
+    
+    function log(msg, className = '') {
+      const div = document.createElement('div');
+      div.className = className;
+      div.textContent = msg;
+      resultsDiv.appendChild(div);
+    }
+    
+    function parseCSV(text) {
+      const lines = text.split(/\r?\n/);
+      const result = [];
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        const row = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let j = 0; j < line.length; j++) {
+          const char = line[j];
+          const next = line[j + 1];
+          
+          if (char === '"' && inQuotes && next === '"') {
+            current += '"';
+            j++;
+          } else if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            row.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        row.push(current.trim());
+        result.push(row);
+      }
+      
+      return result;
+    }
+    
+    async function fetchAndAnalyze() {
+      resultsDiv.innerHTML = '';
+      
+      const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTq3wrZNUASAMxl9A6VvJxTT6DKj40xp0R2xcIGfeji6MxQ8wi6Zbu_FWPmxKkmJdPHYgMC6UIT9tvv/pub?gid=561799849&single=true&output=csv';
+      
+      log('🔍 Virtual 시트 접근 중...');
+      log('📊 목표 시간: 18:41');
+      log('');
+      
+      try {
+        const response = await fetch(csvUrl);
+        const text = await response.text();
+        
+        log(`📄 응답 상태: ${response.status} ${response.statusText}`);
+        log(`📄 Content-Type: ${response.headers.get('content-type')}`);
+        log('');
+        
+        // HTML 체크
+        if (text.includes('<!DOCTYPE') || text.includes('<html') || text.includes('<HTML')) {
+          log('⚠️ HTML 응답 받음. CSV가 아닙니다.', 'error');
+          log('');
+          log('📄 응답 내용 처음 500자:');
+          log(text.substring(0, 500));
+          log('');
+          log('💡 시트가 비공개이거나 권한이 필요합니다.');
+          log('');
+          log('해결 방법:');
+          log('1. Google Sheets 열기');
+          log('2. 파일 → 공유 → "링크가 있는 모든 사용자에게 공개"');
+          log('3. 또는 파일 → 웹에 게시');
+          return;
+        }
+        
+        // CSV 파싱
+        const rows = parseCSV(text);
+        log(`✅ CSV 파싱 성공: ${rows.length}개 행`);
+        log('');
+        
+        // 헤더 확인
+        if (rows.length > 0) {
+          log('📋 헤더 (처음 8개 열):');
+          const headers = rows[0].slice(0, 8);
+          headers.forEach((h, i) => {
+            log(`  ${String.fromCharCode(65 + i)}열: "${h}"`);
+          });
+          log('');
+        }
+        
+        // C열 샘플 표시
+        log('📊 C열 시간 데이터 (처음 30개):');
+        log('='.repeat(60));
+        for (let i = 1; i < Math.min(31, rows.length); i++) {
+          const cValue = rows[i][2];
+          if (cValue && cValue.trim()) {
+            const highlight = cValue.includes('18:4') ? 'match' : '';
+            log(`행 ${(i + 1).toString().padStart(3)}: "${cValue}"`, highlight);
+          }
+        }
+        log('');
+        
+        // 18:41 검색
+        const targetHours = 18;
+        const targetMinutes = 41;
+        const targetTotalMinutes = targetHours * 60 + targetMinutes;
+        
+        log('🎯 18:41 매칭 검색...');
+        log('='.repeat(60));
+        
+        const matches = [];
+        const closeMatches = [];
+        
+        for (let i = 1; i < rows.length; i++) {
+          const cValue = rows[i][2];
+          if (!cValue) continue;
+          
+          // 직접 문자열 매칭
+          if (cValue === '18:41' || cValue.includes('18:41')) {
+            matches.push({
+              row: i + 1,
+              exact: cValue,
+              data: rows[i]
+            });
+            continue;
+          }
+          
+          // 시간 파싱
+          const timeMatch = cValue.match(/(\d{1,2}):(\d{2})/);
+          if (timeMatch) {
+            const hours = parseInt(timeMatch[1]);
+            const minutes = parseInt(timeMatch[2]);
+            const totalMinutes = hours * 60 + minutes;
+            const diff = Math.abs(totalMinutes - targetTotalMinutes);
+            
+            if (diff === 0) {
+              matches.push({
+                row: i + 1,
+                exact: cValue,
+                data: rows[i]
+              });
+            } else if (diff <= 5) {
+              closeMatches.push({
+                row: i + 1,
+                time: `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`,
+                original: cValue,
+                diff: diff,
+                data: rows[i]
+              });
+            }
+          }
+        }
+        
+        log('');
+        log('📌 검색 결과:');
+        log('='.repeat(60));
+        
+        if (matches.length > 0) {
+          log('');
+          log(`✅ 18:41과 정확히 일치: ${matches.length}개 행`, 'match');
+          matches.forEach(m => {
+            log('', 'match');
+            log(`📍 행 ${m.row}:`, 'match');
+            log(`  A열: "${m.data[0]}"`, 'match');
+            log(`  B열: "${m.data[1]}"`, 'match');
+            log(`  C열: "${m.data[2]}" ← 18:41 일치!`, 'match');
+            log(`  D열: "${m.data[3]}"`, 'match');
+            log(`  E열: "${m.data[4]}"`, 'match');
+            log(`  F열: "${m.data[5]}"`, 'match');
+          });
+        } else {
+          log('');
+          log('❌ 18:41과 정확히 일치하는 행을 찾을 수 없습니다', 'error');
+          
+          if (closeMatches.length > 0) {
+            log('');
+            log('⚠️ 근접한 시간 (5분 이내):', 'close');
+            closeMatches.sort((a, b) => a.diff - b.diff);
+            closeMatches.slice(0, 10).forEach(m => {
+              log(`  행 ${m.row}: ${m.original} (${m.diff}분 차이)`, 'close');
+              log(`    A열: "${m.data[0]}"`, 'close');
+            });
+          }
+          
+          // 18시대 모든 시간 찾기
+          log('');
+          log('💡 18시대 모든 시간:');
+          let count18 = 0;
+          for (let i = 1; i < rows.length; i++) {
+            const cValue = rows[i][2];
+            if (cValue && cValue.includes('18:')) {
+              count18++;
+              if (count18 <= 10) {
+                log(`  행 ${i + 1}: "${cValue}"`);
+              }
+            }
+          }
+          log(`  총 ${count18}개 18시대 시간 존재`);
+        }
+        
+        log('');
+        log('✅ 분석 완료!');
+        
+      } catch (error) {
+        log(`❌ 오류: ${error.message}`, 'error');
+        log('');
+        log('CORS 오류일 수 있습니다. 다음 방법을 시도하세요:', 'error');
+        log('1. CSV 파일을 다운로드하여 analyze-csv-file.html 사용');
+        log('2. Google Sheets를 웹에 게시');
+      }
+    }
+    
+    // 자동 실행
+    fetchAndAnalyze();
+  </script>
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>핸드 입력 - 포커 핸드 로거</title>
+    <link href="../assets/css/main.css" rel="stylesheet">
+    <link href="../assets/css/hand-input.css" rel="stylesheet">
+</head>
+<body>
+    <div class="min-h-screen bg-gray-100">
+        <!-- 헤더 -->
+        <header class="bg-white shadow">
+            <div class="container mx-auto px-4 py-4">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-2xl font-bold text-gray-800">핸드 입력</h1>
+                    <nav class="flex space-x-4">
+                        <a href="dashboard.html" class="text-gray-600 hover:text-blue-600">대시보드</a>
+                        <a href="hand-input.html" class="text-blue-600 font-semibold">핸드 입력</a>
+                        <a href="history.html" class="text-gray-600 hover:text-blue-600">히스토리</a>
+                        <a href="statistics.html" class="text-gray-600 hover:text-blue-600">통계</a>
+                        <a href="settings.html" class="text-gray-600 hover:text-blue-600">설정</a>
+                    </nav>
+                </div>
+            </div>
+        </header>
+
+        <!-- 메인 폼 -->
+        <main class="container mx-auto px-4 py-8">
+            <form id="hand-input-form" class="max-w-4xl mx-auto">
+                <!-- 기본 정보 -->
+                <div class="bg-white rounded-lg shadow p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">기본 정보</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">핸드 번호</label>
+                            <input type="text" id="hand-number" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="자동 생성">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">테이블</label>
+                            <input type="text" id="table-name" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="예: Table 1">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">플레이어 수</label>
+                            <select id="player-count" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="2">2명</option>
+                                <option value="3">3명</option>
+                                <option value="4">4명</option>
+                                <option value="5">5명</option>
+                                <option value="6" selected>6명</option>
+                                <option value="7">7명</option>
+                                <option value="8">8명</option>
+                                <option value="9">9명</option>
+                                <option value="10">10명</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">내 포지션</label>
+                            <select id="my-position" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="UTG">UTG</option>
+                                <option value="MP">MP</option>
+                                <option value="CO">CO</option>
+                                <option value="BTN" selected>BTN</option>
+                                <option value="SB">SB</option>
+                                <option value="BB">BB</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 카드 정보 -->
+                <div class="bg-white rounded-lg shadow p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">카드 정보</h2>
+                    
+                    <!-- 홀 카드 -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">홀 카드</label>
+                        <div class="flex space-x-2">
+                            <div id="hole-card-1" class="card-selector"></div>
+                            <div id="hole-card-2" class="card-selector"></div>
+                        </div>
+                    </div>
+
+                    <!-- 커뮤니티 카드 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">커뮤니티 카드</label>
+                        <div class="flex space-x-2">
+                            <div id="flop-1" class="card-selector"></div>
+                            <div id="flop-2" class="card-selector"></div>
+                            <div id="flop-3" class="card-selector"></div>
+                            <div class="w-px bg-gray-300 mx-2"></div>
+                            <div id="turn" class="card-selector"></div>
+                            <div class="w-px bg-gray-300 mx-2"></div>
+                            <div id="river" class="card-selector"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 액션 히스토리 -->
+                <div class="bg-white rounded-lg shadow p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">액션 히스토리</h2>
+                    
+                    <!-- 프리플랍 -->
+                    <div class="mb-4">
+                        <h3 class="text-md font-medium text-gray-700 mb-2">프리플랍</h3>
+                        <div id="preflop-actions" class="action-container"></div>
+                        <button type="button" onclick="addAction('preflop')" class="mt-2 text-blue-600 hover:text-blue-800">+ 액션 추가</button>
+                    </div>
+
+                    <!-- 플랍 -->
+                    <div class="mb-4">
+                        <h3 class="text-md font-medium text-gray-700 mb-2">플랍</h3>
+                        <div id="flop-actions" class="action-container"></div>
+                        <button type="button" onclick="addAction('flop')" class="mt-2 text-blue-600 hover:text-blue-800">+ 액션 추가</button>
+                    </div>
+
+                    <!-- 턴 -->
+                    <div class="mb-4">
+                        <h3 class="text-md font-medium text-gray-700 mb-2">턴</h3>
+                        <div id="turn-actions" class="action-container"></div>
+                        <button type="button" onclick="addAction('turn')" class="mt-2 text-blue-600 hover:text-blue-800">+ 액션 추가</button>
+                    </div>
+
+                    <!-- 리버 -->
+                    <div>
+                        <h3 class="text-md font-medium text-gray-700 mb-2">리버</h3>
+                        <div id="river-actions" class="action-container"></div>
+                        <button type="button" onclick="addAction('river')" class="mt-2 text-blue-600 hover:text-blue-800">+ 액션 추가</button>
+                    </div>
+                </div>
+
+                <!-- 결과 -->
+                <div class="bg-white rounded-lg shadow p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">결과</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">팟 크기</label>
+                            <input type="number" id="pot-size" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">결과</label>
+                            <select id="result" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">선택하세요</option>
+                                <option value="Win">승리</option>
+                                <option value="Lose">패배</option>
+                                <option value="Chop">찹</option>
+                                <option value="Fold">폴드</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">노트</label>
+                        <textarea id="notes" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" rows="3" placeholder="메모나 분석을 입력하세요..."></textarea>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">태그</label>
+                        <input type="text" id="tags" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="예: bluff, value, hero-call (쉼표로 구분)">
+                    </div>
+                </div>
+
+                <!-- 버튼 -->
+                <div class="flex justify-between">
+                    <button type="button" onclick="clearForm()" class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition">
+                        초기화
+                    </button>
+                    <div class="space-x-4">
+                        <button type="button" onclick="saveAsDraft()" class="px-6 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition">
+                            임시 저장
+                        </button>
+                        <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                            저장
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </main>
+    </div>
+
+    <!-- 카드 선택 모달 -->
+    <div id="card-picker-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50">
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="bg-white rounded-lg p-6 max-w-md w-full">
+                <h3 class="text-lg font-semibold mb-4">카드 선택</h3>
+                <div id="card-picker-grid" class="grid grid-cols-13 gap-1">
+                    <!-- 동적으로 생성됨 -->
+                </div>
+                <div class="mt-4 flex justify-end space-x-2">
+                    <button onclick="closeCardPicker()" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
+                        취소
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../assets/js/hand-input.js"></script>
+</body>
+</html>

@@ -1,0 +1,483 @@
+/* ==========================================
+   포커 핸드 로거 v35 - Custom Styles
+   ========================================== */
+
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+/* CSS Variables */
+:root {
+  --color-primary: #FBBF24;
+  --color-secondary: #60A5FA;
+  --color-danger: #EF4444;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-dark: #1F2937;
+  --color-darker: #111827;
+  --transition-speed: 0.2s;
+}
+
+/* Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Noto Sans KR', 'Roboto', sans-serif;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+}
+
+/* Loading Spinner */
+.spinner {
+  width: 50px;
+  height: 50px;
+  margin: 0 auto;
+  border: 4px solid rgba(251, 191, 36, 0.2);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Card Components */
+.card {
+  background: rgba(31, 41, 55, 0.9);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(75, 85, 99, 0.3);
+  backdrop-filter: blur(10px);
+  transition: all var(--transition-speed);
+}
+
+.card:hover {
+  border-color: rgba(251, 191, 36, 0.3);
+  box-shadow: 0 4px 20px rgba(251, 191, 36, 0.1);
+}
+
+.card-title {
+  padding: 1rem 1.25rem;
+  border-bottom: 2px solid #374151;
+  font-size: 1.25rem;
+  font-weight: bold;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-content {
+  padding: 1.25rem;
+}
+
+/* Buttons */
+.btn {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all var(--transition-speed);
+  cursor: pointer;
+  border: none;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: var(--color-darker);
+}
+
+.btn-primary:hover {
+  background: #F59E0B;
+}
+
+.btn-secondary {
+  background: #4B5563;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #6B7280;
+}
+
+.btn-danger {
+  background: var(--color-danger);
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #DC2626;
+}
+
+.btn-success {
+  background: var(--color-success);
+  color: white;
+}
+
+.btn-icon {
+  padding: 0.5rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.25rem;
+  transition: transform var(--transition-speed);
+}
+
+.btn-icon:hover {
+  transform: scale(1.2);
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 2px solid #374151;
+  padding-bottom: 0.5rem;
+}
+
+.tab {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  color: #9CA3AF;
+  border: none;
+  border-radius: 0.375rem 0.375rem 0 0;
+  cursor: pointer;
+  transition: all var(--transition-speed);
+  font-weight: 500;
+}
+
+.tab:hover {
+  background: rgba(75, 85, 99, 0.5);
+  color: white;
+}
+
+.tab.active {
+  background: var(--color-primary);
+  color: var(--color-darker);
+  font-weight: bold;
+}
+
+/* Player Cards */
+.player-card {
+  background: rgba(55, 65, 81, 0.8);
+  border: 2px solid #374151;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  transition: all var(--transition-speed);
+}
+
+.player-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-secondary);
+}
+
+.player-card.is-winner {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.4);
+}
+
+.player-card.is-loser {
+  border-color: var(--color-secondary);
+  box-shadow: 0 0 20px rgba(96, 165, 250, 0.4);
+}
+
+/* Card Display */
+.card-display {
+  background: white;
+  color: black;
+  border-radius: 0.25rem;
+  padding: 0.25rem;
+  width: 3rem;
+  height: 4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Roboto', sans-serif;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.card-display.red {
+  color: #DC2626;
+}
+
+.card-placeholder {
+  border: 2px dashed #4B5563;
+  border-radius: 0.25rem;
+  min-height: 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-speed);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.card-placeholder:hover {
+  border-color: var(--color-primary);
+  background: rgba(251, 191, 36, 0.1);
+}
+
+/* Forms and Inputs */
+.input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: rgba(55, 65, 81, 0.8);
+  border: 1px solid #4B5563;
+  border-radius: 0.375rem;
+  color: white;
+  transition: all var(--transition-speed);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+}
+
+.select {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: rgba(55, 65, 81, 0.8);
+  border: 1px solid #4B5563;
+  border-radius: 0.375rem;
+  color: white;
+  cursor: pointer;
+}
+
+/* Stats Display */
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #374151;
+}
+
+.stat-item:last-child {
+  border-bottom: none;
+}
+
+.stat-label {
+  color: #9CA3AF;
+  font-size: 0.875rem;
+}
+
+.stat-value {
+  color: var(--color-primary);
+  font-weight: bold;
+  font-size: 1.125rem;
+}
+
+/* Log Display */
+.log-display {
+  background: rgba(17, 24, 39, 0.8);
+  border-radius: 0.375rem;
+  padding: 0.75rem;
+  max-height: 150px;
+  overflow-y: auto;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.75rem;
+}
+
+.log-entry {
+  padding: 0.25rem 0;
+  border-bottom: 1px solid rgba(55, 65, 81, 0.5);
+}
+
+.log-entry.error {
+  color: var(--color-danger);
+}
+
+.log-entry.success {
+  color: var(--color-success);
+}
+
+.log-entry.warning {
+  color: var(--color-warning);
+}
+
+/* Toast Notifications */
+.toast {
+  min-width: 300px;
+  padding: 1rem 1.25rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.toast.success {
+  background: var(--color-success);
+  color: white;
+}
+
+.toast.error {
+  background: var(--color-danger);
+  color: white;
+}
+
+.toast.warning {
+  background: var(--color-warning);
+  color: white;
+}
+
+.toast.info {
+  background: var(--color-secondary);
+  color: white;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  background: var(--color-dark);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  max-width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: scaleIn 0.2s ease-out;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .card-title {
+    font-size: 1rem;
+  }
+  
+  .btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+  }
+  
+  .toast {
+    min-width: 250px;
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(31, 41, 55, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4B5563;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6B7280;
+}
+
+/* Animations */
+.pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.shake {
+  animation: shake 0.5s;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+  20%, 40%, 60%, 80% { transform: translateX(2px); }
+}
+
+/* Accessibility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Print Styles */
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+  
+  .card {
+    background: white;
+    border: 1px solid black;
+  }
+  
+  .btn, .tabs, #control-panel {
+    display: none;
+  }
+}

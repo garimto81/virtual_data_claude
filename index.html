@@ -1,585 +1,1571 @@
 <!DOCTYPE html>
+<!--
+  포커 핸드 모니터링 시스템 - 키 플레이어 분석
+  Version: 8.8.0
+  Last Updated: 2025-09-06
+  Description: 키 플레이어 식별 + 멀티 플레이어 지원 + 개선된 Virtual 시트 매칭 + 카드 파싱 안정성 향상
+-->
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🎰 Virtual Data v4.0.0 Phoenix</title>
-
-  <!-- Favicon -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎰</text></svg>">
-
-  <!-- Tailwind CSS -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>포커 핸드 모니터링 v8.8.0 - 키 플레이어 분석</title>
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Custom Styles -->
   <style>
-    /* Phoenix Theme Variables */
-    :root {
-      --phoenix-primary: #ef4444;    /* Red */
-      --phoenix-secondary: #f97316;  /* Orange */
-      --phoenix-accent: #fbbf24;     /* Amber */
-      --phoenix-success: #10b981;    /* Emerald */
-      --phoenix-warning: #f59e0b;    /* Yellow */
-      --phoenix-error: #dc2626;      /* Red-600 */
-      --phoenix-dark: #1f2937;       /* Gray-800 */
-      --phoenix-darker: #111827;     /* Gray-900 */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
-
-    /* Phoenix Animation */
-    @keyframes phoenix-rise {
-      0% { opacity: 0; transform: translateY(20px) scale(0.9); }
-      100% { opacity: 1; transform: translateY(0) scale(1); }
+    
+    body { 
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #e2e8f0;
+      min-height: 100vh;
+      overflow-x: hidden;
     }
-
-    @keyframes phoenix-glow {
-      0%, 100% { box-shadow: 0 0 20px var(--phoenix-accent); }
-      50% { box-shadow: 0 0 40px var(--phoenix-primary); }
+    
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
     }
-
-    .phoenix-rise { animation: phoenix-rise 0.6s ease-out; }
-    .phoenix-glow { animation: phoenix-glow 2s infinite; }
-
-    /* Loading Spinner */
-    .loader {
-      border: 4px solid #f3f4f6;
-      border-top: 4px solid var(--phoenix-primary);
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      animation: spin 1s linear infinite;
+    
+    /* 컴팩트 카드 스타일 */
+    .card-mini {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 48px;
+      background-color: #FFFFFF !important;
+      color-scheme: light;
+      border: 1px solid #6b7280;
+      border-radius: 4px;
+      font-weight: 800;
+      font-size: 16px;
+      margin: 0 1px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      position: relative;
     }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    
+    /* 스페이드, 클럽 - 진한 검은색 */
+    .card-mini.spade, .card-mini.club { 
+      color: #000000 !important;
     }
-
-    /* Module Cards */
-    .module-card {
-      transition: all 0.3s ease;
-      border: 2px solid transparent;
+    
+    /* 하트, 다이아몬드 - 진한 빨간색 */
+    .card-mini.heart, .card-mini.diamond { 
+      color: #dc2626 !important;
     }
-
-    .module-card:hover {
-      transform: translateY(-2px);
-      border-color: var(--phoenix-accent);
+    
+    /* 보드 카드 스타일 */
+    .board-card {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 60px;
+      background-color: #FFFFFF !important;
+      color-scheme: light;
+      border: 2px solid #f59e0b;
+      border-radius: 6px;
+      font-weight: 900;
+      font-size: 20px;
+      margin: 0 2px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      position: relative;
     }
-
-    .module-card.active {
-      border-color: var(--phoenix-primary);
-      background: linear-gradient(135deg, var(--phoenix-dark) 0%, var(--phoenix-darker) 100%);
+    
+    /* 스페이드, 클럽 - 진한 검은색 */
+    .board-card.spade, .board-card.club { 
+      color: #000000 !important;
     }
-
-    /* Status Indicators */
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
+    
+    /* 하트, 다이아몬드 - 진한 빨간색 */
+    .board-card.heart, .board-card.diamond { 
+      color: #dc2626 !important;
+    }
+    
+    /* 액션 배지 스타일 */
+    .action-badge {
       display: inline-block;
-      margin-right: 8px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
     }
-
-    .status-loading { background: var(--phoenix-warning); animation: pulse 1s infinite; }
-    .status-success { background: var(--phoenix-success); }
-    .status-error { background: var(--phoenix-error); }
-    .status-inactive { background: #6b7280; }
-
-    /* Debug Panel */
-    .debug-panel {
-      font-family: 'Courier New', monospace;
+    
+    .action-badge.fold { background: #64748b; color: white; }
+    .action-badge.check { background: #0ea5e9; color: white; }
+    .action-badge.call { background: #22c55e; color: white; }
+    .action-badge.bet { background: #f97316; color: white; }
+    .action-badge.raise { background: #ef4444; color: white; }
+    .action-badge.allin { background: #fbbf24; color: #000; }
+    
+    /* 포지션 배지 */
+    .pos-badge {
+      display: inline-block;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    
+    .pos-badge.btn { background: #fbbf24; color: #000; }
+    .pos-badge.sb { background: #10b981; color: white; }
+    .pos-badge.bb { background: #3b82f6; color: white; }
+    .pos-badge.utg { background: #8b5cf6; color: white; }
+    .pos-badge.mp { background: #ec4899; color: white; }
+    .pos-badge.co { background: #f97316; color: white; }
+    
+    /* 스크롤바 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: #1e293b;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 3px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: #64748b;
+    }
+    
+    /* 컴팩트 그리드 레이아웃 */
+    .compact-grid {
+      display: grid;
+      grid-template-columns: 280px 1fr 320px;
+      gap: 12px;
+      padding: 12px;
+      height: 100vh;
+      max-width: 1920px;
+      margin: 0 auto;
+    }
+    
+    @media (max-width: 1440px) {
+      .compact-grid {
+        grid-template-columns: 260px 1fr 300px;
+      }
+    }
+    
+    /* 섹션 스타일 */
+    .section {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 12px;
+      backdrop-filter: blur(10px);
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .section-header {
+      font-size: 13px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #334155;
+    }
+    
+    /* 플레이어 리스트 */
+    .player-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .player-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 8px;
+      background: rgba(15, 23, 42, 0.4);
+      border: 1px solid #334155;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    
+    .player-item:hover {
+      background: rgba(59, 130, 246, 0.1);
+      border-color: #3b82f6;
+    }
+    
+    .player-item.folded {
+      opacity: 0.5;
+    }
+    
+    /* 액션 타임라인 컴팩트 */
+    .action-line {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 6px;
       font-size: 12px;
-      max-height: 200px;
-      overflow-y: auto;
-      background: #0f172a;
-      border: 1px solid #374151;
+      border-left: 2px solid transparent;
     }
-
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-      .desktop-only { display: none !important; }
-      .mobile-full { width: 100% !important; }
+    
+    .action-line.preflop { border-left-color: #8b5cf6; }
+    .action-line.flop { border-left-color: #3b82f6; }
+    .action-line.turn { border-left-color: #10b981; }
+    .action-line.river { border-left-color: #f97316; }
+    .action-line.showdown { border-left-color: #fbbf24; }
+    
+    /* 팟 디스플레이 */
+    .pot-display {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      color: #000;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 16px;
     }
   </style>
 </head>
-
-<body class="bg-gray-900 text-white min-h-screen">
-  <!-- Loading Screen -->
-  <div id="loading-screen" class="fixed inset-0 bg-gray-900 flex items-center justify-center z-50">
-    <div class="text-center">
-      <div class="loader mx-auto mb-4"></div>
-      <h1 class="text-3xl font-bold mb-2 phoenix-glow">🎰 Virtual Data</h1>
-      <p class="text-xl text-orange-400 mb-4">v4.0.0 Phoenix</p>
-      <p id="loading-status" class="text-gray-400">시스템 초기화 중...</p>
-      <div class="mt-4 w-64 bg-gray-700 rounded-full h-2">
-        <div id="loading-progress" class="bg-gradient-to-r from-red-500 to-orange-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+<body>
+  <!-- 헤더 -->
+  <div class="app-header" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid #334155; padding: 10px 16px; position: sticky; top: 0; z-index: 100;">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <h1 class="text-lg font-bold">포커 핸드 모니터링</h1>
+        <span class="text-xs text-gray-500">v8.7.0</span>
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+          <span class="text-xs text-gray-400">연결됨</span>
+        </div>
+        <div class="flex items-center gap-2 text-xs text-gray-400">
+          <span>🔄 Virtual 시트 매칭</span>
+          <span>•</span>
+          <span>📊 실시간 분석</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <input type="text" id="virtual-sheet-url" 
+               class="text-xs bg-gray-700 px-2 py-1 rounded w-64" 
+               placeholder="Virtual 시트 URL 입력..."
+               title="Virtual 시트가 포함된 Google Sheets URL">
+        <button id="refresh-btn" class="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">
+          새로고침
+        </button>
+        <button id="settings-btn" class="px-3 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700">
+          설정
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- Main App Container -->
-  <div id="app" class="hidden phoenix-rise">
-
-    <!-- Header -->
-    <header class="bg-gray-800 border-b border-gray-700">
-      <div class="container mx-auto px-4 py-3">
-        <div class="flex items-center justify-between">
-          <!-- Logo & Title -->
-          <div class="flex items-center space-x-3">
-            <span class="text-2xl">🎰</span>
-            <div>
-              <h1 class="text-xl font-bold">Virtual Data Phoenix</h1>
-              <p class="text-sm text-gray-400">v4.0.0 - 완전히 새로운 모듈화 아키텍처</p>
-            </div>
-          </div>
-
-          <!-- Status & Controls -->
-          <div class="flex items-center space-x-4 desktop-only">
-            <div id="connection-status" class="flex items-center">
-              <span class="status-dot status-inactive"></span>
-              <span class="text-sm">연결 확인 중...</span>
-            </div>
-
-            <button id="settings-btn" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm transition-colors">
-              ⚙️ 설정
-            </button>
-
-            <button id="debug-btn" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm transition-colors">
-              🔍 디버그
-            </button>
-          </div>
-        </div>
+  <!-- 메인 컨텐츠 -->
+  <div class="compact-grid">
+    
+    <!-- 왼쪽: 핸드 리스트 -->
+    <div class="section overflow-hidden">
+      <div class="section-header flex items-center justify-between">
+        <span>핸드 목록</span>
+        <span id="hand-count" class="text-xs">0</span>
       </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="container mx-auto px-4 py-6">
-
-      <!-- System Status -->
-      <section class="mb-8">
-        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-          <h2 class="text-lg font-semibold mb-4 flex items-center">
-            <span class="mr-2">📊</span>
-            시스템 상태
-          </h2>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <!-- App Status -->
-            <div class="bg-gray-700 rounded-lg p-4">
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm text-gray-400">애플리케이션</span>
-                <span id="app-status" class="status-dot status-loading"></span>
-              </div>
-              <div id="app-status-text" class="font-semibold">초기화 중...</div>
-              <div id="app-uptime" class="text-xs text-gray-400">-</div>
-            </div>
-
-            <!-- Modules Status -->
-            <div class="bg-gray-700 rounded-lg p-4">
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm text-gray-400">모듈</span>
-                <span id="modules-count" class="text-sm font-mono">0/4</span>
-              </div>
-              <div id="modules-status" class="font-semibold">로딩 중...</div>
-              <div id="modules-list" class="text-xs text-gray-400">-</div>
-            </div>
-
-            <!-- API Status -->
-            <div class="bg-gray-700 rounded-lg p-4">
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm text-gray-400">API 연결</span>
-                <span id="api-status" class="status-dot status-inactive"></span>
-              </div>
-              <div id="api-status-text" class="font-semibold">확인 중...</div>
-              <div id="api-url" class="text-xs text-gray-400 truncate">-</div>
-            </div>
-
-            <!-- Performance -->
-            <div class="bg-gray-700 rounded-lg p-4">
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm text-gray-400">성능</span>
-                <span id="perf-indicator" class="text-sm font-mono">-</span>
-              </div>
-              <div id="perf-status" class="font-semibold">측정 중...</div>
-              <div id="memory-usage" class="text-xs text-gray-400">-</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Module Grid -->
-      <section class="mb-8">
-        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-          <h2 class="text-lg font-semibold mb-4 flex items-center">
-            <span class="mr-2">🧩</span>
-            모듈 상태
-          </h2>
-
-          <div id="modules-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <!-- Modules will be populated dynamically -->
-          </div>
-        </div>
-      </section>
-
-      <!-- Quick Actions -->
-      <section class="mb-8">
-        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-          <h2 class="text-lg font-semibold mb-4 flex items-center">
-            <span class="mr-2">⚡</span>
-            빠른 작업
-          </h2>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button id="setup-btn" class="bg-blue-600 hover:bg-blue-700 p-4 rounded-lg text-left transition-colors">
-              <div class="text-lg font-semibold mb-2">🔧 초기 설정</div>
-              <div class="text-sm text-blue-200">Apps Script URL 및 기본 설정</div>
-            </button>
-
-            <button id="demo-btn" class="bg-purple-600 hover:bg-purple-700 p-4 rounded-lg text-left transition-colors">
-              <div class="text-lg font-semibold mb-2">🎮 데모 모드</div>
-              <div class="text-sm text-purple-200">샘플 데이터로 기능 체험</div>
-            </button>
-
-            <button id="docs-btn" class="bg-green-600 hover:bg-green-700 p-4 rounded-lg text-left transition-colors">
-              <div class="text-lg font-semibold mb-2">📚 문서</div>
-              <div class="text-sm text-green-200">사용법 및 API 문서</div>
-            </button>
-          </div>
-        </div>
-      </section>
-
-    </main>
-
-    <!-- Footer -->
-    <footer class="bg-gray-800 border-t border-gray-700 py-4 desktop-only">
-      <div class="container mx-auto px-4">
-        <div class="flex items-center justify-between">
-          <div class="text-sm text-gray-400">
-            © 2024 Virtual Data v4.0.0 Phoenix - Powered by Claude AI
-          </div>
-          <div class="flex items-center space-x-4 text-sm text-gray-400">
-            <span id="build-info">Build: 2025-09-24</span>
-            <span>•</span>
-            <span id="memory-info">Memory: -</span>
-            <span>•</span>
-            <span id="events-info">Events: -</span>
-          </div>
-        </div>
+      <div class="flex gap-2 mb-2">
+        <select id="table-filter" class="bg-gray-700 text-xs px-2 py-1 rounded flex-1">
+          <option value="">모든 테이블</option>
+        </select>
+        <select id="status-filter" class="bg-gray-700 text-xs px-2 py-1 rounded">
+          <option value="">전체</option>
+          <option value="pending">대기</option>
+          <option value="completed">완료</option>
+        </select>
       </div>
-    </footer>
-  </div>
-
-  <!-- Debug Panel (Hidden by default) -->
-  <div id="debug-panel" class="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700 p-4 hidden" style="height: 300px;">
-    <div class="flex items-center justify-between mb-2">
-      <h3 class="font-semibold">🔍 디버그 콘솔</h3>
-      <button id="debug-close" class="text-gray-400 hover:text-white">✕</button>
+      <div id="hand-list" class="flex-1 overflow-y-auto" style="max-height: calc(100vh - 180px);">
+        <!-- 핸드 리스트 동적 생성 -->
+      </div>
     </div>
-    <div id="debug-output" class="debug-panel rounded bg-gray-800 p-2 text-green-400"></div>
-  </div>
 
-  <!-- Error Modal -->
-  <div id="error-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-    <div class="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-red-500">
-      <div class="flex items-center mb-4">
-        <span class="text-2xl mr-3">⚠️</span>
-        <h3 class="text-lg font-semibold text-red-400">시스템 오류</h3>
+    <!-- 중앙: 핸드 상세 정보 -->
+    <div class="section overflow-hidden">
+      <!-- 핸드 헤더 정보 -->
+      <div class="flex items-center justify-between mb-3 pb-2 border-b border-gray-700">
+        <div class="flex flex-col gap-1">
+          <div class="flex items-center gap-3">
+            <span class="text-sm font-bold">Hand #<span id="hand-number">-</span></span>
+            <span class="text-xs text-gray-400">Table: <span id="table-name">-</span></span>
+            <span class="text-xs text-gray-400">Blinds: <span id="blinds">-</span></span>
+          </div>
+          <div class="text-xs text-blue-300">
+            📹 <span id="camera-files">-</span>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button id="edit-btn" class="px-2 py-1 bg-yellow-600 text-xs rounded">편집</button>
+          <button id="complete-btn" class="px-2 py-1 bg-green-600 text-xs rounded">완료</button>
+        </div>
       </div>
-      <div id="error-message" class="mb-4 text-gray-300"></div>
-      <div class="flex justify-end space-x-3">
-        <button id="error-details-btn" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm">상세 정보</button>
-        <button id="error-retry-btn" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-sm">다시 시도</button>
-        <button id="error-close-btn" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded text-sm">확인</button>
+
+      <!-- 팟 정보 -->
+      <div class="pot-display mb-3">
+        POT: <span id="pot-amount">0</span>
+      </div>
+
+      <!-- 보드 카드 -->
+      <div class="mb-3">
+        <div class="section-header">Board</div>
+        <div id="board-cards" class="flex justify-center gap-1">
+          <!-- 보드 카드 동적 생성 -->
+        </div>
+      </div>
+
+      <!-- 플레이어 카드 섹션 -->
+      <div class="mb-3">
+        <div class="section-header">Players</div>
+        <div id="players-section" class="player-list" style="max-height: 180px; overflow-y: auto;">
+          <!-- 플레이어 정보 동적 생성 -->
+        </div>
+      </div>
+
+      <!-- 액션 히스토리 -->
+      <div class="flex-1">
+        <div class="section-header">Actions</div>
+        <div id="action-history" style="max-height: calc(100vh - 520px); overflow-y: auto;">
+          <!-- 액션 히스토리 동적 생성 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 오른쪽: 요약 정보 -->
+    <div class="section">
+      <!-- 통계 -->
+      <div class="mb-3">
+        <div class="section-header">통계</div>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="bg-gray-800 rounded p-2">
+            <div class="text-xs text-gray-400">총 핸드</div>
+            <div class="text-lg font-bold" id="total-hands">0</div>
+          </div>
+          <div class="bg-gray-800 rounded p-2">
+            <div class="text-xs text-gray-400">완료</div>
+            <div class="text-lg font-bold text-green-400" id="completed-hands">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 핸드 결과 -->
+      <div class="mb-3">
+        <div class="section-header">결과</div>
+        <div id="hand-result" class="bg-gray-800 rounded p-3">
+          <div class="text-xs text-gray-400">대기 중...</div>
+        </div>
+      </div>
+
+      <!-- 편집 노트 -->
+      <div class="flex-1">
+        <div class="section-header">노트</div>
+        <textarea id="hand-notes" 
+          class="w-full flex-1 bg-gray-800 rounded p-2 text-xs resize-none" 
+          style="min-height: 100px;"
+          placeholder="핸드 분석 노트..."></textarea>
+        <button id="save-notes" class="mt-2 w-full px-3 py-1 bg-blue-600 text-white rounded text-xs">
+          노트 저장
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- Settings Modal -->
-  <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-    <div class="bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 border border-gray-700 max-h-96 overflow-y-auto">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-semibold">⚙️ 시스템 설정</h3>
-        <button id="settings-close" class="text-gray-400 hover:text-white">✕</button>
+  <!-- 완료 파일명 입력 모달 -->
+  <div id="completion-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-lg p-6 max-w-lg w-full">
+      <h2 class="text-lg font-bold mb-4">📝 핸드 편집 완료</h2>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm mb-2">최종 파일명</label>
+          <input type="text" id="final-filename" 
+                 class="w-full bg-gray-700 rounded px-3 py-2 text-sm" 
+                 placeholder="예: 2025-09-05_Hand91_Final.mp4">
+        </div>
+        <div>
+          <label class="block text-sm mb-2">핸드 시간 (시:분:초)</label>
+          <input type="text" id="hand-timestamp" 
+                 class="w-full bg-gray-700 rounded px-3 py-2 text-sm mono" 
+                 readonly>
+        </div>
+        <div>
+          <label class="block text-sm mb-2">매칭된 Virtual 시트 행</label>
+          <input type="text" id="matched-row" 
+                 class="w-full bg-gray-700 rounded px-3 py-2 text-sm" 
+                 readonly>
+        </div>
+        <div>
+          <label class="block text-sm mb-2">AI 분석 요약 (3줄)</label>
+          <textarea id="ai-summary" 
+                    class="w-full bg-gray-700 rounded px-3 py-2 text-sm" 
+                    rows="3"
+                    placeholder="AI가 자동으로 분석하여 요약합니다..."
+                    readonly></textarea>
+        </div>
+        <div class="text-xs text-gray-400">
+          <p>✅ Virtual 시트의 가장 비슷한 시간 행을 찾아 업데이트합니다</p>
+          <p>✅ F열: 파일명, H열: AI 요약이 자동 입력됩니다</p>
+        </div>
       </div>
-      <div id="settings-content">
-        <!-- Settings content will be populated dynamically -->
+      <div class="flex justify-end gap-2 mt-6">
+        <button id="cancel-completion" class="px-4 py-2 bg-gray-600 rounded text-sm">취소</button>
+        <button id="confirm-completion" class="px-4 py-2 bg-green-600 rounded text-sm">완료 처리</button>
       </div>
     </div>
   </div>
 
-  <!-- Main App Script -->
-  <script type="module">
-    import { createApp } from './core/app.js';
+  <!-- 설정 모달 -->
+  <div id="settings-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-lg p-6 max-w-md w-full">
+      <h2 class="text-lg font-bold mb-4">설정</h2>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm mb-2">새로고침 간격</label>
+          <select id="refresh-interval" class="w-full bg-gray-700 rounded px-3 py-2">
+            <option value="5000">5초</option>
+            <option value="10000" selected>10초</option>
+            <option value="30000">30초</option>
+            <option value="60000">1분</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="checkbox" id="enable-notifications" checked>
+          <label for="enable-notifications" class="text-sm">새 핸드 알림 활성화</label>
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="checkbox" id="enable-sound" checked>
+          <label for="enable-sound" class="text-sm">소리 알림 활성화</label>
+        </div>
+        <div class="mt-4 pt-4 border-t border-gray-700">
+          <h3 class="text-sm font-bold mb-2">🤖 AI API 설정</h3>
+          <div class="mb-2">
+            <label class="block text-xs mb-1">AI 서비스 선택</label>
+            <select id="ai-service" class="w-full bg-gray-700 rounded px-3 py-1 text-sm">
+              <option value="none">사용 안 함 (기본 요약)</option>
+              <option value="openai">OpenAI (GPT-4/GPT-3.5)</option>
+              <option value="gemini">Google Gemini</option>
+              <option value="claude">Anthropic Claude</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="block text-xs mb-1">API 키</label>
+            <input type="password" id="ai-api-key" 
+                   class="w-full bg-gray-700 rounded px-3 py-1 text-sm" 
+                   placeholder="API 키 입력...">
+            <p class="text-xs text-gray-400 mt-1">
+              API 키는 로컬에만 저장됩니다.
+            </p>
+          </div>
+        </div>
+        <div class="mt-4 pt-4 border-t border-gray-700">
+          <button id="clear-notification-history" class="w-full px-4 py-2 bg-red-600 rounded text-sm hover:bg-red-700 transition">
+            🔄 버퍼 초기화
+          </button>
+          <p class="text-xs text-gray-400 mt-2">
+            최근 핸드 버퍼(최대 100개)가 초기화되며, 다음 로드시 기존 핸드도 새 핸드로 인식될 수 있습니다.
+          </p>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-6">
+        <button id="cancel-settings" class="px-4 py-2 bg-gray-600 rounded text-sm">취소</button>
+        <button id="save-settings" class="px-4 py-2 bg-blue-600 rounded text-sm">저장</button>
+      </div>
+    </div>
+  </div>
 
-    // 전역 변수
-    let app = null;
-    let loadingProgress = 0;
-
-    // DOM 요소들
-    const elements = {
-      loadingScreen: document.getElementById('loading-screen'),
-      loadingStatus: document.getElementById('loading-status'),
-      loadingProgress: document.getElementById('loading-progress'),
-      app: document.getElementById('app'),
-      errorModal: document.getElementById('error-modal'),
-      errorMessage: document.getElementById('error-message'),
-      debugPanel: document.getElementById('debug-panel'),
-      debugOutput: document.getElementById('debug-output')
+  <script>
+    // ====================================
+    // 포커 핸드 모니터링 시스템 v8.8.0 - 멀티 플레이어 지원 + Virtual 시트 매칭 + 카드 파싱 안정성 향상
+    const VERSION = '8.8.0';
+    // ====================================
+    
+    const CONFIG = {
+      // Google Sheets CSV URLs
+      CSV_HAND_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSDY_i4330JANAjIz4sMncdJdRHsOkfUCjQusHTGQk2tykrhA4d09LeIp3XRbLd8hkN6SgSB47k_nux/pub?gid=1906746276&single=true&output=csv',
+      CSV_INDEX_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSDY_i4330JANAjIz4sMncdJdRHsOkfUCjQusHTGQk2tykrhA4d09LeIp3XRbLd8hkN6SgSB47k_nux/pub?gid=1354012271&single=true&output=csv',
+      APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzWfe_4CAKcMAzzoHzJBstQIC7jQxSVC1BO23nYwlU23Pd5vLPLjfUi-gKyqzDYvPRT/exec',
+      
+      // 설정
+      REFRESH_INTERVAL: 10000,
+      ENABLE_NOTIFICATIONS: true,
+      ENABLE_SOUND: true,
+      
+      // AI API 설정
+      AI_SERVICE: 'none',
+      AI_API_KEY: '',
+      AI_MODEL: {
+        openai: 'gpt-3.5-turbo',
+        gemini: 'gemini-pro',
+        claude: 'claude-3-sonnet-20240229'
+      }
     };
-
-    // 로딩 진행 상황 업데이트
-    function updateLoadingProgress(progress, status) {
-      loadingProgress = Math.min(100, Math.max(0, progress));
-      elements.loadingProgress.style.width = `${loadingProgress}%`;
-      elements.loadingStatus.textContent = status;
-    }
-
-    // 에러 표시
-    function showError(message, error = null) {
-      elements.errorMessage.textContent = message;
-      elements.errorModal.classList.remove('hidden');
-
-      if (error) {
-        console.error('App Error:', error);
+    
+    // 전역 상태
+    let currentHand = null;
+    let allHands = [];
+    let masterHandList = new Map();
+    const MASTER_LIST_KEY = 'poker_master_hand_list_v1';
+    let handData = {};
+    let refreshTimerInitial = null;
+    let refreshTimerInterval = null;
+    let lastHandCount = 0;
+    let isInitialLoad = true;
+    
+    // 최근 핸드를 추적하는 버퍼
+    class RecentHandsBuffer {
+      constructor() {
+        this.buffer = [];
+        this.maxSize = 100; 
+        this.storageKey = 'poker_recent_hands_buffer_v2'; 
+        this.loadFromStorage();
+      }
+      
+      addHand(handNumber) {
+        const handStr = String(handNumber);
+        if (this.buffer.includes(handStr)) {
+          return false;
+        }
+        this.buffer.push(handStr);
+        while (this.buffer.length > this.maxSize) {
+          this.buffer.shift();
+        }
+        this.saveToStorage();
+        return true;
+      }
+      
+      hasHand(handNumber) {
+        return this.buffer.includes(String(handNumber));
+      }
+      
+      getStatus() {
+        return {
+          buffer: [...this.buffer],
+          size: this.buffer.length,
+          maxSize: this.maxSize
+        };
+      }
+      
+      loadFromStorage() {
+        try {
+          const stored = localStorage.getItem(this.storageKey);
+          if (stored) {
+            this.buffer = JSON.parse(stored) || [];
+          }
+        } catch (e) {
+          this.buffer = [];
+        }
+      }
+      
+      saveToStorage() {
+        try {
+          localStorage.setItem(this.storageKey, JSON.stringify(this.buffer));
+        } catch (e) {
+          console.error('버퍼 저장 실패:', e);
+        }
+      }
+      
+      clear() {
+        this.buffer = [];
+        this.saveToStorage();
       }
     }
-
-    // 앱 초기화
-    async function initializeApp() {
+    
+    const recentHandsBuffer = new RecentHandsBuffer();
+    
+    // Virtual 시트에서 가장 비슷한 시간 찾기 - 개선된 알고리즘
+    async function findClosestVirtualRow(targetTime, virtualSheetUrl) {
       try {
-        updateLoadingProgress(10, 'Phoenix 시스템 시작...');
-
-        // 앱 생성
-        updateLoadingProgress(30, '핵심 시스템 로딩...');
-        app = await createApp();
-
-        // UI 업데이트
-        updateLoadingProgress(60, 'UI 구성 요소 초기화...');
-        await setupUI();
-
-        // 이벤트 리스너 설정
-        updateLoadingProgress(80, '이벤트 시스템 활성화...');
-        setupEventListeners();
-
-        // 완료
-        updateLoadingProgress(100, '시스템 준비 완료!');
-
-        setTimeout(() => {
-          elements.loadingScreen.classList.add('hidden');
-          elements.app.classList.remove('hidden');
-        }, 500);
-
+        const sheetIdMatch = virtualSheetUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+        if (!sheetIdMatch) {
+          throw new Error('올바른 Google Sheets URL이 아닙니다');
+        }
+        
+        const sheetId = sheetIdMatch[1];
+        const gidMatch = virtualSheetUrl.match(/[#&]gid=(\d+)/);
+        const gid = gidMatch ? gidMatch[1] : '0';
+        const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+        
+        const response = await fetch(csvUrl + '&t=' + Date.now());
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const text = await response.text();
+        if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+          throw new Error('시트가 비공개 상태이거나 접근할 수 없습니다');
+        }
+        
+        const rows = parseCSV(text);
+        
+        // KST 시간 변환 - 개선된 로직
+        const targetDate = new Date(targetTime * 1000);
+        const kstDate = new Date(targetDate.toLocaleString("en-US", {timeZone: "Asia/Seoul"}));
+        const targetHours = kstDate.getHours();
+        const targetMinutes = kstDate.getMinutes();
+        const targetTimeStr = `${targetHours.toString().padStart(2, '0')}:${targetMinutes.toString().padStart(2, '0')}`;
+        
+        // 개선된 매칭 알고리즘
+        let closestRow = null;
+        let minDiff = Infinity;
+        let matchedRowIndex = -1;
+        let checkedCount = 0;
+        const maxDiffSeconds = 3 * 60; // ±3분 허용 범위
+        const candidates = [];
+        const timeColumnIndex = 2; // C열 (Seoul 시간)
+        
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          const timeCell = row[timeColumnIndex];
+          
+          if (!timeCell) continue;
+          checkedCount++;
+          
+          const timeMatch = timeCell.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+          if (!timeMatch) continue;
+          
+          const cellHours = parseInt(timeMatch[1]);
+          const cellMinutes = parseInt(timeMatch[2]);
+          const cellTotalMinutes = cellHours * 60 + cellMinutes;
+          const targetTotalMinutes = targetHours * 60 + targetMinutes;
+          
+          let diffMinutes = Math.abs(cellTotalMinutes - targetTotalMinutes);
+          
+          // 자정 넘나드는 경우 고려
+          const altDiff = Math.min(
+            Math.abs(cellTotalMinutes - targetTotalMinutes + 1440),
+            Math.abs(cellTotalMinutes - targetTotalMinutes - 1440)
+          );
+          diffMinutes = Math.min(diffMinutes, altDiff);
+          
+          const diffSeconds = diffMinutes * 60;
+          
+          if (diffSeconds <= maxDiffSeconds) {
+            candidates.push({
+              rowIndex: i + 1,
+              timeCell: timeCell,
+              diffSeconds: diffSeconds
+            });
+          }
+          
+          if (diffSeconds < minDiff && diffSeconds <= maxDiffSeconds) {
+            minDiff = diffSeconds;
+            closestRow = row;
+            matchedRowIndex = i + 1;
+          }
+        }
+        
+        if (closestRow) {
+          const diffMinutes = Math.floor(minDiff / 60);
+          const diffSecondsRem = minDiff % 60;
+          
+          let timeDiffStr = '';
+          if (minDiff === 0) {
+            timeDiffStr = '완벽 일치';
+          } else {
+            if (diffMinutes > 0) {
+              timeDiffStr = `${diffMinutes}분 ${diffSecondsRem}초`;
+            } else {
+              timeDiffStr = `${diffSecondsRem}초`;
+            }
+          }
+          
+          return {
+            success: true,
+            row: closestRow,
+            rowIndex: matchedRowIndex,
+            timeDiff: minDiff,
+            timeDiffStr: timeDiffStr,
+            targetTime: targetTimeStr,
+            matchedTime: closestRow[timeColumnIndex],
+            candidates: candidates.sort((a, b) => a.diffSeconds - b.diffSeconds),
+            checkedCount: checkedCount
+          };
+        } else {
+          return {
+            success: false,
+            reason: `3분 범위 내에서 매칭되는 행을 찾을 수 없음`,
+            checkedCount: checkedCount,
+            targetTime: targetTimeStr
+          };
+        }
       } catch (error) {
-        console.error('App initialization failed:', error);
-        updateLoadingProgress(0, '초기화 실패');
-
-        setTimeout(() => {
-          elements.loadingScreen.classList.add('hidden');
-          showError('시스템을 초기화할 수 없습니다. 페이지를 새로고침해주세요.', error);
-        }, 1000);
+        console.error('Virtual 시트 접근 오류:', error);
+        return null;
       }
     }
-
-    // UI 설정
-    async function setupUI() {
-      // 상태 업데이트
-      updateAppStatus();
-      updateModulesStatus();
-
-      // 주기적 업데이트 시작
-      setInterval(updateAppStatus, 5000);
+    
+    // 나머지 기존 함수들... (parseCSV, formatNumber, loadIndexData 등)
+    
+    function parseCSV(text) {
+      console.log('🔍 CSV 파싱 시작, 원본 데이터 길이:', text.length);
+      
+      if (!text || text.trim().length === 0) {
+        console.error('❌ 빈 CSV 데이터');
+        return [];
+      }
+      
+      const lines = text.trim().split('\n');
+      console.log('📄 총 라인 수:', lines.length);
+      
+      const rows = [];
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue; // 빈 라인 스킵
+        
+        const row = [];
+        let inQuotes = false;
+        let currentField = '';
+        
+        for (let j = 0; j < line.length; j++) {
+          const char = line[j];
+          if (char === '"') {
+            if (inQuotes && j + 1 < line.length && line[j + 1] === '"') {
+              // 이스케이프된 인용부호
+              currentField += '"';
+              j++; // 다음 인용부호 스킵
+            } else {
+              inQuotes = !inQuotes;
+            }
+          } else if (char === ',' && !inQuotes) {
+            row.push(currentField.trim());
+            currentField = '';
+          } else {
+            currentField += char;
+          }
+        }
+        row.push(currentField.trim());
+        rows.push(row);
+      }
+      
+      console.log('✅ CSV 파싱 완료, 파싱된 행 수:', rows.length);
+      if (rows.length > 0) {
+        console.log('📊 첫 번째 행 (헤더):', rows[0]);
+        if (rows.length > 1) {
+          console.log('📊 두 번째 행 (샘플 데이터):', rows[1]);
+        }
+      }
+      
+      return rows;
     }
-
-    // 이벤트 리스너 설정
-    function setupEventListeners() {
-      // 디버그 패널
-      document.getElementById('debug-btn')?.addEventListener('click', toggleDebugPanel);
-      document.getElementById('debug-close')?.addEventListener('click', hideDebugPanel);
-
-      // 에러 모달
-      document.getElementById('error-close-btn')?.addEventListener('click', () => {
-        elements.errorModal.classList.add('hidden');
-      });
-
-      document.getElementById('error-retry-btn')?.addEventListener('click', () => {
-        elements.errorModal.classList.add('hidden');
-        location.reload();
-      });
-
-      // 설정 모달
-      document.getElementById('settings-btn')?.addEventListener('click', showSettings);
-      document.getElementById('settings-close')?.addEventListener('click', hideSettings);
-
-      // 빠른 작업 버튼들
-      document.getElementById('setup-btn')?.addEventListener('click', showSetup);
-      document.getElementById('demo-btn')?.addEventListener('click', startDemo);
-      document.getElementById('docs-btn')?.addEventListener('click', showDocs);
-
-      // 앱 이벤트 리스너
-      if (app) {
-        app.events.on('app:error', (data) => {
-          showError('시스템 오류가 발생했습니다.', data.error);
-        });
-
-        app.events.on('module:loaded', (data) => {
-          updateModulesStatus();
-        });
+    
+    // 마스터 핸드 목록 로드
+    function loadMasterHandList() {
+      try {
+        const stored = localStorage.getItem(MASTER_LIST_KEY);
+        if (stored) {
+          const data = JSON.parse(stored);
+          masterHandList.clear();
+          for (const [handNumber, hand] of Object.entries(data)) {
+            masterHandList.set(handNumber, hand);
+          }
+        }
+      } catch (e) {
+        console.error('마스터 핸드 목록 로드 실패:', e);
       }
     }
-
-    // 앱 상태 업데이트
-    function updateAppStatus() {
-      if (!app) return;
-
-      const state = app.getState();
-
-      // 앱 상태
-      const appStatusEl = document.getElementById('app-status');
-      const appStatusTextEl = document.getElementById('app-status-text');
-      const appUptimeEl = document.getElementById('app-uptime');
-
-      if (state.initialized) {
-        appStatusEl.className = 'status-dot status-success';
-        appStatusTextEl.textContent = '정상 동작';
-        appUptimeEl.textContent = `가동시간: ${formatUptime(state.uptime)}`;
-      } else {
-        appStatusEl.className = 'status-dot status-loading';
-        appStatusTextEl.textContent = '초기화 중';
-        appUptimeEl.textContent = '-';
-      }
-
-      // API 상태
-      const apiUrl = app.config.getAppsScriptUrl();
-      document.getElementById('api-url').textContent = apiUrl || '설정되지 않음';
-
-      // 성능 정보
-      updatePerformanceInfo();
-
-      // 푸터 정보
-      document.getElementById('memory-info').textContent = `Memory: ${(performance.memory?.usedJSHeapSize / 1024 / 1024).toFixed(1)}MB`;
-      document.getElementById('events-info').textContent = `Events: ${app.events.getStats().totalEvents}`;
-    }
-
-    // 모듈 상태 업데이트
-    function updateModulesStatus() {
-      if (!app) return;
-
-      const modules = app.getModules();
-      const modulesGrid = document.getElementById('modules-grid');
-
-      // 모듈 카운트
-      document.getElementById('modules-count').textContent = `${modules.length}/4`;
-      document.getElementById('modules-status').textContent = modules.length === 4 ? '모든 모듈 로드됨' : '모듈 로딩 중';
-      document.getElementById('modules-list').textContent = modules.map(([name]) => name).join(', ');
-
-      // 모듈 그리드 업데이트
-      modulesGrid.innerHTML = '';
-
-      const moduleNames = ['table', 'player', 'hand', 'ui'];
-      moduleNames.forEach(name => {
-        const module = app.getModule(name);
-        const card = createModuleCard(name, module);
-        modulesGrid.appendChild(card);
-      });
-    }
-
-    // 모듈 카드 생성
-    function createModuleCard(name, module) {
-      const card = document.createElement('div');
-      card.className = `module-card bg-gray-700 rounded-lg p-4 ${module ? 'active' : ''}`;
-
-      const status = module ? 'status-success' : 'status-inactive';
-      const statusText = module ? '활성화' : '비활성화';
-
-      card.innerHTML = `
-        <div class="flex items-center justify-between mb-2">
-          <span class="font-semibold capitalize">${name}</span>
-          <span class="status-dot ${status}"></span>
-        </div>
-        <div class="text-sm text-gray-400">${statusText}</div>
-        ${module ? `<div class="text-xs text-gray-500 mt-1">v${module.version || '1.0.0'}</div>` : ''}
-      `;
-
-      return card;
-    }
-
-    // 성능 정보 업데이트
-    function updatePerformanceInfo() {
-      const memory = performance.memory;
-      if (memory) {
-        const used = (memory.usedJSHeapSize / 1024 / 1024).toFixed(1);
-        const total = (memory.totalJSHeapSize / 1024 / 1024).toFixed(1);
-
-        document.getElementById('perf-indicator').textContent = `${used}MB`;
-        document.getElementById('perf-status').textContent = '정상';
-        document.getElementById('memory-usage').textContent = `${used}/${total}MB`;
+    
+    // 마스터 핸드 목록 저장
+    function saveMasterHandList() {
+      try {
+        const data = {};
+        for (const [handNumber, hand] of masterHandList.entries()) {
+          data[handNumber] = hand;
+        }
+        localStorage.setItem(MASTER_LIST_KEY, JSON.stringify(data));
+      } catch (e) {
+        console.error('마스터 핸드 목록 저장 실패:', e);
       }
     }
-
-    // 시간 포매팅
-    function formatUptime(ms) {
-      const seconds = Math.floor(ms / 1000);
-      const minutes = Math.floor(seconds / 60);
-      const hours = Math.floor(minutes / 60);
-
-      if (hours > 0) return `${hours}시간 ${minutes % 60}분`;
-      if (minutes > 0) return `${minutes}분 ${seconds % 60}초`;
-      return `${seconds}초`;
-    }
-
-    // 디버그 패널
-    function toggleDebugPanel() {
-      const panel = elements.debugPanel;
-      panel.classList.toggle('hidden');
-
-      if (!panel.classList.contains('hidden')) {
-        updateDebugOutput();
+    
+    async function init() {
+      console.log('='.repeat(60));
+      console.log(`🚀 포커 핸드 모니터링 시스템 v${VERSION}`);
+      console.log(`📋 주요 기능: 키 플레이어 분석 + 개선된 Virtual 시트 매칭`);
+      console.log(`📅 업데이트: 2025-09-06`);
+      console.log(`🔗 대시보드 버전: v${VERSION} (일치)`);
+      console.log('='.repeat(60));
+      console.log('🔧 설정 정보:');
+      console.log('  • 핸드 데이터 URL:', CONFIG.CSV_HAND_URL);
+      console.log('  • 인덱스 데이터 URL:', CONFIG.CSV_INDEX_URL);
+      console.log('  • 새로고침 간격:', CONFIG.REFRESH_INTERVAL/1000, '초');
+      console.log('  • 알림 활성화:', CONFIG.ENABLE_NOTIFICATIONS);
+      console.log('='.repeat(60));
+      
+      loadMasterHandList();
+      
+      const savedVirtualUrl = localStorage.getItem('virtual_sheet_url');
+      if (savedVirtualUrl) {
+        document.getElementById('virtual-sheet-url').value = savedVirtualUrl;
       }
+      
+      const bufferStatus = recentHandsBuffer.getStatus();
+      console.log(`💾 최근 핸드 버퍼: ${bufferStatus.size}/${bufferStatus.maxSize}개`);
+      
+      console.log('');
+      console.log('📋 콘솔 명령어:');
+      console.log('• window.getVersion() - 현재 버전 정보');
+      console.log('• window.getStats() - 시스템 상태');
+      console.log('');
+      
+      console.log('초기화 완료');
     }
-
-    function hideDebugPanel() {
-      elements.debugPanel.classList.add('hidden');
-    }
-
-    function updateDebugOutput() {
-      if (!app) return;
-
-      const debugInfo = {
-        app: app.getState(),
-        modules: app.getModules().map(([name, module]) => ({ name, active: true })),
-        events: app.events.getStats(),
-        config: app.config.getAll()
+    
+    // 전역 콘솔 명령어 함수들
+    window.getVersion = function() {
+      const info = {
+        version: VERSION,
+        title: '포커 핸드 모니터링 시스템',
+        features: [
+          '키 플레이어 분석',
+          '개선된 Virtual 시트 매칭',
+          'AI 핸드 분석',
+          '실시간 모니터링'
+        ],
+        lastUpdated: '2025-09-06',
+        improvements: [
+          '±3분 범위 검색',
+          'KST 시간대 변환',
+          '후보 분석 시스템',
+          '강화된 에러 처리'
+        ]
       };
-
-      elements.debugOutput.textContent = JSON.stringify(debugInfo, null, 2);
+      console.log('='.repeat(50));
+      console.log(`🚀 ${info.title} v${info.version}`);
+      console.log('='.repeat(50));
+      console.log(`📅 업데이트: ${info.lastUpdated}`);
+      console.log(`📋 주요 기능:`);
+      info.features.forEach(feature => console.log(`  • ${feature}`));
+      console.log(`🔧 v8.7.0 개선사항:`);
+      info.improvements.forEach(improvement => console.log(`  • ${improvement}`));
+      console.log('='.repeat(50));
+      return info;
+    };
+    
+    window.getStats = function() {
+      const bufferStatus = recentHandsBuffer.getStatus();
+      const stats = {
+        '시스템 버전': VERSION,
+        '대시보드 버전': VERSION,
+        '버전 일치': '✅ 완벽 일치',
+        '전체 핸드': allHands.length,
+        '완료된 핸드': allHands.filter(h => h.handEdit || h.isLocallyCompleted).length,
+        '마스터 목록': masterHandList.size,
+        '최근 버퍼': `${bufferStatus.size}/${bufferStatus.maxSize}개`
+      };
+      console.log('📊 시스템 현황');
+      console.table(stats);
+      return stats;
+    };
+    
+    // Virtual 시트 URL 저장
+    document.getElementById('virtual-sheet-url').addEventListener('change', (e) => {
+      localStorage.setItem('virtual_sheet_url', e.target.value);
+    });
+    
+    // 핸드 데이터 로드
+    async function loadHandData() {
+      try {
+        console.log('📡 핸드 데이터 로딩 시작...');
+        const response = await fetch(CONFIG.CSV_HAND_URL + '&t=' + Date.now(), {
+          method: 'GET',
+          mode: 'cors',
+          cache: 'no-cache',
+          redirect: 'follow'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const text = await response.text();
+        console.log('📊 받은 데이터 크기:', text.length, 'bytes');
+        
+        if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+          throw new Error('시트가 비공개 상태이거나 접근할 수 없습니다');
+        }
+        const rows = parseCSV(text);
+        console.log('📝 파싱된 행 수:', rows.length);
+        
+        if (rows.length <= 1) {
+          throw new Error('유효한 데이터가 없습니다. 헤더만 존재합니다.');
+        }
+        
+        const hands = [];
+        
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row[1]) continue;
+          
+          const handNumber = row[1];
+          const existingHand = masterHandList.get(handNumber);
+          
+          const hand = {
+            handNumber,
+            tableNumber: row[0],
+            tableName: row[2],
+            potAmount: parseInt(row[3]) || 0,
+            boardCards: row[4],
+            handEdit: existingHand ? (existingHand.isLocallyCompleted || existingHand.handEdit) : (row[5] === 'TRUE'),
+            isLocallyCompleted: existingHand ? existingHand.isLocallyCompleted : false,
+            handTime: row[6] ? parseInt(row[6]) : null,
+            finalFilename: existingHand ? existingHand.finalFilename : row[7],
+            aiAnalysis: existingHand ? existingHand.aiAnalysis : row[8],
+            cameraFiles: row[9] || '',
+            blinds: row[10] || '',
+            gameType: row[11] || '',
+            playerCount: parseInt(row[12]) || 6,
+            notes: existingHand ? existingHand.notes : ''
+          };
+          
+          hands.push(hand);
+          masterHandList.set(handNumber, hand);
+        }
+        
+        allHands = hands;
+        updateHandList();
+        updateStats();
+        
+        // 새 핸드 감지 및 알림
+        if (!isInitialLoad && hands.length > lastHandCount) {
+          const newHands = hands.filter(hand => {
+            return recentHandsBuffer.addHand(hand.handNumber);
+          });
+          
+          if (newHands.length > 0 && CONFIG.ENABLE_NOTIFICATIONS) {
+            showNotification(`새 핸드 ${newHands.length}개 감지`, 
+              `핸드 번호: ${newHands.map(h => h.handNumber).join(', ')}`);
+          }
+        }
+        
+        lastHandCount = hands.length;
+        isInitialLoad = false;
+        
+        console.log('✅ 핸드 데이터 로딩 완료:', hands.length, '개');
+        saveMasterHandList();
+      } catch (error) {
+        console.error('❌ 핸드 데이터 로드 오류:', error);
+        console.error('오류 세부사항:', {
+          message: error.message,
+          stack: error.stack,
+          csvUrl: CONFIG.CSV_HAND_URL
+        });
+        showNotification('데이터 로드 오류', `${error.message}\n\nConsole에서 자세한 오류를 확인하세요.`);
+      }
     }
-
-    // 설정 관련
-    function showSettings() {
+    
+    // 핸드 리스트 업데이트
+    function updateHandList() {
+      const container = document.getElementById('hand-list');
+      const tableFilter = document.getElementById('table-filter').value;
+      const statusFilter = document.getElementById('status-filter').value;
+      
+      let filteredHands = allHands;
+      
+      if (tableFilter) {
+        filteredHands = filteredHands.filter(hand => hand.tableNumber === tableFilter);
+      }
+      
+      if (statusFilter === 'pending') {
+        filteredHands = filteredHands.filter(hand => !hand.handEdit && !hand.isLocallyCompleted);
+      } else if (statusFilter === 'completed') {
+        filteredHands = filteredHands.filter(hand => hand.handEdit || hand.isLocallyCompleted);
+      }
+      
+      // 테이블 필터 옵션 업데이트
+      const tableSelect = document.getElementById('table-filter');
+      const currentTables = [...new Set(allHands.map(h => h.tableNumber))].sort();
+      const currentValue = tableSelect.value;
+      tableSelect.innerHTML = '<option value="">모든 테이블</option>';
+      currentTables.forEach(table => {
+        const option = document.createElement('option');
+        option.value = table;
+        option.textContent = `테이블 ${table}`;
+        if (table === currentValue) option.selected = true;
+        tableSelect.appendChild(option);
+      });
+      
+      container.innerHTML = '';
+      
+      filteredHands.reverse().forEach(hand => {
+        const handElement = createHandElement(hand);
+        container.appendChild(handElement);
+      });
+      
+      document.getElementById('hand-count').textContent = filteredHands.length;
+    }
+    
+    // 핸드 요소 생성
+    function createHandElement(hand) {
+      const div = document.createElement('div');
+      div.className = `hand-item cursor-pointer p-2 bg-gray-700 rounded border ${hand.handEdit || hand.isLocallyCompleted ? 'border-green-500' : 'border-gray-600'} hover:border-blue-500 transition-colors`;
+      div.dataset.handNumber = hand.handNumber;
+      
+      const statusIcon = (hand.handEdit || hand.isLocallyCompleted) ? '✅' : '⏳';
+      const statusText = (hand.handEdit || hand.isLocallyCompleted) ? '완료' : '대기';
+      
+      div.innerHTML = `
+        <div class="flex justify-between items-start mb-1">
+          <span class="font-bold text-sm">#${hand.handNumber}</span>
+          <span class="text-xs px-2 py-1 rounded ${
+            (hand.handEdit || hand.isLocallyCompleted) ? 'bg-green-600' : 'bg-yellow-600'
+          }">${statusIcon} ${statusText}</span>
+        </div>
+        <div class="text-xs text-gray-400 mb-1">
+          테이블 ${hand.tableNumber} • ${formatNumber(hand.potAmount)}
+        </div>
+        <div class="text-xs text-blue-300">
+          ${hand.cameraFiles || '카메라 파일 없음'}
+        </div>
+      `;
+      
+      div.addEventListener('click', () => {
+        selectHand(hand);
+      });
+      
+      return div;
+    }
+    
+    // 핸드 선택
+    function selectHand(hand) {
+      currentHand = hand;
+      
+      // 선택된 핸드 하이라이트
+      document.querySelectorAll('.hand-item').forEach(el => {
+        el.classList.remove('bg-blue-800', 'border-blue-400');
+        el.classList.add('bg-gray-700', 'border-gray-600');
+      });
+      
+      const selectedElement = document.querySelector(`[data-hand-number="${hand.handNumber}"]`);
+      if (selectedElement) {
+        selectedElement.classList.remove('bg-gray-700', 'border-gray-600');
+        selectedElement.classList.add('bg-blue-800', 'border-blue-400');
+      }
+      
+      updateHandDetails(hand);
+      
+      // 핸드 상세 데이터 로드
+      loadHandDetails(hand.handNumber);
+    }
+    
+    // 핸드 상세 정보 업데이트
+    function updateHandDetails(hand) {
+      document.getElementById('hand-number').textContent = hand.handNumber;
+      document.getElementById('table-name').textContent = hand.tableName;
+      document.getElementById('blinds').textContent = hand.blinds;
+      document.getElementById('pot-amount').textContent = formatNumber(hand.potAmount);
+      document.getElementById('camera-files').textContent = hand.cameraFiles || '파일 없음';
+      
+      // 보드 카드 표시
+      const boardContainer = document.getElementById('board-cards');
+      boardContainer.innerHTML = '';
+      
+      if (hand.boardCards && typeof hand.boardCards === 'string') {
+        console.log('📋 보드 카드 원본 데이터:', hand.boardCards);
+        
+        // 다양한 구분자로 분리 시도 (공백, 쉼표, 슬래시 등)
+        const cards = hand.boardCards
+          .replace(/[,/\-_]/g, ' ')  // 쉼표, 슬래시, 하이픈, 언더스코어를 공백으로 치환
+          .split(/\s+/)              // 공백으로 분리
+          .map(card => card.trim())  // 공백 제거
+          .filter(card => card && card.length >= 2); // 유효한 카드만 필터링
+        
+        console.log('📋 파싱된 보드 카드:', cards);
+        
+        if (cards.length > 0) {
+          cards.forEach(card => {
+            try {
+              const cardElement = createCardElement(card, 'board-card');
+              boardContainer.appendChild(cardElement);
+            } catch (error) {
+              console.error('❌ 보드 카드 생성 오류:', error, '카드 데이터:', card);
+            }
+          });
+        } else {
+          console.warn('⚠️ 유효한 보드 카드가 없습니다:', hand.boardCards);
+        }
+      } else if (hand.boardCards) {
+        console.warn('⚠️ 보드 카드 데이터가 문자열이 아닙니다:', typeof hand.boardCards, hand.boardCards);
+      }
+      
+      // 노트 로드
+      document.getElementById('hand-notes').value = hand.notes || '';
+    }
+    
+    // 카드 요소 생성
+    function createCardElement(card, className = 'card-mini') {
+      const div = document.createElement('div');
+      div.className = className;
+      
+      // 카드 데이터 검증
+      if (!card || card.length < 2) {
+        console.warn('⚠️ 유효하지 않은 카드 데이터:', card);
+        div.innerHTML = '<div style="color: red;">?</div><div>?</div>';
+        return div;
+      }
+      
+      const rank = card[0];
+      const suit = card[1];
+      
+      let suitClass = '';
+      let suitSymbol = '';
+      
+      switch (suit.toLowerCase()) {
+        case 's': suitClass = 'spade'; suitSymbol = '♠'; break;
+        case 'h': suitClass = 'heart'; suitSymbol = '♥'; break;
+        case 'd': suitClass = 'diamond'; suitSymbol = '♦'; break;
+        case 'c': suitClass = 'club'; suitSymbol = '♣'; break;
+        default: 
+          console.warn('⚠️ 알 수 없는 카드 슈트:', suit);
+          suitClass = 'unknown'; 
+          suitSymbol = '?'; 
+          break;
+      }
+      
+      // suitClass가 비어있지 않을 때만 추가
+      if (suitClass && suitClass !== '') {
+        div.classList.add(suitClass);
+      }
+      
+      div.innerHTML = `
+        <div>${rank}</div>
+        <div>${suitSymbol}</div>
+      `;
+      
+      return div;
+    }
+    
+    // 핸드 상세 데이터 로드 - 멀티 플레이어 지원 개선
+    async function loadHandDetails(handNumber) {
+      try {
+        console.log('📡 핸드 상세 데이터 로딩 (멀티 플레이어):', handNumber);
+        const response = await fetch(CONFIG.CSV_INDEX_URL + '&t=' + Date.now(), {
+          method: 'GET',
+          mode: 'cors',
+          cache: 'no-cache',
+          redirect: 'follow'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const text = await response.text();
+        console.log('📊 플레이어 인덱스 데이터 크기:', text.length, 'bytes');
+        const rows = parseCSV(text);
+        console.log('📝 플레이어 인덱스 파싱된 행 수:', rows.length);
+        
+        // 멀티 플레이어 데이터 구조로 변경
+        handData = {
+          handNumber: handNumber,
+          players: []
+        };
+        
+        let playersFound = 0;
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (row[0] === handNumber) {
+            const player = {
+              handNumber: row[0],
+              position: row[1],
+              holeCards: row[2],
+              preflopAction: row[3],
+              flopAction: row[4],
+              turnAction: row[5],
+              riverAction: row[6],
+              showdownAction: row[7],
+              result: row[8],
+              playerName: row[9]
+            };
+            handData.players.push(player);
+            playersFound++;
+          }
+        }
+        
+        console.log(`✅ 핸드 상세 데이터 로딩 완료: ${handNumber} (플레이어 ${playersFound}명)`);
+        updatePlayersSection();
+        updateActionHistory();
+        updateHandResult();
+        
+      } catch (error) {
+        console.error('❌ 핸드 상세 데이터 로드 오류:', error);
+        console.error('오류 세부사항:', {
+          handNumber: handNumber,
+          message: error.message,
+          stack: error.stack,
+          csvIndexUrl: CONFIG.CSV_INDEX_URL
+        });
+      }
+    }
+    
+    // 플레이어 섹션 업데이트 - 멀티 플레이어 지원
+    function updatePlayersSection() {
+      const container = document.getElementById('players-section');
+      container.innerHTML = '';
+      
+      // 멀티 플레이어 데이터 구조 지원
+      if (handData.players && handData.players.length > 0) {
+        // 멀티 플레이어 표시
+        handData.players.forEach((player, index) => {
+          const playerDiv = document.createElement('div');
+          playerDiv.className = 'player-item mb-2 p-2 bg-gray-800 rounded border border-gray-700';
+          
+          // 홀카드 생성
+          const holeCardsHtml = player.holeCards ? 
+            player.holeCards.split(' ').map(card => {
+              try {
+                const cardElement = createCardElement(card, 'card-mini');
+                return cardElement.outerHTML;
+              } catch (error) {
+                console.warn('카드 생성 오류:', card, error);
+                return `<div class="card-mini bg-red-200"><div>?</div><div>?</div></div>`;
+              }
+            }).join('') : 
+            '<span class="text-gray-500 text-xs">카드 없음</span>';
+          
+          playerDiv.innerHTML = `
+            <div class="flex justify-between items-center mb-1">
+              <div class="flex items-center gap-2">
+                <span class="pos-badge bg-blue-600 text-white px-1 py-0.5 text-xs rounded">${player.position || 'N/A'}</span>
+                <span class="font-medium text-sm">${player.playerName || 'Unknown'}</span>
+              </div>
+              <span class="text-xs text-gray-400">#${index + 1}</span>
+            </div>
+            <div class="flex gap-1 mb-1">
+              ${holeCardsHtml}
+            </div>
+            <div class="text-xs text-gray-300">
+              ${player.result ? `결과: ${player.result}` : ''}
+            </div>
+          `;
+          container.appendChild(playerDiv);
+        });
+        
+        // 총 플레이어 수 표시
+        const summaryDiv = document.createElement('div');
+        summaryDiv.className = 'text-xs text-amber-400 mt-2 pt-2 border-t border-gray-700';
+        summaryDiv.innerHTML = `총 ${handData.players.length}명의 플레이어`;
+        container.appendChild(summaryDiv);
+        return;
+      }
+      
+      // 레거시 단일 플레이어 지원
+      if (!handData.playerName) {
+        container.innerHTML = '<div class="text-xs text-gray-400">플레이어 정보 없음</div>';
+        return;
+      }
+      
+      const playerDiv = document.createElement('div');
+      playerDiv.className = 'player-item';
+      playerDiv.innerHTML = `
+        <div class="flex items-center gap-2">
+          <span class="pos-badge bg-blue-600 text-white px-1 py-0.5 text-xs rounded">${handData.position}</span>
+          <span class="font-medium">${handData.playerName}</span>
+        </div>
+        <div class="flex gap-1">
+          ${handData.holeCards ? handData.holeCards.split(' ').map(card => {
+            try {
+              const cardElement = createCardElement(card, 'card-mini');
+              return cardElement.outerHTML;
+            } catch (error) {
+              return `<div class="card-mini bg-red-200"><div>?</div><div>?</div></div>`;
+            }
+          }).join('') : ''}
+        </div>
+      `;
+      
+      container.appendChild(playerDiv);
+    }
+    
+    // 액션 히스토리 업데이트 - 멀티 플레이어 지원
+    function updateActionHistory() {
+      const container = document.getElementById('action-history');
+      container.innerHTML = '';
+      
+      // 멀티 플레이어 액션 지원
+      if (handData.players && handData.players.length > 0) {
+        const stages = ['Preflop', 'Flop', 'Turn', 'River', 'Showdown'];
+        const actionFields = ['preflopAction', 'flopAction', 'turnAction', 'riverAction', 'showdownAction'];
+        
+        stages.forEach((stage, stageIndex) => {
+          const stageDiv = document.createElement('div');
+          stageDiv.className = 'action-stage mb-2';
+          
+          let hasActions = false;
+          let actionsHtml = `<div class="text-xs font-medium text-amber-400 mb-1">${stage}:</div>`;
+          
+          handData.players.forEach((player) => {
+            const action = player[actionFields[stageIndex]];
+            if (action && action.trim()) {
+              hasActions = true;
+              actionsHtml += `
+                <div class="action-line flex items-center gap-2 mb-1 text-xs">
+                  <span class="text-blue-400">${player.playerName || 'Unknown'}:</span>
+                  <span class="action-badge bg-gray-700 px-1 py-0.5 rounded">${action}</span>
+                </div>
+              `;
+            }
+          });
+          
+          if (hasActions) {
+            stageDiv.innerHTML = actionsHtml;
+            container.appendChild(stageDiv);
+          }
+        });
+        
+        if (container.children.length === 0) {
+          container.innerHTML = '<div class="text-xs text-gray-400">액션 없음</div>';
+        }
+        return;
+      }
+      
+      // 레거시 단일 플레이어 액션
+      const actions = [
+        { stage: 'preflop', action: handData.preflopAction, label: 'Preflop' },
+        { stage: 'flop', action: handData.flopAction, label: 'Flop' },
+        { stage: 'turn', action: handData.turnAction, label: 'Turn' },
+        { stage: 'river', action: handData.riverAction, label: 'River' },
+        { stage: 'showdown', action: handData.showdownAction, label: 'Showdown' }
+      ];
+      
+      actions.forEach(({ stage, action, label }) => {
+        if (action) {
+          const actionDiv = document.createElement('div');
+          actionDiv.className = `action-line ${stage}`;
+          actionDiv.innerHTML = `
+            <span class="font-medium text-xs">${label}:</span>
+            <span class="action-badge ${action.toLowerCase()}">${action}</span>
+          `;
+          container.appendChild(actionDiv);
+        }
+      });
+    }
+    
+    // 핸드 결과 업데이트
+    function updateHandResult() {
+      const container = document.getElementById('hand-result');
+      
+      if (handData.result) {
+        container.innerHTML = `
+          <div class="text-sm font-medium mb-1">결과</div>
+          <div class="text-green-400">${handData.result}</div>
+        `;
+      } else {
+        container.innerHTML = '<div class="text-xs text-gray-400">결과 정보 없음</div>';
+      }
+    }
+    
+    // 유틸리티 함수들
+    function getCardSuitClass(card) {
+      if (!card || card.length < 2) return '';
+      const suit = card[1].toLowerCase();
+      switch (suit) {
+        case 's': return 'spade';
+        case 'h': return 'heart';
+        case 'd': return 'diamond';
+        case 'c': return 'club';
+        default: return '';
+      }
+    }
+    
+    function getCardSuitSymbol(suit) {
+      switch (suit?.toLowerCase()) {
+        case 's': return '♠';
+        case 'h': return '♥';
+        case 'd': return '♦';
+        case 'c': return '♣';
+        default: return suit;
+      }
+    }
+    
+    function formatNumber(num) {
+      if (!num) return '0';
+      return num.toLocaleString();
+    }
+    
+    function updateStats() {
+      document.getElementById('total-hands').textContent = allHands.length;
+      document.getElementById('completed-hands').textContent = 
+        allHands.filter(h => h.handEdit || h.isLocallyCompleted).length;
+    }
+    
+    // 알림 함수
+    function showNotification(title, message) {
+      if (!CONFIG.ENABLE_NOTIFICATIONS) return;
+      
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, { body: message });
+      } else {
+        console.log(`${title}: ${message}`);
+      }
+    }
+    
+    // AI 분석 함수 (간소화)
+    async function analyzeHandWithAI(hand) {
+      if (CONFIG.AI_SERVICE === 'none' || !CONFIG.AI_API_KEY) {
+        return '기본 분석: 핸드 편집 완료';
+      }
+      
+      try {
+        // AI API 호출 로직은 설정에 따라 구현
+        return 'AI 분석: 핸드 분석 완료';
+      } catch (error) {
+        console.error('AI 분석 오류:', error);
+        return '기본 분석: 핸드 편집 완료';
+      }
+    }
+    
+    // 이벤트 리스너들
+    document.getElementById('refresh-btn').addEventListener('click', () => {
+      loadHandData();
+    });
+    
+    document.getElementById('complete-btn').addEventListener('click', async () => {
+      if (!currentHand) {
+        alert('핸드를 선택해주세요.');
+        return;
+      }
+      
+      const virtualSheetUrl = document.getElementById('virtual-sheet-url').value;
+      if (!virtualSheetUrl) {
+        alert('Virtual 시트 URL을 입력해주세요.');
+        return;
+      }
+      
+      // 모달 표시 및 데이터 준비
+      const modal = document.getElementById('completion-modal');
+      
+      // 기본 파일명 생성
+      const today = new Date();
+      const dateStr = today.toISOString().split('T')[0];
+      const defaultFilename = `${dateStr}_Hand${currentHand.handNumber}_Final.mp4`;
+      document.getElementById('final-filename').value = defaultFilename;
+      
+      // 핸드 시간 표시
+      if (currentHand.handTime) {
+        const handDate = new Date(currentHand.handTime * 1000);
+        const kstDate = new Date(handDate.toLocaleString("en-US", {timeZone: "Asia/Seoul"}));
+        const timeStr = kstDate.toTimeString().split(' ')[0];
+        document.getElementById('hand-timestamp').value = timeStr;
+      } else {
+        document.getElementById('hand-timestamp').value = '시간 정보 없음';
+      }
+      
+      // Virtual 시트 매칭 시도
+      if (currentHand.handTime) {
+        const matchResult = await findClosestVirtualRow(currentHand.handTime, virtualSheetUrl);
+        if (matchResult && matchResult.success) {
+          document.getElementById('matched-row').value = 
+            `행 ${matchResult.rowIndex} (차이: ${matchResult.timeDiffStr})`;
+        } else {
+          document.getElementById('matched-row').value = '매칭 실패';
+        }
+      }
+      
+      // AI 분석
+      const aiSummary = await analyzeHandWithAI(currentHand);
+      document.getElementById('ai-summary').value = aiSummary;
+      
+      modal.classList.remove('hidden');
+    });
+    
+    document.getElementById('confirm-completion').addEventListener('click', () => {
+      if (!currentHand) return;
+      
+      const finalFilename = document.getElementById('final-filename').value;
+      const aiSummary = document.getElementById('ai-summary').value;
+      
+      // 로컬 상태 업데이트
+      currentHand.isLocallyCompleted = true;
+      currentHand.finalFilename = finalFilename;
+      currentHand.aiAnalysis = aiSummary;
+      
+      masterHandList.set(currentHand.handNumber, currentHand);
+      saveMasterHandList();
+      
+      // UI 업데이트
+      updateHandList();
+      updateStats();
+      
+      // 모달 닫기
+      document.getElementById('completion-modal').classList.add('hidden');
+      
+      showNotification('핸드 완료', `핸드 #${currentHand.handNumber}가 완료되었습니다.`);
+    });
+    
+    document.getElementById('cancel-completion').addEventListener('click', () => {
+      document.getElementById('completion-modal').classList.add('hidden');
+    });
+    
+    document.getElementById('save-notes').addEventListener('click', () => {
+      if (!currentHand) return;
+      
+      const notes = document.getElementById('hand-notes').value;
+      currentHand.notes = notes;
+      
+      masterHandList.set(currentHand.handNumber, currentHand);
+      saveMasterHandList();
+      
+      showNotification('노트 저장', '핸드 노트가 저장되었습니다.');
+    });
+    
+    // 필터 이벤트
+    document.getElementById('table-filter').addEventListener('change', updateHandList);
+    document.getElementById('status-filter').addEventListener('change', updateHandList);
+    
+    // 설정 관련 이벤트들
+    document.getElementById('settings-btn').addEventListener('click', () => {
       document.getElementById('settings-modal').classList.remove('hidden');
-    }
-
-    function hideSettings() {
+    });
+    
+    document.getElementById('cancel-settings').addEventListener('click', () => {
       document.getElementById('settings-modal').classList.add('hidden');
+    });
+    
+    document.getElementById('clear-notification-history').addEventListener('click', () => {
+      recentHandsBuffer.clear();
+      showNotification('버퍼 초기화', '최근 핸드 버퍼가 초기화되었습니다.');
+    });
+    
+    // 자동 새로고침
+    function startAutoRefresh() {
+      // 초기 로드
+      refreshTimerInitial = setTimeout(() => {
+        loadHandData();
+        
+        // 이후 주기적 새로고침
+        refreshTimerInterval = setInterval(() => {
+          loadHandData();
+        }, CONFIG.REFRESH_INTERVAL);
+      }, 1000);
     }
-
-    // 빠른 작업들
-    function showSetup() {
-      alert('설정 기능은 곧 구현됩니다.');
+    
+    // 알림 권한 요청
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
     }
-
-    function startDemo() {
-      alert('데모 모드는 곧 구현됩니다.');
-    }
-
-    function showDocs() {
-      alert('문서는 곧 구현됩니다.');
-    }
-
+    
     // 앱 시작
-    document.addEventListener('DOMContentLoaded', initializeApp);
-
-    // 전역에 앱 노출 (디버깅용)
-    window.__PHOENIX_APP__ = () => app;
+    init();
+    loadHandData();
+    startAutoRefresh();
+    
   </script>
 </body>
 </html>

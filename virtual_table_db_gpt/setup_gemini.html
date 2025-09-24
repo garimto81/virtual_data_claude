@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Gemini API 설정</title>
+</head>
+<body>
+  <h1>Gemini API 초기 설정</h1>
+  <p>이 페이지를 한 번 열면 Gemini API가 자동 설정됩니다.</p>
+  <script>
+    // Gemini API 설정 저장
+    localStorage.setItem('ai_service', 'gemini');
+    localStorage.setItem('ai_api_key', 'AIzaSyBB8uqP1ECTe40jknSy5XK71TCs8_KbGV0');
+    
+    alert('✅ Gemini API 설정 완료!\n\n이제 index.html로 돌아가서 사용하세요.');
+    
+    // index.html로 리다이렉트
+    window.location.href = '/index.html';
+  </script>
+</body>
+</html>

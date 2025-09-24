@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Apps Script updateHandEdit 테스트</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #response {
+      background: white;
+      border: 1px solid #ddd;
+      padding: 15px;
+      border-radius: 5px;
+      min-height: 200px;
+      white-space: pre-wrap;
+      font-family: monospace;
+    }
+    .success {
+      color: green;
+      font-weight: bold;
+    }
+    .error {
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔧 Apps Script updateHandEdit 테스트</h1>
+  
+  <div>
+    <label>핸드 번호: <input type="text" id="handNumber" value="1" style="font-size: 16px; padding: 5px;"></label>
+    <br><br>
+    <button onclick="testUpdate(true)" style="background: #4CAF50; color: white;">✅ 체크박스 체크 (완료)</button>
+    <button onclick="testUpdate(false)" style="background: #FF9800; color: white;">📝 체크박스 해제 (편집)</button>
+    <button onclick="testConnection()" style="background: #2196F3; color: white;">🔌 연결 테스트</button>
+  </div>
+  
+  <h2>📊 응답:</h2>
+  <pre id="response">테스트를 시작하려면 위 버튼을 클릭하세요.</pre>
+  
+  <script>
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbygDLxqQaNvzc9ORH00jk1VuskDdVpBG1phvDsfnhk1SCqk9kl3gz51ScsQFDr30g1y/exec';
+    
+    async function testUpdate(checked) {
+      const handNumber = document.getElementById('handNumber').value;
+      const responseEl = document.getElementById('response');
+      
+      responseEl.textContent = '요청 전송 중...\n';
+      
+      try {
+        // FormData 방식 (index.html과 동일)
+        console.log('=== updateHandEdit 테스트 시작 ===');
+        const payload = {
+          action: 'updateHandEdit',
+          handNumber: handNumber,
+          checked: checked
+        };
+        
+        console.log('전송할 Payload:', payload);
+        responseEl.textContent += `\n📤 전송 데이터:\n${JSON.stringify(payload, null, 2)}\n`;
+        
+        const formData = new FormData();
+        formData.append('payload', JSON.stringify(payload));
+        
+        const response = await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          body: formData
+        });
+        
+        console.log('응답 상태:', response.status, response.statusText);
+        responseEl.textContent += `\n📨 응답 상태: ${response.status} ${response.statusText}\n`;
+        
+        const text = await response.text();
+        console.log('응답 텍스트:', text);
+        responseEl.textContent += `\n📄 응답 원본:\n${text}\n`;
+        
+        // 파싱 시도
+        try {
+          const result = JSON.parse(text);
+          console.log('파싱된 결과:', result);
+          
+          if (result.status === 'success') {
+            responseEl.innerHTML += `\n<span class="success">✅ 성공!</span>\n`;
+            responseEl.textContent += `핸드 #${result.handNumber} - 체크: ${result.checked}\n`;
+            if (result.editTime) {
+              responseEl.textContent += `편집 시간: ${result.editTime}\n`;
+            }
+          } else if (result.status === 'error') {
+            responseEl.innerHTML += `\n<span class="error">❌ 에러: ${result.message}</span>\n`;
+          }
+          
+          responseEl.textContent += `\n📊 파싱된 결과:\n${JSON.stringify(result, null, 2)}`;
+        } catch (e) {
+          console.error('JSON 파싱 실패:', e);
+          responseEl.innerHTML += `\n<span class="error">❌ JSON 파싱 실패</span>\n`;
+          responseEl.textContent += `에러: ${e.message}\n`;
+          
+          // HTML 응답인 경우 (CORS 에러 등)
+          if (text.includes('<!DOCTYPE')) {
+            responseEl.textContent += '\n⚠️ HTML 응답 받음 - Apps Script 배포 설정 확인 필요';
+          }
+        }
+        
+      } catch (error) {
+        console.error('네트워크 에러:', error);
+        responseEl.innerHTML = `<span class="error">❌ 네트워크 에러: ${error.message}</span>`;
+      }
+    }
+    
+    async function testConnection() {
+      const responseEl = document.getElementById('response');
+      responseEl.textContent = '연결 테스트 중...\n';
+      
+      try {
+        // GET 요청으로 연결 테스트
+        const response = await fetch(APPS_SCRIPT_URL);
+        const text = await response.text();
+        
+        console.log('GET 응답:', text);
+        responseEl.textContent += `\n📡 GET 응답:\n${text}\n`;
+        
+        try {
+          const result = JSON.parse(text);
+          if (result.status === 'ok') {
+            responseEl.innerHTML += `\n<span class="success">✅ 연결 성공! 버전: ${result.version}</span>`;
+          }
+        } catch (e) {
+          responseEl.innerHTML += `\n<span class="error">⚠️ 응답은 받았지만 JSON이 아님</span>`;
+        }
+        
+      } catch (error) {
+        responseEl.innerHTML = `<span class="error">❌ 연결 실패: ${error.message}</span>`;
+      }
+    }
+    
+    // 페이지 로드 시 정보 표시
+    window.onload = () => {
+      console.log('테스트 페이지 준비 완료');
+      console.log('Apps Script URL:', APPS_SCRIPT_URL);
+      console.log('브라우저 콘솔(F12)에서 자세한 로그를 확인하세요.');
+    };
+  </script>
+</body>
+</html>

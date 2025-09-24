@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Google Sheets CSV 연동 테스트 도구 v1.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+        }
+        
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .test-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-pending { background: #fbbf24; color: #92400e; }
+        .status-running { background: #3b82f6; color: #1e40af; }
+        .status-success { background: #10b981; color: #065f46; }
+        .status-error { background: #ef4444; color: #991b1b; }
+        
+        .log-output {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        
+        .url-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 8px;
+            padding: 12px;
+            transition: all 0.2s;
+        }
+        
+        .url-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .url-valid { border-color: #10b981 !important; }
+        .url-warning { border-color: #f59e0b !important; }
+        .url-error { border-color: #ef4444 !important; }
+        
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: #2563eb;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #10b981);
+            width: 0%;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold mb-4">🧪 Google Sheets CSV 연동 테스트 도구</h1>
+            <p class="text-xl text-blue-200">Virtual 시트 매칭 시스템 디버깅 및 테스트</p>
+        </div>
+
+        <!-- 단계별 테스트 진행도 -->
+        <div class="test-card">
+            <h2 class="text-2xl font-bold mb-4">📊 테스트 진행도</h2>
+            <div class="progress-bar mb-4">
+                <div id="progress-fill" class="progress-fill"></div>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div class="text-center">
+                    <div id="step1-status" class="status-badge status-pending mb-2">대기</div>
+                    <div class="text-sm">URL 검증</div>
+                </div>
+                <div class="text-center">
+                    <div id="step2-status" class="status-badge status-pending mb-2">대기</div>
+                    <div class="text-sm">CSV 접근</div>
+                </div>
+                <div class="text-center">
+                    <div id="step3-status" class="status-badge status-pending mb-2">대기</div>
+                    <div class="text-sm">데이터 파싱</div>
+                </div>
+                <div class="text-center">
+                    <div id="step4-status" class="status-badge status-pending mb-2">대기</div>
+                    <div class="text-sm">시간 매칭</div>
+                </div>
+                <div class="text-center">
+                    <div id="step5-status" class="status-badge status-pending mb-2">대기</div>
+                    <div class="text-sm">결과 검증</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 입력 섹션 -->
+        <div class="test-card">
+            <h2 class="text-2xl font-bold mb-4">🔗 테스트 설정</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Google Sheets URL</label>
+                    <input 
+                        type="text" 
+                        id="sheets-url" 
+                        class="url-input w-full"
+                        placeholder="https://docs.google.com/spreadsheets/d/..."
+                    >
+                    <div id="url-feedback" class="mt-2 text-sm"></div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">테스트할 시간 (Seoul 기준)</label>
+                    <input 
+                        type="text" 
+                        id="target-time" 
+                        class="url-input w-full"
+                        placeholder="14:30:25 또는 14시 30분 25초"
+                        value="14:30:25"
+                    >
+                    <div class="mt-2 text-sm text-gray-300">
+                        지원 형식: HH:MM:SS, HH:MM, N시 N분 N초, N시 N분
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 flex gap-4 flex-wrap">
+                <button id="start-test" class="btn btn-primary">🚀 테스트 시작</button>
+                <button id="manual-csv-test" class="btn" style="background: #10b981; color: white;">📋 수동 CSV 테스트</button>
+                <button id="clear-logs" class="btn" style="background: #6b7280; color: white;">🗑️ 로그 지우기</button>
+            </div>
+        </div>
+
+        <!-- 실시간 로그 -->
+        <div class="test-card">
+            <h2 class="text-2xl font-bold mb-4">📝 실시간 로그</h2>
+            <div id="log-output" class="log-output">
+                <div class="text-gray-400">테스트를 시작하려면 위의 '테스트 시작' 버튼을 클릭하세요.</div>
+            </div>
+        </div>
+
+        <!-- 결과 섹션 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- CSV 데이터 미리보기 -->
+            <div class="test-card">
+                <h2 class="text-2xl font-bold mb-4">📄 CSV 데이터 미리보기</h2>
+                <div id="csv-preview" class="log-output">
+                    <div class="text-gray-400">CSV 데이터를 불러오면 여기에 표시됩니다.</div>
+                </div>
+            </div>
+
+            <!-- 매칭 결과 -->
+            <div class="test-card">
+                <h2 class="text-2xl font-bold mb-4">🎯 매칭 결과</h2>
+                <div id="match-result" class="log-output">
+                    <div class="text-gray-400">매칭 결과가 여기에 표시됩니다.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 문제 진단 섹션 -->
+        <div class="test-card">
+            <h2 class="text-2xl font-bold mb-4">🔍 문제 진단</h2>
+            <div id="diagnosis-result" class="log-output">
+                <div class="text-gray-400">테스트 완료 후 문제 진단 결과가 표시됩니다.</div>
+            </div>
+        </div>
+
+        <!-- 추천 해결책 -->
+        <div class="test-card">
+            <h2 class="text-2xl font-bold mb-4">💡 추천 해결책</h2>
+            <div id="recommendations" class="text-sm">
+                <div class="mb-4">
+                    <h3 class="font-bold text-green-400 mb-2">✅ Google Sheets 올바른 설정 방법:</h3>
+                    <ol class="list-decimal list-inside space-y-1 text-gray-300">
+                        <li>Google Sheets에서 해당 시트 열기</li>
+                        <li>파일 → 웹에 게시 클릭</li>
+                        <li>"쉼표로 구분된 값(.csv)" 선택</li>
+                        <li>"게시" 버튼 클릭</li>
+                        <li>생성된 CSV 링크 복사하여 사용</li>
+                    </ol>
+                </div>
+                <div>
+                    <h3 class="font-bold text-blue-400 mb-2">📋 예상 CSV 구조:</h3>
+                    <pre class="text-xs text-gray-400">A열(Blinds),B열(Cyprus),C열(Seoul),D열(#)
+"100/200","13:30:25","14:30:25","1"
+"150/300","13:35:45","14:35:45","2"</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 글로벌 변수
+        let testResults = {};
+        let currentStep = 0;
+        const totalSteps = 5;
+
+        // 로그 출력 함수
+        function log(message, type = 'info') {
+            const logOutput = document.getElementById('log-output');
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = {
+                info: '#94a3b8',
+                success: '#10b981',
+                warning: '#f59e0b',
+                error: '#ef4444',
+                debug: '#8b5cf6'
+            };
+            
+            const logEntry = document.createElement('div');
+            logEntry.style.color = colors[type] || colors.info;
+            logEntry.innerHTML = `<span style="color: #64748b">[${timestamp}]</span> ${message}`;
+            
+            logOutput.appendChild(logEntry);
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        // 진행도 업데이트
+        function updateProgress(step) {
+            currentStep = step;
+            const progressFill = document.getElementById('progress-fill');
+            const percentage = (step / totalSteps) * 100;
+            progressFill.style.width = `${percentage}%`;
+        }
+
+        // 단계 상태 업데이트
+        function updateStepStatus(step, status) {
+            const stepElement = document.getElementById(`step${step}-status`);
+            stepElement.className = `status-badge status-${status}`;
+            stepElement.textContent = {
+                pending: '대기',
+                running: '진행중',
+                success: '성공',
+                error: '실패'
+            }[status];
+        }
+
+        // DOM이 완전히 로드된 후 이벤트 리스너 등록
+        document.addEventListener('DOMContentLoaded', function() {
+            // URL 실시간 검증
+            document.getElementById('sheets-url').addEventListener('input', function(e) {
+            const url = e.target.value;
+            const feedback = document.getElementById('url-feedback');
+            
+            if (!url) {
+                e.target.className = 'url-input w-full';
+                feedback.textContent = '';
+                return;
+            }
+            
+            let feedbackText = '';
+            let urlClass = 'url-input w-full';
+            
+            if (url.includes('/pub?') && url.includes('output=csv')) {
+                feedbackText = '✅ 완벽한 웹 게시 CSV URL (권장)';
+                urlClass += ' url-valid';
+            } else if (url.includes('/spreadsheets/d/e/2PACX-')) {
+                feedbackText = '🟡 웹 게시 URL (자동으로 CSV로 변환됨)';
+                urlClass += ' url-warning';
+            } else if (url.includes('/spreadsheets/d/') && !url.includes('/pub?')) {
+                feedbackText = '🟠 편집 URL (CORS 문제 가능성 있음)';
+                urlClass += ' url-warning';
+            } else if (url.includes('docs.google.com')) {
+                feedbackText = '🔴 지원되지 않는 URL 형식';
+                urlClass += ' url-error';
+            } else {
+                feedbackText = '❌ Google Sheets URL이 아닙니다';
+                urlClass += ' url-error';
+            }
+            
+            e.target.className = urlClass;
+            feedback.textContent = feedbackText;
+        });
+
+        // Google Sheets URL 검증 함수 (원본 index.html에서 가져옴)
+        function validateGoogleSheetsUrl(url) {
+            if (!url || !url.trim()) {
+                return {
+                    valid: false,
+                    type: 'empty',
+                    message: 'URL이 입력되지 않았습니다',
+                    color: '#ef4444'
+                };
+            }
+            
+            const trimmedUrl = url.trim();
+            
+            // 1. 이미 웹 게시된 CSV URL (가장 권장)
+            if (trimmedUrl.includes('/pub?') && trimmedUrl.includes('output=csv')) {
+                return {
+                    valid: true,
+                    type: 'published-csv',
+                    message: '✅ 완벽한 웹 게시 CSV URL (권장)',
+                    color: '#10b981',
+                    csvUrl: trimmedUrl
+                };
+            }
+            
+            // 2. 웹 게시된 일반 URL (2PACX 형식)
+            if (trimmedUrl.includes('/spreadsheets/d/e/2PACX-')) {
+                const gidMatch = trimmedUrl.match(/gid=(\d+)/);
+                const gid = gidMatch ? gidMatch[1] : '0';
+                const publishedIdMatch = trimmedUrl.match(/\/spreadsheets\/d\/e\/(2PACX-[a-zA-Z0-9-_]+)/);
+                
+                if (publishedIdMatch) {
+                    const csvUrl = `https://docs.google.com/spreadsheets/d/e/${publishedIdMatch[1]}/pub?gid=${gid}&single=true&output=csv`;
+                    return {
+                        valid: true,
+                        type: 'published-converted',
+                        message: '🟡 웹 게시 URL (자동으로 CSV로 변환됨)',
+                        color: '#f59e0b',
+                        csvUrl: csvUrl
+                    };
+                }
+            }
+            
+            // 3. 일반 편집 URL (비추천)
+            if (trimmedUrl.includes('/spreadsheets/d/') && !trimmedUrl.includes('/pub?')) {
+                const sheetIdMatch = trimmedUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+                
+                if (sheetIdMatch) {
+                    const sheetId = sheetIdMatch[1];
+                    const gidMatch = trimmedUrl.match(/gid=(\d+)/);
+                    const gid = gidMatch ? gidMatch[1] : '0';
+                    const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+                    
+                    return {
+                        valid: true,
+                        type: 'export-url',
+                        message: '🟠 편집 URL (CORS 및 권한 문제 가능성)',
+                        color: '#f59e0b',
+                        csvUrl: csvUrl,
+                        warning: true
+                    };
+                }
+            }
+            
+            // 4. 지원되지 않는 형식
+            if (trimmedUrl.includes('docs.google.com')) {
+                return {
+                    valid: false,
+                    type: 'unsupported',
+                    message: '🔴 지원되지 않는 Google Sheets URL 형식',
+                    color: '#ef4444'
+                };
+            }
+            
+            return {
+                valid: false,
+                type: 'invalid',
+                message: '❌ Google Sheets URL이 아닙니다',
+                color: '#ef4444'
+            };
+        }
+
+        // CSV 파싱 함수 (원본에서 가져옴)
+        function parseCSV(text) {
+            const rows = [];
+            const lines = text.split(/\r?\n/);
+            
+            for (let line of lines) {
+                if (!line.trim()) continue;
+                
+                const row = [];
+                let current = '';
+                let inQuotes = false;
+                
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    
+                    if (char === '"' && (i === 0 || line[i-1] !== '\\')) {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        row.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                
+                row.push(current.trim());
+                rows.push(row);
+            }
+            
+            return rows;
+        }
+
+        // 시간 파싱 및 매칭 함수
+        function parseTimeString(timeStr) {
+            const timePatterns = [
+                { pattern: /(\d{1,2}):(\d{2}):(\d{2})/, name: 'HH:MM:SS' },
+                { pattern: /(\d{1,2}):(\d{2})/, name: 'HH:MM' },
+                { pattern: /(\d{1,2})시\s*(\d{1,2})분\s*(\d{1,2})초/, name: '한국어 시:분:초' },
+                { pattern: /(\d{1,2})시\s*(\d{1,2})분/, name: '한국어 시:분' }
+            ];
+            
+            for (const {pattern, name} of timePatterns) {
+                const match = timeStr.match(pattern);
+                if (match) {
+                    const hours = parseInt(match[1]);
+                    const minutes = parseInt(match[2]);
+                    const seconds = match[3] ? parseInt(match[3]) : 0;
+                    
+                    return {
+                        hours,
+                        minutes,
+                        seconds,
+                        totalSeconds: hours * 3600 + minutes * 60 + seconds,
+                        pattern: name,
+                        formatted: `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+                    };
+                }
+            }
+            
+            return null;
+        }
+
+        // 메인 테스트 함수
+        async function runTest() {
+            const url = document.getElementById('sheets-url').value;
+            const targetTimeStr = document.getElementById('target-time').value;
+            
+            testResults = {};
+            log('🚀 === Google Sheets CSV 연동 테스트 시작 ===', 'info');
+            
+            // 초기화
+            updateProgress(0);
+            for (let i = 1; i <= totalSteps; i++) {
+                updateStepStatus(i, 'pending');
+            }
+            
+            try {
+                // 1단계: URL 검증
+                updateStepStatus(1, 'running');
+                updateProgress(1);
+                log('📋 1단계: URL 검증 시작', 'info');
+                
+                const urlValidation = validateGoogleSheetsUrl(url);
+                testResults.urlValidation = urlValidation;
+                
+                log(`🔗 입력 URL: ${url}`, 'debug');
+                log(`📊 URL 형식: ${urlValidation.type}`, 'debug');
+                log(`💬 검증 결과: ${urlValidation.message}`, urlValidation.valid ? 'success' : 'error');
+                
+                if (!urlValidation.valid) {
+                    updateStepStatus(1, 'error');
+                    throw new Error(`URL 검증 실패: ${urlValidation.message}`);
+                }
+                
+                updateStepStatus(1, 'success');
+                log(`✅ CSV URL: ${urlValidation.csvUrl}`, 'success');
+                
+                // 2단계: CSV 데이터 접근
+                updateStepStatus(2, 'running');
+                updateProgress(2);
+                log('📥 2단계: CSV 데이터 접근 시작', 'info');
+                
+                log('🌐 HTTP 요청 시작...', 'debug');
+                
+                // CORS 문제 해결을 위한 여러 방법 시도
+                let response = null;
+                let fetchMethod = '';
+                
+                // 방법 1: 기본 fetch (no-cors 모드)
+                try {
+                    log('🔄 방법 1: 기본 fetch 시도', 'debug');
+                    response = await fetch(urlValidation.csvUrl, {
+                        method: 'GET',
+                        mode: 'cors',
+                        headers: {
+                            'Accept': 'text/csv,text/plain,*/*'
+                        }
+                    });
+                    fetchMethod = '기본 fetch (CORS)';
+                    log('✅ 방법 1 성공!', 'success');
+                } catch (error) {
+                    log(`❌ 방법 1 실패: ${error.message}`, 'warning');
+                    
+                    // 방법 2: no-cors 모드 시도
+                    try {
+                        log('🔄 방법 2: no-cors 모드 시도', 'debug');
+                        response = await fetch(urlValidation.csvUrl, {
+                            method: 'GET',
+                            mode: 'no-cors'
+                        });
+                        fetchMethod = 'no-cors 모드';
+                        log('✅ 방법 2 성공!', 'success');
+                    } catch (error2) {
+                        log(`❌ 방법 2 실패: ${error2.message}`, 'warning');
+                        
+                        // 방법 3: 프록시 서버 사용
+                        try {
+                            log('🔄 방법 3: CORS 프록시 서버 사용', 'debug');
+                            const proxyUrl = `https://cors-anywhere.herokuapp.com/${urlValidation.csvUrl}`;
+                            response = await fetch(proxyUrl);
+                            fetchMethod = 'CORS 프록시';
+                            log('✅ 방법 3 성공!', 'success');
+                        } catch (error3) {
+                            log(`❌ 방법 3 실패: ${error3.message}`, 'warning');
+                            
+                            // 방법 4: 다른 프록시 서버 시도
+                            try {
+                                log('🔄 방법 4: 대체 프록시 서버 사용', 'debug');
+                                const proxyUrl2 = `https://api.allorigins.win/get?url=${encodeURIComponent(urlValidation.csvUrl)}`;
+                                const proxyResponse = await fetch(proxyUrl2);
+                                const proxyData = await proxyResponse.json();
+                                
+                                // 가짜 response 객체 생성
+                                response = {
+                                    ok: true,
+                                    status: 200,
+                                    statusText: 'OK',
+                                    headers: {
+                                        get: (key) => key === 'content-type' ? 'text/csv' : null
+                                    },
+                                    text: async () => proxyData.contents
+                                };
+                                fetchMethod = 'AllOrigins 프록시';
+                                log('✅ 방법 4 성공!', 'success');
+                            } catch (error4) {
+                                log(`❌ 모든 방법 실패`, 'error');
+                                log(`❌ 원본 오류: ${error.message}`, 'error');
+                                log(`❌ no-cors 오류: ${error2.message}`, 'error');  
+                                log(`❌ 프록시 오류: ${error3.message}`, 'error');
+                                log(`❌ 대체 프록시 오류: ${error4.message}`, 'error');
+                                throw new Error(`모든 fetch 방법 실패. 마지막 오류: ${error4.message}`);
+                            }
+                        }
+                    }
+                }
+                
+                log(`📊 사용된 방법: ${fetchMethod}`, 'info');
+                testResults.httpResponse = {
+                    status: response.status,
+                    statusText: response.statusText,
+                    contentType: response.headers.get('content-type'),
+                    ok: response.ok
+                };
+                
+                log(`📊 HTTP 응답: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                log(`📊 Content-Type: ${response.headers.get('content-type')}`, 'debug');
+                
+                if (!response.ok) {
+                    updateStepStatus(2, 'error');
+                    let errorMsg = `HTTP 오류: ${response.status} ${response.statusText}`;
+                    if (response.status === 403) errorMsg += ' (권한 없음 - 웹 게시 설정 확인)';
+                    if (response.status === 404) errorMsg += ' (시트를 찾을 수 없음 - URL 확인)';
+                    throw new Error(errorMsg);
+                }
+                
+                const csvText = await response.text();
+                testResults.csvText = csvText;
+                
+                log(`📄 CSV 데이터 크기: ${csvText.length} 글자`, 'success');
+                log(`📄 첫 200자 미리보기: ${csvText.substring(0, 200)}...`, 'debug');
+                
+                updateStepStatus(2, 'success');
+                
+                // CSV 미리보기 업데이트
+                const csvPreview = document.getElementById('csv-preview');
+                csvPreview.innerHTML = `<div style="color: #10b981;">✅ 데이터 크기: ${csvText.length} 글자</div>
+<div style="color: #64748b; margin-top: 8px;">첫 500자:</div>
+<pre style="white-space: pre-wrap; margin-top: 4px; color: #e2e8f0;">${csvText.substring(0, 500)}${csvText.length > 500 ? '...' : ''}</pre>`;
+                
+                // 3단계: 데이터 파싱
+                updateStepStatus(3, 'running');
+                updateProgress(3);
+                log('🔧 3단계: CSV 데이터 파싱 시작', 'info');
+                
+                const rows = parseCSV(csvText);
+                testResults.parsedRows = rows;
+                
+                log(`📋 파싱된 행 수: ${rows.length}`, 'success');
+                
+                if (rows.length === 0) {
+                    updateStepStatus(3, 'error');
+                    throw new Error('CSV에 데이터가 없습니다');
+                }
+                
+                // 첫 5행 로그
+                log('📊 CSV 데이터 구조 (첫 5행):', 'debug');
+                for (let i = 0; i < Math.min(5, rows.length); i++) {
+                    log(`   행 ${i+1}: A="${rows[i][0] || ''}", B="${rows[i][1] || ''}", C="${rows[i][2] || ''}", D="${rows[i][3] || ''}"`, 'debug');
+                }
+                
+                updateStepStatus(3, 'success');
+                
+                // 4단계: 시간 매칭
+                updateStepStatus(4, 'running');
+                updateProgress(4);
+                log('⏰ 4단계: 시간 매칭 시작', 'info');
+                
+                // 타겟 시간 파싱
+                const targetTime = parseTimeString(targetTimeStr);
+                if (!targetTime) {
+                    updateStepStatus(4, 'error');
+                    throw new Error(`타겟 시간 파싱 실패: ${targetTimeStr}`);
+                }
+                
+                log(`🎯 타겟 시간: ${targetTime.formatted} (${targetTime.totalSeconds}초, 패턴: ${targetTime.pattern})`, 'info');
+                
+                let closestRow = null;
+                let minDiff = Infinity;
+                let rowIndex = -1;
+                let matchedTime = null;
+                let validTimeCount = 0;
+                
+                // C열에서 시간 매칭 수행
+                log('🔍 C열에서 시간 데이터 검색 중...', 'debug');
+                
+                for (let i = 0; i < rows.length; i++) {
+                    const cellValue = rows[i][2]; // C열
+                    if (!cellValue || !cellValue.trim()) continue;
+                    
+                    const cellTime = parseTimeString(cellValue);
+                    if (!cellTime) {
+                        log(`   행 ${i+1} C열: "${cellValue}" - 시간 형식 매칭 실패`, 'debug');
+                        continue;
+                    }
+                    
+                    validTimeCount++;
+                    const diff = Math.abs(cellTime.totalSeconds - targetTime.totalSeconds);
+                    
+                    log(`   행 ${i+1} C열: "${cellValue}" → ${cellTime.formatted} (차이: ${diff}초)`, 'debug');
+                    
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        closestRow = rows[i];
+                        rowIndex = i + 1;
+                        matchedTime = cellTime;
+                        
+                        log(`   🎯 새로운 최적 매칭: 행 ${rowIndex}, 차이 ${diff}초`, 'success');
+                        
+                        if (diff <= 5) {
+                            log('✅ 정확한 매칭 발견! (5초 이내)', 'success');
+                            break;
+                        }
+                    }
+                }
+                
+                testResults.matching = {
+                    targetTime,
+                    validTimeCount,
+                    closestRow,
+                    rowIndex,
+                    matchedTime,
+                    minDiff,
+                    success: closestRow !== null
+                };
+                
+                log(`📊 매칭 요약: 유효한 시간 ${validTimeCount}개, 최소 차이 ${minDiff === Infinity ? '무한' : minDiff + '초'}`, 'info');
+                
+                if (closestRow) {
+                    updateStepStatus(4, 'success');
+                    
+                    const accuracy = minDiff <= 5 ? '정확 (5초 이내)' : minDiff <= 30 ? '근사 (30초 이내)' : '대략적 (30초 초과)';
+                    log(`✅ 매칭 성공: 행 ${rowIndex}, 시간 ${matchedTime.formatted}, 정확도 ${accuracy}`, 'success');
+                    
+                    // 매칭 결과 업데이트
+                    const matchResult = document.getElementById('match-result');
+                    matchResult.innerHTML = `<div style="color: #10b981;">✅ 매칭 성공!</div>
+<div style="margin-top: 8px;">
+  <div>📍 위치: 행 ${rowIndex}</div>
+  <div>🎯 타겟 시간: ${targetTime.formatted}</div>
+  <div>🕐 매칭된 시간: ${matchedTime.formatted}</div>
+  <div>⏰ 시간 차이: ${minDiff}초</div>
+  <div>📊 정확도: ${accuracy}</div>
+</div>
+<div style="margin-top: 8px; color: #64748b;">전체 행 데이터:</div>
+<div style="margin-top: 4px;">
+  <div>A열: "${closestRow[0] || ''}"</div>
+  <div>B열: "${closestRow[1] || ''}"</div>
+  <div>C열: "${closestRow[2] || ''}"</div>
+  <div>D열: "${closestRow[3] || ''}"</div>
+</div>`;
+                } else {
+                    updateStepStatus(4, 'error');
+                    log('❌ 매칭할 수 있는 시간 데이터를 찾지 못했습니다', 'error');
+                    
+                    const matchResult = document.getElementById('match-result');
+                    matchResult.innerHTML = `<div style="color: #ef4444;">❌ 매칭 실패</div>
+<div style="margin-top: 8px;">
+  <div>🎯 타겟 시간: ${targetTime.formatted}</div>
+  <div>📊 유효한 시간 데이터: ${validTimeCount}개</div>
+  <div style="color: #f59e0b; margin-top: 8px;">가능한 원인:</div>
+  <div style="margin-left: 16px;">
+    <div>• C열에 올바른 시간 형식 데이터 없음</div>
+    <div>• 타겟 시간과 유사한 시간대 데이터 부족</div>
+  </div>
+</div>`;
+                }
+                
+                // 5단계: 결과 검증 및 진단
+                updateStepStatus(5, 'running');
+                updateProgress(5);
+                log('🔍 5단계: 결과 검증 및 문제 진단', 'info');
+                
+                await generateDiagnosis();
+                
+                updateStepStatus(5, 'success');
+                log('✅ === 테스트 완료 ===', 'success');
+                
+            } catch (error) {
+                log(`❌ 테스트 실패: ${error.message}`, 'error');
+                console.error('테스트 오류:', error);
+                
+                await generateDiagnosis();
+            }
+        }
+
+        // 문제 진단 생성
+        async function generateDiagnosis() {
+            const diagnosis = document.getElementById('diagnosis-result');
+            let diagnosisHTML = '<div style="color: #3b82f6; font-weight: bold;">🔍 자동 진단 결과</div><div style="margin-top: 12px;">';
+            
+            // URL 검증 진단
+            if (testResults.urlValidation) {
+                const url = testResults.urlValidation;
+                diagnosisHTML += `<div><span style="color: #f59e0b;">URL 검증:</span> ${url.message}</div>`;
+                if (url.warning) {
+                    diagnosisHTML += `<div style="color: #ef4444; margin-left: 16px;">⚠️ CORS 문제가 발생할 수 있습니다</div>`;
+                }
+            }
+            
+            // HTTP 응답 진단
+            if (testResults.httpResponse) {
+                const http = testResults.httpResponse;
+                diagnosisHTML += `<div><span style="color: #f59e0b;">HTTP 응답:</span> ${http.status} ${http.statusText}</div>`;
+                if (!http.ok) {
+                    if (http.status === 403) {
+                        diagnosisHTML += `<div style="color: #ef4444; margin-left: 16px;">❌ 권한 문제 - 웹 게시 설정 확인 필요</div>`;
+                    } else if (http.status === 404) {
+                        diagnosisHTML += `<div style="color: #ef4444; margin-left: 16px;">❌ 시트를 찾을 수 없음 - URL 및 gid 확인 필요</div>`;
+                    }
+                }
+            }
+            
+            // CSV 데이터 진단
+            if (testResults.csvText) {
+                const csvSize = testResults.csvText.length;
+                diagnosisHTML += `<div><span style="color: #f59e0b;">CSV 데이터:</span> ${csvSize}글자 ${csvSize > 0 ? '✅' : '❌'}</div>`;
+                if (csvSize === 0) {
+                    diagnosisHTML += `<div style="color: #ef4444; margin-left: 16px;">❌ 빈 응답 - 시트에 데이터가 없거나 잘못된 gid</div>`;
+                }
+            }
+            
+            // 파싱 진단
+            if (testResults.parsedRows) {
+                const rowCount = testResults.parsedRows.length;
+                diagnosisHTML += `<div><span style="color: #f59e0b;">데이터 파싱:</span> ${rowCount}행 파싱됨 ${rowCount > 0 ? '✅' : '❌'}</div>`;
+            }
+            
+            // 매칭 진단
+            if (testResults.matching) {
+                const m = testResults.matching;
+                diagnosisHTML += `<div><span style="color: #f59e0b;">시간 매칭:</span> 유효한 시간 ${m.validTimeCount}개 ${m.success ? '✅' : '❌'}</div>`;
+                if (!m.success && m.validTimeCount === 0) {
+                    diagnosisHTML += `<div style="color: #ef4444; margin-left: 16px;">❌ C열에 올바른 시간 형식 데이터가 없음</div>`;
+                } else if (!m.success && m.validTimeCount > 0) {
+                    diagnosisHTML += `<div style="color: #ef4444; margin-left: 16px;">❌ 타겟 시간과 매칭되는 데이터가 없음</div>`;
+                }
+            }
+            
+            diagnosisHTML += '</div>';
+            diagnosis.innerHTML = diagnosisHTML;
+        }
+
+        // 수동 CSV 테스트 함수
+        async function manualCSVTest() {
+            const csvData = prompt(`CORS 문제로 자동 테스트가 실패했습니다.
+수동으로 CSV 데이터를 입력해서 테스트해보겠습니다.
+
+다음 단계를 따라주세요:
+1. Google Sheets를 새 탭에서 열기
+2. URL을 브라우저 주소창에 직접 입력하여 CSV 데이터 확인
+3. 전체 CSV 내용을 복사해서 아래에 붙여넣기
+
+CSV URL: ${document.getElementById('sheets-url').value}
+
+CSV 데이터를 붙여넣어 주세요:`, 
+`Blinds,Cyprus,Seoul,#
+100/200,13:30:25,14:30:25,1
+150/300,13:35:45,14:35:45,2
+200/400,13:40:15,14:40:15,3`);
+
+            if (!csvData) {
+                log('❌ 수동 테스트 취소됨', 'warning');
+                return;
+            }
+
+            log('📋 === 수동 CSV 테스트 시작 ===', 'info');
+            
+            try {
+                // 진행도 초기화
+                updateProgress(0);
+                for (let i = 1; i <= totalSteps; i++) {
+                    updateStepStatus(i, 'pending');
+                }
+
+                // 1단계: URL 검증 (스킵)
+                updateStepStatus(1, 'success');
+                updateProgress(1);
+                log('📋 1단계: URL 검증 스킵 (수동 모드)', 'info');
+
+                // 2단계: CSV 데이터 접근 (스킵)
+                updateStepStatus(2, 'success');
+                updateProgress(2);
+                log('📥 2단계: CSV 데이터 접근 스킵 (수동 입력)', 'info');
+
+                // 수동 입력 데이터 처리
+                testResults = {
+                    csvText: csvData,
+                    urlValidation: { valid: true, type: 'manual', message: '수동 입력' },
+                    httpResponse: { status: 200, statusText: 'OK (Manual)', ok: true }
+                };
+
+                // CSV 미리보기 업데이트
+                const csvPreview = document.getElementById('csv-preview');
+                csvPreview.innerHTML = `<div style="color: #10b981;">✅ 수동 입력 데이터 크기: ${csvData.length} 글자</div>
+<div style="color: #64748b; margin-top: 8px;">수동 입력 데이터:</div>
+<pre style="white-space: pre-wrap; margin-top: 4px; color: #e2e8f0;">${csvData.substring(0, 500)}${csvData.length > 500 ? '...' : ''}</pre>`;
+
+                log(`📄 수동 입력 데이터 크기: ${csvData.length} 글자`, 'success');
+
+                // 3단계: 데이터 파싱
+                updateStepStatus(3, 'running');
+                updateProgress(3);
+                log('🔧 3단계: CSV 데이터 파싱 시작', 'info');
+
+                const rows = parseCSV(csvData);
+                testResults.parsedRows = rows;
+
+                log(`📋 파싱된 행 수: ${rows.length}`, 'success');
+
+                if (rows.length === 0) {
+                    updateStepStatus(3, 'error');
+                    throw new Error('CSV에 데이터가 없습니다');
+                }
+
+                // 첫 5행 로그
+                log('📊 CSV 데이터 구조 (첫 5행):', 'debug');
+                for (let i = 0; i < Math.min(5, rows.length); i++) {
+                    log(`   행 ${i+1}: A="${rows[i][0] || ''}", B="${rows[i][1] || ''}", C="${rows[i][2] || ''}", D="${rows[i][3] || ''}"`, 'debug');
+                }
+
+                updateStepStatus(3, 'success');
+
+                // 4단계: 시간 매칭
+                updateStepStatus(4, 'running');
+                updateProgress(4);
+                log('⏰ 4단계: 시간 매칭 시작', 'info');
+
+                const targetTimeStr = document.getElementById('target-time').value;
+                const targetTime = parseTimeString(targetTimeStr);
+                
+                if (!targetTime) {
+                    updateStepStatus(4, 'error');
+                    throw new Error(`타겟 시간 파싱 실패: ${targetTimeStr}`);
+                }
+
+                log(`🎯 타겟 시간: ${targetTime.formatted} (${targetTime.totalSeconds}초, 패턴: ${targetTime.pattern})`, 'info');
+
+                let closestRow = null;
+                let minDiff = Infinity;
+                let rowIndex = -1;
+                let matchedTime = null;
+                let validTimeCount = 0;
+
+                // C열에서 시간 매칭 수행
+                log('🔍 C열에서 시간 데이터 검색 중...', 'debug');
+
+                for (let i = 0; i < rows.length; i++) {
+                    const cellValue = rows[i][2]; // C열
+                    if (!cellValue || !cellValue.trim()) continue;
+
+                    const cellTime = parseTimeString(cellValue);
+                    if (!cellTime) {
+                        log(`   행 ${i+1} C열: "${cellValue}" - 시간 형식 매칭 실패`, 'debug');
+                        continue;
+                    }
+
+                    validTimeCount++;
+                    const diff = Math.abs(cellTime.totalSeconds - targetTime.totalSeconds);
+
+                    log(`   행 ${i+1} C열: "${cellValue}" → ${cellTime.formatted} (차이: ${diff}초)`, 'debug');
+
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        closestRow = rows[i];
+                        rowIndex = i + 1;
+                        matchedTime = cellTime;
+
+                        log(`   🎯 새로운 최적 매칭: 행 ${rowIndex}, 차이 ${diff}초`, 'success');
+
+                        if (diff <= 5) {
+                            log('✅ 정확한 매칭 발견! (5초 이내)', 'success');
+                            break;
+                        }
+                    }
+                }
+
+                testResults.matching = {
+                    targetTime,
+                    validTimeCount,
+                    closestRow,
+                    rowIndex,
+                    matchedTime,
+                    minDiff,
+                    success: closestRow !== null
+                };
+
+                log(`📊 매칭 요약: 유효한 시간 ${validTimeCount}개, 최소 차이 ${minDiff === Infinity ? '무한' : minDiff + '초'}`, 'info');
+
+                if (closestRow) {
+                    updateStepStatus(4, 'success');
+
+                    const accuracy = minDiff <= 5 ? '정확 (5초 이내)' : minDiff <= 30 ? '근사 (30초 이내)' : '대략적 (30초 초과)';
+                    log(`✅ 매칭 성공: 행 ${rowIndex}, 시간 ${matchedTime.formatted}, 정확도 ${accuracy}`, 'success');
+
+                    // 매칭 결과 업데이트
+                    const matchResult = document.getElementById('match-result');
+                    matchResult.innerHTML = `<div style="color: #10b981;">✅ 매칭 성공!</div>
+<div style="margin-top: 8px;">
+  <div>📍 위치: 행 ${rowIndex}</div>
+  <div>🎯 타겟 시간: ${targetTime.formatted}</div>
+  <div>🕐 매칭된 시간: ${matchedTime.formatted}</div>
+  <div>⏰ 시간 차이: ${minDiff}초</div>
+  <div>📊 정확도: ${accuracy}</div>
+</div>
+<div style="margin-top: 8px; color: #64748b;">전체 행 데이터:</div>
+<div style="margin-top: 4px;">
+  <div>A열: "${closestRow[0] || ''}"</div>
+  <div>B열: "${closestRow[1] || ''}"</div>
+  <div>C열: "${closestRow[2] || ''}"</div>
+  <div>D열: "${closestRow[3] || ''}"</div>
+</div>`;
+                } else {
+                    updateStepStatus(4, 'error');
+                    log('❌ 매칭할 수 있는 시간 데이터를 찾지 못했습니다', 'error');
+
+                    const matchResult = document.getElementById('match-result');
+                    matchResult.innerHTML = `<div style="color: #ef4444;">❌ 매칭 실패</div>
+<div style="margin-top: 8px;">
+  <div>🎯 타겟 시간: ${targetTime.formatted}</div>
+  <div>📊 유효한 시간 데이터: ${validTimeCount}개</div>
+  <div style="color: #f59e0b; margin-top: 8px;">가능한 원인:</div>
+  <div style="margin-left: 16px;">
+    <div>• C열에 올바른 시간 형식 데이터 없음</div>
+    <div>• 타겟 시간과 유사한 시간대 데이터 부족</div>
+  </div>
+</div>`;
+                }
+
+                // 5단계: 결과 검증 및 진단
+                updateStepStatus(5, 'running');
+                updateProgress(5);
+                log('🔍 5단계: 결과 검증 및 문제 진단', 'info');
+
+                await generateDiagnosis();
+
+                updateStepStatus(5, 'success');
+                log('✅ === 수동 테스트 완료 ===', 'success');
+
+            } catch (error) {
+                log(`❌ 수동 테스트 실패: ${error.message}`, 'error');
+                console.error('수동 테스트 오류:', error);
+
+                await generateDiagnosis();
+            }
+        }
+
+            // 테스트 시작 버튼 이벤트
+            document.getElementById('start-test').addEventListener('click', runTest);
+            
+            // 수동 CSV 테스트 버튼 이벤트
+            document.getElementById('manual-csv-test').addEventListener('click', manualCSVTest);
+
+            // 로그 지우기
+            document.getElementById('clear-logs').addEventListener('click', function() {
+            document.getElementById('log-output').innerHTML = '<div class="text-gray-400">로그가 지워졌습니다.</div>';
+            document.getElementById('csv-preview').innerHTML = '<div class="text-gray-400">CSV 데이터를 불러오면 여기에 표시됩니다.</div>';
+            document.getElementById('match-result').innerHTML = '<div class="text-gray-400">매칭 결과가 여기에 표시됩니다.</div>';
+            document.getElementById('diagnosis-result').innerHTML = '<div class="text-gray-400">테스트 완료 후 문제 진단 결과가 표시됩니다.</div>';
+            
+                // 진행도 초기화
+                updateProgress(0);
+                for (let i = 1; i <= totalSteps; i++) {
+                    updateStepStatus(i, 'pending');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

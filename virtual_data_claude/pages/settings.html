@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>설정 - 포커 핸드 로거</title>
+    <link href="../assets/css/main.css" rel="stylesheet">
+    <link href="../assets/css/settings.css" rel="stylesheet">
+</head>
+<body>
+    <div class="min-h-screen bg-gray-100">
+        <!-- 헤더 -->
+        <header class="bg-white shadow">
+            <div class="container mx-auto px-4 py-4">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-2xl font-bold text-gray-800">설정</h1>
+                    <nav class="flex space-x-4">
+                        <a href="dashboard.html" class="text-gray-600 hover:text-blue-600">대시보드</a>
+                        <a href="hand-input.html" class="text-gray-600 hover:text-blue-600">핸드 입력</a>
+                        <a href="history.html" class="text-gray-600 hover:text-blue-600">히스토리</a>
+                        <a href="statistics.html" class="text-gray-600 hover:text-blue-600">통계</a>
+                        <a href="settings.html" class="text-blue-600 font-semibold">설정</a>
+                    </nav>
+                </div>
+            </div>
+        </header>
+
+        <!-- 설정 콘텐츠 -->
+        <main class="container mx-auto px-4 py-8">
+            <div class="max-w-4xl mx-auto">
+                <!-- 일반 설정 -->
+                <div class="bg-white rounded-lg shadow p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">일반 설정</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">언어</label>
+                            <select id="language" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                <option value="ko" selected>한국어</option>
+                                <option value="en">English</option>
+                                <option value="ja">日本語</option>
+                                <option value="zh">中文</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">시간대</label>
+                            <select id="timezone" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                <option value="Asia/Seoul" selected>서울 (GMT+9)</option>
+                                <option value="Asia/Tokyo">도쿄 (GMT+9)</option>
+                                <option value="America/New_York">뉴욕 (GMT-5)</option>
+                                <option value="Europe/London">런던 (GMT+0)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">날짜 형식</label>
+                            <select id="date-format" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                <option value="YYYY-MM-DD" selected>2024-03-20</option>
+                                <option value="MM/DD/YYYY">03/20/2024</option>
+                                <option value="DD/MM/YYYY">20/03/2024</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">통화</label>
+                            <select id="currency" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                <option value="USD" selected>USD ($)</option>
+                                <option value="KRW">KRW (₩)</option>
+                                <option value="EUR">EUR (€)</option>
+                                <option value="JPY">JPY (¥)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 게임 설정 -->
+                <div class="bg-white rounded-lg shadow p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">게임 설정</h2>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">기본 스몰 블라인드</label>
+                                <input type="number" id="default-sb" class="w-full px-3 py-2 border border-gray-300 rounded-md" value="50">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">기본 빅 블라인드</label>
+                                <input type="number" id="default-bb" class="w-full px-3 py-2 border border-gray-300 rounded-md" value="100">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">기본 테이블 이름</label>
+                            <input type="text" id="default-table" class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="예: Main Table">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">기본 플레이어 수</label>
+                            <select id="default-players" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                <option value="2">2명</option>
+                                <option value="6" selected>6명</option>
+                                <option value="9">9명</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="auto-save" class="mr-2" checked>
+                            <label for="auto-save" class="text-sm font-medium text-gray-700">자동 저장 활성화</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 데이터 관리 -->
+                <div class="bg-white rounded-lg shadow p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">데이터 관리</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Google Apps Script URL</label>
+                            <input type="text" id="apps-script-url" class="w-full px-3 py-2 border border-gray-300 rounded-md" 
+                                   value="https://script.google.com/macros/s/AKfycbwWfm4L72PgwtZTD8ur-vyAi4JJsHaQ5REhGhFdp5OYSrQbQacgkoUZRhvzZanrE6in/exec">
+                            <p class="text-xs text-gray-500 mt-1">Google Sheets 연동을 위한 Apps Script URL</p>
+                        </div>
+                        
+                        <div class="flex space-x-4">
+                            <button onclick="testConnection()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                연결 테스트
+                            </button>
+                            <button onclick="syncData()" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+                                데이터 동기화
+                            </button>
+                        </div>
+
+                        <div class="border-t pt-4">
+                            <h3 class="text-md font-medium text-gray-700 mb-3">데이터 백업 및 복원</h3>
+                            <div class="flex space-x-4">
+                                <button onclick="backupData()" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                                    백업 생성
+                                </button>
+                                <button onclick="restoreData()" class="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700">
+                                    백업 복원
+                                </button>
+                                <button onclick="clearLocalData()" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+                                    로컬 데이터 삭제
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 디스플레이 설정 -->
+                <div class="bg-white rounded-lg shadow p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">디스플레이 설정</h2>
+                    <div class="space-y-4">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="dark-mode" class="mr-2">
+                            <label for="dark-mode" class="text-sm font-medium text-gray-700">다크 모드</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="show-card-suits" class="mr-2" checked>
+                            <label for="show-card-suits" class="text-sm font-medium text-gray-700">카드 수트 표시</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="show-animations" class="mr-2" checked>
+                            <label for="show-animations" class="text-sm font-medium text-gray-700">애니메이션 효과</label>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">테이블 표시 행 수</label>
+                            <select id="table-rows" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                <option value="10" selected>10개</option>
+                                <option value="25">25개</option>
+                                <option value="50">50개</option>
+                                <option value="100">100개</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 알림 설정 -->
+                <div class="bg-white rounded-lg shadow p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">알림 설정</h2>
+                    <div class="space-y-4">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="enable-notifications" class="mr-2">
+                            <label for="enable-notifications" class="text-sm font-medium text-gray-700">브라우저 알림 허용</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="sound-effects" class="mr-2">
+                            <label for="sound-effects" class="text-sm font-medium text-gray-700">사운드 효과</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="success-notifications" class="mr-2" checked>
+                            <label for="success-notifications" class="text-sm font-medium text-gray-700">저장 성공 알림</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 저장 버튼 -->
+                <div class="flex justify-between">
+                    <button onclick="resetSettings()" class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600">
+                        기본값으로 재설정
+                    </button>
+                    <button onclick="saveSettings()" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        설정 저장
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 파일 업로드 모달 (백업 복원용) -->
+    <input type="file" id="restore-file-input" accept=".json" style="display: none;">
+
+    <script src="../assets/js/settings.js"></script>
+</body>
+</html>

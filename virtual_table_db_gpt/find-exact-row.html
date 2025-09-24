@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Virtual 시트 18:41 정확한 행 찾기</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #0f0; }
+    #results { margin-top: 20px; white-space: pre-wrap; border: 1px solid #0f0; padding: 10px; }
+    .match { background: #003300; padding: 5px; margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <h1>Virtual 시트에서 18:41 정확한 행 찾기</h1>
+  <button onclick="findRow()">18:41 찾기</button>
+  <div id="results"></div>
+  
+  <script>
+    const resultsDiv = document.getElementById('results');
+    
+    function parseCSV(text) {
+      const lines = text.split(/\r?\n/);
+      const result = [];
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line.trim()) continue;
+        
+        const row = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let j = 0; j < line.length; j++) {
+          const char = line[j];
+          const next = line[j + 1];
+          
+          if (char === '"' && inQuotes && next === '"') {
+            current += '"';
+            j++;
+          } else if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            row.push(current);
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        row.push(current);
+        result.push(row);
+      }
+      
+      return result;
+    }
+    
+    async function findRow() {
+      resultsDiv.textContent = '검색 중...\n';
+      
+      const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTq3wrZNUASAMxl9A6VvJxTT6DKj40xp0R2xcIGfeji6MxQ8wi6Zbu_FWPmxKkmJdPHYgMC6UIT9tvv/pub?gid=561799849&single=true&output=csv';
+      
+      try {
+        const response = await fetch(csvUrl);
+        const text = await response.text();
+        const rows = parseCSV(text);
+        
+        resultsDiv.textContent = `총 ${rows.length}개 행 로드됨\n\n`;
+        
+        // 헤더 표시
+        if (rows.length > 0) {
+          resultsDiv.textContent += '헤더:\n';
+          rows[0].forEach((h, i) => {
+            resultsDiv.textContent += `  ${String.fromCharCode(65+i)}열: "${h}"\n`;
+          });
+          resultsDiv.textContent += '\n';
+        }
+        
+        // 18:41 찾기
+        let found = false;
+        resultsDiv.textContent += '18:41 검색 결과:\n';
+        resultsDiv.textContent += '='.repeat(60) + '\n\n';
+        
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          for (let j = 0; j < row.length; j++) {
+            if (row[j] && row[j].includes('18:41')) {
+              found = true;
+              resultsDiv.textContent += `✅ 발견! 행 ${i + 1} (0-based: ${i}), ${String.fromCharCode(65+j)}열\n`;
+              resultsDiv.textContent += `  전체 행 데이터:\n`;
+              row.forEach((cell, idx) => {
+                if (cell && cell.trim()) {
+                  resultsDiv.textContent += `    ${String.fromCharCode(65+idx)}열: "${cell}"\n`;
+                }
+              });
+              resultsDiv.textContent += '\n';
+            }
+          }
+        }
+        
+        if (!found) {
+          resultsDiv.textContent += '❌ 18:41을 찾을 수 없습니다\n\n';
+          
+          // 18시대 시간 찾기
+          resultsDiv.textContent += '18시대 시간들:\n';
+          for (let i = 0; i < Math.min(rows.length, 200); i++) {
+            const row = rows[i];
+            for (let j = 0; j < row.length; j++) {
+              if (row[j] && row[j].includes('18:')) {
+                resultsDiv.textContent += `  행 ${i + 1}: ${String.fromCharCode(65+j)}열 = "${row[j]}"\n`;
+                break;
+              }
+            }
+          }
+        }
+        
+      } catch (error) {
+        resultsDiv.textContent = `오류: ${error.message}\n`;
+        resultsDiv.textContent += '\nCORS 오류일 수 있습니다. CSV 파일을 직접 다운로드해서 확인해주세요.';
+      }
+    }
+  </script>
+</body>
+</html>
