@@ -1,10 +1,10 @@
 # 🎰 Virtual Data - Poker Hand Logger
 
-> 실시간 포커 핸드 기록 및 분석 시스템 v3.4.24
+> 실시간 포커 핸드 기록 및 분석 시스템 v3.5.32
 
 ## 🌐 접속 링크
-- **GitHub 저장소**: https://github.com/garimto81/virtual_data
-- **라이브 데모**: https://garimto81.github.io/virtual_data/
+- **GitHub 저장소**: https://github.com/garimto81/virtual_data_claude
+- **라이브 데모**: https://garimto81.github.io/virtual_data_claude/
 
 ## 📋 개요
 
@@ -269,30 +269,64 @@ python -m http.server 8000
 ## 🛠 기술 스택
 
 - **Frontend**: Vanilla JavaScript, Tailwind CSS
-- **Backend**: Google Apps Script v63
+- **Backend**: Google Apps Script v71.0.3
 - **Database**: Google Sheets
 - **API**: Gemini Vision API (칩 분석)
 
 ## 📁 프로젝트 구조
 
 ```
-virtual_data/
-├── index.html                    # 메인 애플리케이션 (v3.2.5)
-├── action-history.js             # ActionHistory 시스템 (Phase 1)
-├── double-tap-handler.js         # 더블탭 핸들러 (Phase 2)
-├── batch-processor.js            # 배치 처리 시스템 (Phase 2)
-├── mobile-optimizer.js           # 모바일 최적화 (Phase 3)
-├── virtual-scroll.js             # 가상 스크롤 시스템 (Phase 3)
-├── offline-storage.js            # 오프라인 저장소 (Phase 3)
-├── chip-analysis-module.js       # 칩 분석 모듈
-├── table-management-v59.js       # 테이블 관리 모듈
-├── apps-script/
-│   └── Code_v63_InOut.gs        # Google Apps Script 백엔드
-├── docs/
-│   ├── DEVELOPMENT.md           # 개발 계획
-│   ├── MOBILE_POPUP_REMOVAL_PLAN.md  # 모바일 최적화 계획
-│   └── fix.md                   # 알려진 이슈 목록
-└── README.md                     # 프로젝트 문서
+virtual_data_claude/
+├── 📄 index.html                    # 메인 애플리케이션 (320KB+)
+├── 🖥️ server.js                     # 로컬 개발 서버 (Node.js)
+├── 🛡️ phase4-functions.js           # API 보호 및 에러 처리 시스템
+├── 📦 package.json                  # Node.js 의존성 관리
+├── 📋 README.md                     # 메인 프로젝트 문서
+├── ⚙️ _config.yml                   # GitHub Pages 설정
+├── 🚫 .gitignore                    # Git 제외 파일 설정
+├── 📝 .nojekyll                     # GitHub Pages Jekyll 비활성화
+│
+├── 📚 docs/                         # 📖 프로젝트 문서들
+│   ├── ANALYSIS_REPORT.md           # 프로젝트 분석 보고서
+│   ├── APPS_SCRIPT_DEPLOYMENT_GUIDE.md  # Apps Script 배포 가이드
+│   ├── APPS_SCRIPT_FLOW_ANALYSIS.md     # Apps Script 플로우 분석
+│   ├── CHECKLIST.md                 # 개발 체크리스트
+│   ├── LOAD_INITIAL_DESIGN_ANALYSIS.md  # 초기 설계 분석
+│   ├── MIGRATION_PLAN.md            # 마이그레이션 계획
+│   ├── RUNTIME_ERROR_ANALYSIS.md    # 런타임 에러 분석
+│   └── virtual_data_master_plan.md  # 마스터 플랜
+│
+├── 💻 src/                          # 🔧 소스 코드 모듈들
+│   └── js/                          # JavaScript 모듈들
+│       ├── action-order-manager-v2.js      # 액션 순서 관리 V2
+│       ├── duplicate-remover.js            # 중복 플레이어 제거
+│       ├── event-manager.js                # 이벤트 관리자
+│       ├── modal-auto-close.js             # 모달 자동 닫기
+│       ├── unified-event-handler.js        # 통합 이벤트 핸들러
+│       └── action-order-integration-guide.md  # 통합 가이드
+│
+├── ⚙️ apps-script/                  # 🔧 Google Apps Script 백엔드
+│   └── Code_v71.0.3.gs              # 백엔드 API 서버 (Google Apps Script)
+│
+├── 📦 archive/                      # 🗃️ 백업 및 아카이브 파일들
+│   ├── index_v2_manual_init.html    # 수동 초기화 버전
+│   ├── index_v3_smart_init.html     # 스마트 초기화 버전
+│   ├── minimal_index.html           # 최소 버전
+│   ├── action-history.js            # Phase 1: 액션 히스토리 시스템
+│   ├── batch-processor.js           # Phase 2: 배치 처리 시스템
+│   ├── mobile-optimizer.js          # Phase 3: 모바일 최적화
+│   ├── offline-storage.js           # Phase 3: 오프라인 저장소
+│   ├── virtual-scroll.js            # Phase 3: 가상 스크롤
+│   ├── double-tap-handler.js        # Phase 2: 더블탭 핸들러
+│   ├── chip-analysis-module.js      # 칩 분석 모듈
+│   ├── table-management-v59.js      # 테이블 관리 V59
+│   └── old-tests/                   # 이전 테스트 파일들
+│
+├── 💾 backups/                     # 🔙 자동 백업 파일들
+│   └── 20250923/                   # 날짜별 백업
+│
+└── 📂 .github/                     # 🔧 GitHub 설정 및 워크플로우
+    └── workflows/                  # GitHub Actions
 ```
 
 ## 📊 Google Sheets 구조
@@ -525,44 +559,52 @@ virtual_data/
 ### Apps Script 배포
 1. [Google Apps Script](https://script.google.com) 접속
 2. 새 프로젝트 생성
-3. `Code_v63_InOut.gs` 내용 붙여넣기
+3. `apps-script/Code_v71.0.3.gs` 내용 붙여넣기
 4. 스프레드시트 ID 설정
 5. 웹 앱으로 배포 (액세스: 모든 사용자)
 
 ### 로컬 개발
 ```bash
 # 저장소 클론
-git clone https://github.com/garimto81/virtual_data.git
+git clone https://github.com/garimto81/virtual_data_claude.git
+cd virtual_data_claude
 
-# 로컬 서버 실행
-python -m http.server 8000
+# 의존성 설치 (Node.js 서버 사용 시)
+npm install
 
-# 브라우저에서 열기
-http://localhost:8000
+# 로컬 서버 실행 (Node.js)
+node server.js  # http://localhost:8080
+
+# 또는 Python 서버
+python -m http.server 8000  # http://localhost:8000
 ```
 
 ## 📚 프로젝트 문서
 
 ### 문서 구조
 ```
-📁 docs/
-├── 📖 README.md                    # 문서 센터 메인
-├── 🚀 development/                 # 개발 가이드 및 로드맵
-├── 🧪 testing/                     # 테스트 계획 및 품질 보증
-├── 🌐 deployment/                  # 배포 가이드 및 운영
-└── 📦 archive/                     # 완료된 프로젝트 아카이브
+📁 docs/                           # 📖 프로젝트 문서 센터
+├── 📊 ANALYSIS_REPORT.md           # 프로젝트 분석 보고서
+├── 🚀 APPS_SCRIPT_DEPLOYMENT_GUIDE.md  # Apps Script 배포 가이드
+├── 🔍 APPS_SCRIPT_FLOW_ANALYSIS.md     # Apps Script 플로우 분석
+├── ✅ CHECKLIST.md                 # 개발 체크리스트
+├── 🎯 LOAD_INITIAL_DESIGN_ANALYSIS.md  # 초기 설계 분석
+├── 📋 MIGRATION_PLAN.md            # 마이그레이션 계획
+├── 🐛 RUNTIME_ERROR_ANALYSIS.md    # 런타임 에러 분석
+└── 📖 virtual_data_master_plan.md  # 마스터 플랜
 
-📁 test/                            # 로컬 테스트 환경
-📁 apps-script/                     # Apps Script 백엔드 소스
-📁 archive/                         # 참고용 아카이브 파일
+📁 src/js/                         # JavaScript 모듈
+📁 apps-script/                    # Google Apps Script 백엔드
+📁 archive/                        # 백업 및 아카이브 파일
+📁 backups/                        # 자동 백업 파일
 ```
 
 ### 주요 문서
-- [📚 문서 센터](docs/README.md) - 모든 문서의 인덱스
-- [🚀 개발 가이드](docs/development/DEVELOPMENT.md) - 개발 로드맵 및 기술 사양
-- [🧪 테스트 계획](docs/testing/TEST_PLAN.md) - 종합 테스트 전략
-- [🌐 배포 가이드](docs/deployment/DEPLOYMENT_GUIDE.md) - 운영 환경 배포
-- [🧪 로컬 테스트](test/README.md) - Apps Script 로컬 테스트 환경
+- [📊 프로젝트 분석](docs/ANALYSIS_REPORT.md) - 종합 프로젝트 분석 보고서
+- [🚀 Apps Script 가이드](docs/APPS_SCRIPT_DEPLOYMENT_GUIDE.md) - 백엔드 배포 가이드
+- [✅ 개발 체크리스트](docs/CHECKLIST.md) - 단계별 완성 계획
+- [📋 마이그레이션 계획](docs/MIGRATION_PLAN.md) - 시스템 개선 로드맵
+- [📖 마스터 플랜](docs/virtual_data_master_plan.md) - 전체 시스템 설계
 
 ## ⚠️ 주의사항
 
@@ -574,7 +616,7 @@ http://localhost:8000
 
 ## 📧 문의
 
-문제가 있거나 개선 사항이 있으면 [Issue](https://github.com/garimto81/virtual_data/issues)를 등록해주세요.
+문제가 있거나 개선 사항이 있으면 [Issue](https://github.com/garimto81/virtual_data_claude/issues)를 등록해주세요.
 
 ---
 

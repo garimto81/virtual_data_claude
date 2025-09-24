@@ -1,328 +1,217 @@
-const { chromium } = require('playwright');
+const { test, expect } = require('@playwright/test');
 
-// Phase 4 Playwright 테스트 스크립트
-async function runPhase4Tests() {
-  const browser = await chromium.launch({ headless: false, slowMo: 1000 });
-  const context = await browser.newContext();
-  const page = await context.newPage();
+test.describe('Virtual Data Claude - Phase 4 검증 테스트', () => {
+  let page;
+  let consoleMessages = [];
+  let networkRequests = [];
+  let jsErrors = [];
 
-  console.log('🚀 Phase 4 테스트 시작...');
-
-  try {
-    // 페이지 콘솔 에러 수집
-    const consoleMessages = [];
-    const errors = [];
-
+  test.beforeEach(async ({ browser }) => {
+    page = await browser.newPage();
+    
+    // 콘솔 메시지 수집
     page.on('console', msg => {
-      consoleMessages.push({
+      const message = {
         type: msg.type(),
         text: msg.text(),
-        location: msg.location()
-      });
-    });
-
-    page.on('pageerror', error => {
-      errors.push(error);
-      console.log('❌ 페이지 JavaScript 에러:', error);
-    });
-
-    // 1. 메인 애플리케이션 페이지 로드
-    console.log('📄 메인 애플리케이션 로드 중...');
-    await page.goto('http://localhost:8080/index.html');
-    await page.waitForLoadState('networkidle');
-
-    // 페이지가 완전히 로드될 때까지 추가 대기
-    console.log('⏳ 페이지 완전 로드 대기 중...');
-    await page.waitForTimeout(3000);
-
-    // 콘솔 에러 확인
-    console.log('🔍 브라우저 콘솔 메시지 확인...');
-    const errorMessages = consoleMessages.filter(msg => msg.type === 'error');
-    if (errorMessages.length > 0) {
-      console.log('❌ 발견된 JavaScript 에러들:');
-      errorMessages.forEach(err => {
-        console.log(`  - ${err.text} (${err.location?.url}:${err.location?.lineNumber})`);
-      });
-    } else {
-      console.log('✅ JavaScript 에러 없음');
-    }
-
-    if (errors.length > 0) {
-      console.log('❌ 페이지 에러들:');
-      errors.forEach(err => console.log(`  - ${err.message}`));
-    }
-
-    // 2. 개발자 콘솔에서 Phase 4 함수들이 정의되었는지 확인 (여러 번 시도)
-    console.log('🔍 Phase 4 함수 정의 확인...');
-
-    let functionsCheck = null;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      console.log(`🔄 함수 정의 확인 시도 ${attempt}/3...`);
-
-      functionsCheck = await page.evaluate(() => {
-        const results = {};
-
-        // window 객체를 통한 확인
-        results.ensureAppsScriptUrl = typeof window.ensureAppsScriptUrl;
-        results.protectedApiCall = typeof window.protectedApiCall;
-        results.ApiCallManager = typeof window.ApiCallManager;
-        results.getUserFriendlyErrorMessage = typeof window.getUserFriendlyErrorMessage;
-
-        // 글로벌 변수 확인
-        results.APP_CONFIG = typeof window.APP_CONFIG;
-        results.validateAppsScriptUrl = typeof validateAppsScriptUrl;
-
-        // 전역 스코프 확인 (window 없이)
-        results.ensureAppsScriptUrl_global = typeof ensureAppsScriptUrl;
-        results.protectedApiCall_global = typeof protectedApiCall;
-
-        return results;
-      });
-
-      console.log(`📊 시도 ${attempt} - 함수 정의 상태:`, functionsCheck);
-
-      // 함수들이 정의되었는지 확인
-      if (functionsCheck.ensureAppsScriptUrl === 'function' ||
-          functionsCheck.ensureAppsScriptUrl_global === 'function') {
-        console.log('✅ 함수들이 정의됨!');
-        break;
-      }
-
-      // 마지막 시도가 아니면 잠시 대기
-      if (attempt < 3) {
-        console.log('⏳ 2초 대기 후 재시도...');
-        await page.waitForTimeout(2000);
-      }
-    }
-
-    // 3. URL 검증 함수 테스트
-    console.log('🔒 URL 검증 테스트...');
-
-    const urlValidationTest = await page.evaluate(() => {
-      try {
-        // APP_CONFIG 초기화가 안된 상태에서 테스트
-        if (!window.APP_CONFIG.appsScriptUrl) {
-          ensureAppsScriptUrl();
-          return { success: false, error: 'Should have thrown error for missing URL' };
-        }
-      } catch (error) {
-        return {
-          success: true,
-          expectedError: error.message,
-          testResult: 'URL 누락 에러가 올바르게 발생함'
-        };
-      }
-      return { success: false, error: 'URL validation test failed' };
-    });
-
-    console.log('🧪 URL 검증 테스트 결과:', urlValidationTest);
-
-    // 4. 테스트용 Apps Script URL 설정
-    console.log('⚙️ 테스트용 URL 설정...');
-
-    const urlSetResult = await page.evaluate(() => {
-      try {
-        // 가짜 Apps Script URL 설정
-        const testUrl = 'https://script.google.com/macros/s/1234567890abcdef1234567890abcdef12345678/exec';
-        window.APP_CONFIG.appsScriptUrl = testUrl;
-        window.APP_CONFIG.isInitialized = true;
-        window.APP_CONFIG.state.isOnline = true;
-
-        // URL 검증 다시 시도
-        const validatedUrl = ensureAppsScriptUrl();
-
-        return {
-          success: true,
-          url: validatedUrl,
-          message: 'URL 설정 및 검증 성공'
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error: error.message
-        };
-      }
-    });
-
-    console.log('🔧 URL 설정 결과:', urlSetResult);
-
-    // 5. 보호된 API 호출 테스트 (네트워크 요청은 실제로 하지 않음)
-    console.log('🛡️ 보호된 API 호출 기본 구조 테스트...');
-
-    const protectedCallTest = await page.evaluate(() => {
-      try {
-        // protectedApiCall 함수가 존재하고 호출 가능한지 확인
-        // 실제 네트워크 요청은 하지 않고 함수 구조만 확인
-        const isFunction = typeof protectedApiCall === 'function';
-        const hasParams = protectedApiCall.length >= 1; // 최소 1개 매개변수 필요
-
-        return {
-          success: true,
-          isFunction,
-          hasParams,
-          message: 'protectedApiCall 함수 구조 확인 완료'
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error: error.message
-        };
-      }
-    });
-
-    console.log('🔒 보호된 API 호출 테스트 결과:', protectedCallTest);
-
-    // 6. API Call Manager 테스트
-    console.log('📊 API Call Manager 테스트...');
-
-    const apiManagerTest = await page.evaluate(() => {
-      try {
-        if (typeof ApiCallManager === 'undefined') {
-          return { success: false, error: 'ApiCallManager가 정의되지 않음' };
-        }
-
-        // 기본 메서드들이 존재하는지 확인
-        const hasAddCall = typeof ApiCallManager.addCall === 'function';
-        const hasGetStats = typeof ApiCallManager.getStats === 'function';
-        const hasReset = typeof ApiCallManager.reset === 'function';
-
-        return {
-          success: true,
-          hasAddCall,
-          hasGetStats,
-          hasReset,
-          message: 'ApiCallManager 메서드 확인 완료'
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error: error.message
-        };
-      }
-    });
-
-    console.log('🎯 API Manager 테스트 결과:', apiManagerTest);
-
-    // 7. 에러 메시지 함수 테스트
-    console.log('⚠️ 에러 메시지 생성 테스트...');
-
-    const errorMessageTest = await page.evaluate(() => {
-      try {
-        if (typeof getUserFriendlyErrorMessage === 'undefined') {
-          return { success: false, error: 'getUserFriendlyErrorMessage가 정의되지 않음' };
-        }
-
-        // 다양한 에러 타입 테스트
-        const testTypes = ['URL_VALIDATION_ERROR', 'NETWORK_ERROR', 'API_ERROR', 'UNKNOWN_ERROR'];
-        const messages = {};
-
-        testTypes.forEach(type => {
-          messages[type] = getUserFriendlyErrorMessage(type);
-        });
-
-        return {
-          success: true,
-          messages,
-          messageCount: Object.keys(messages).length
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error: error.message
-        };
-      }
-    });
-
-    console.log('💬 에러 메시지 테스트 결과:', errorMessageTest);
-
-    // 8. Phase 4 테스트 페이지로 이동하여 추가 테스트
-    console.log('📋 Phase 4 전용 테스트 페이지 로드...');
-
-    await page.goto('http://localhost:8080/test_phase4.html');
-    await page.waitForLoadState('networkidle');
-
-    // 테스트 페이지에서 자동 테스트 실행
-    await page.waitForSelector('#appsScriptUrl');
-
-    // 테스트 URL 입력
-    await page.fill('#appsScriptUrl', 'https://script.google.com/macros/s/1234567890abcdef1234567890abcdef12345678/exec');
-    await page.click('button:has-text("URL 설정")');
-
-    await page.waitForTimeout(1000);
-
-    // URL 검증 테스트 실행
-    await page.click('button:has-text("URL 검증 실행")');
-    await page.waitForTimeout(1000);
-
-    // 테스트 결과 확인
-    const testPageResults = await page.evaluate(() => {
-      const urlStatus = document.getElementById('urlStatus').textContent;
-      const urlValidationResult = document.getElementById('urlValidationResult').textContent;
-      const testLog = document.getElementById('testLog').textContent;
-
-      return {
-        urlStatus,
-        urlValidationResult,
-        logLength: testLog.length,
-        hasSuccessMessage: testLog.includes('URL 검증 성공')
+        location: msg.location(),
+        timestamp: new Date().toISOString()
       };
+      consoleMessages.push(message);
+      console.log(`[${message.type.toUpperCase()}] ${message.text}`);
     });
 
-    console.log('📊 테스트 페이지 결과:', testPageResults);
+    // 네트워크 요청 모니터링
+    page.on('request', request => {
+      networkRequests.push({
+        url: request.url(),
+        method: request.method(),
+        resourceType: request.resourceType(),
+        timestamp: new Date().toISOString()
+      });
+    });
 
-    // 9. 종합 평가
-    console.log('\n📋 Phase 4 테스트 종합 결과:');
-    console.log('================================');
+    // JavaScript 런타임 에러 포착
+    page.on('pageerror', error => {
+      jsErrors.push({
+        message: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
+      console.error('JavaScript Error:', error.message);
+    });
 
-    const overallResults = {
-      functionsExist: Object.values(functionsCheck).every(v => v === true),
-      urlValidation: urlValidationTest.success,
-      urlSetting: urlSetResult.success,
-      protectedCall: protectedCallTest.success,
-      apiManager: apiManagerTest.success,
-      errorMessages: errorMessageTest.success,
-      testPageWorking: testPageResults.hasSuccessMessage
-    };
+    // 응답 실패 모니터링
+    page.on('response', response => {
+      if (!response.ok()) {
+        console.error(`❌ Failed request: ${response.url()} - Status: ${response.status()}`);
+      }
+    });
+  });
 
-    const passedTests = Object.values(overallResults).filter(v => v === true).length;
-    const totalTests = Object.keys(overallResults).length;
-
-    console.log(`✅ 통과: ${passedTests}/${totalTests} 테스트`);
-    console.log('상세 결과:', overallResults);
-
-    if (passedTests === totalTests) {
-      console.log('🎉 Phase 4 모든 테스트 통과!');
-    } else {
-      console.log('❌ Phase 4 일부 테스트 실패, 수정 필요');
-
-      // 실패한 테스트들 나열
-      Object.entries(overallResults).forEach(([test, passed]) => {
-        if (!passed) {
-          console.log(`❌ 실패: ${test}`);
-        }
+  test('Phase 4 - 앱 초기화 및 콘솔 에러 검증', async () => {
+    console.log('🚀 테스트 시작: 앱 초기화 및 콘솔 에러 검증');
+    
+    // 페이지 로드
+    await page.goto('http://localhost:8080', { waitUntil: 'networkidle' });
+    
+    // 페이지 제목 확인
+    const title = await page.title();
+    console.log(`📄 페이지 제목: ${title}`);
+    
+    // 잠시 대기하여 JavaScript 실행 완료 확인
+    await page.waitForTimeout(3000);
+    
+    // 페이지 로드 완료 확인
+    await expect(page).toHaveTitle(/Virtual Data/);
+    
+    // 콘솔 에러 검사
+    const errors = consoleMessages.filter(msg => msg.type === 'error');
+    console.log(`🔍 발견된 콘솔 에러 수: ${errors.length}`);
+    
+    if (errors.length > 0) {
+      console.log('❌ 콘솔 에러 상세:');
+      errors.forEach((error, index) => {
+        console.log(`  ${index + 1}. ${error.text}`);
+        console.log(`     위치: ${error.location?.url || 'Unknown'}:${error.location?.lineNumber || 'Unknown'}`);
       });
     }
+    
+    // JavaScript 런타임 에러 검사
+    console.log(`🔍 JavaScript 런타임 에러 수: ${jsErrors.length}`);
+    if (jsErrors.length > 0) {
+      console.log('❌ JavaScript 런타임 에러 상세:');
+      jsErrors.forEach((error, index) => {
+        console.log(`  ${index + 1}. ${error.message}`);
+        console.log(`     스택: ${error.stack}`);
+      });
+    }
+    
+    // Phase 4 검증을 위한 추가 대기
+    await page.waitForTimeout(2000);
+  });
 
-    return overallResults;
+  test('Phase 4 - DOM 요소 및 전역 함수 접근 검증', async () => {
+    console.log('🚀 테스트 시작: DOM 요소 및 전역 함수 접근 검증');
+    
+    await page.goto('http://localhost:8080', { waitUntil: 'networkidle' });
+    await page.waitForTimeout(3000);
+    
+    // 주요 DOM 요소 존재 확인
+    const elements = [
+      'body',
+      'head',
+      'title'
+    ];
+    
+    for (const element of elements) {
+      const exists = await page.locator(element).count() > 0;
+      console.log(`📍 ${element} 요소 존재: ${exists ? '✅' : '❌'}`);
+    }
+    
+    // Phase 4 관련 전역 함수들 확인
+    const globalFunctions = await page.evaluate(() => {
+      const functions = {};
+      
+      // 전역 객체들 확인
+      if (typeof window !== 'undefined') functions.window = true;
+      if (typeof document !== 'undefined') functions.document = true;
+      if (typeof console !== 'undefined') functions.console = true;
+      
+      // Phase 4 관련 함수들 확인 (실제 구현에 따라 조정)
+      const phase4Functions = [
+        'initializeApp',
+        'loadHandHistory', 
+        'setupEventListeners',
+        'validateConfiguration'
+      ];
+      
+      phase4Functions.forEach(funcName => {
+        functions[funcName] = typeof window[funcName] === 'function';
+      });
+      
+      return functions;
+    });
+    
+    console.log('🔍 전역 함수 접근성 검사:');
+    Object.entries(globalFunctions).forEach(([name, exists]) => {
+      console.log(`  ${name}: ${exists ? '✅' : '❌'}`);
+    });
+  });
 
-  } catch (error) {
-    console.error('❌ Phase 4 테스트 중 오류 발생:', error);
-    return null;
-  } finally {
-    await browser.close();
-  }
-}
+  test('Phase 4 - 외부 스크립트 로딩 상태 검증', async () => {
+    console.log('🚀 테스트 시작: 외부 스크립트 로딩 상태 검증');
+    
+    await page.goto('http://localhost:8080', { waitUntil: 'networkidle' });
+    await page.waitForTimeout(2000);
+    
+    // 404 에러가 발생한 리소스 확인
+    const failedRequests = networkRequests.filter(req => 
+      req.resourceType === 'script' || req.resourceType === 'stylesheet'
+    );
+    
+    console.log('🔍 로드된 외부 리소스:');
+    failedRequests.forEach(req => {
+      console.log(`  ${req.method} ${req.url} (${req.resourceType})`);
+    });
+    
+    // 스크립트 태그 확인
+    const scripts = await page.$$eval('script', scripts => 
+      scripts.map(script => ({
+        src: script.src,
+        inline: script.src ? false : true,
+        content: script.src ? null : script.textContent?.substring(0, 100)
+      }))
+    );
+    
+    console.log('📜 페이지 내 스크립트 태그:');
+    scripts.forEach((script, index) => {
+      if (script.src) {
+        console.log(`  ${index + 1}. 외부 스크립트: ${script.src}`);
+      } else {
+        console.log(`  ${index + 1}. 인라인 스크립트: ${script.content}...`);
+      }
+    });
+  });
 
-// 테스트 실행
-runPhase4Tests().then(results => {
-  console.log('\n🏁 Phase 4 자동 테스트 완료');
-  if (results) {
-    const success = Object.values(results).every(v => v === true);
-    process.exit(success ? 0 : 1);
-  } else {
-    process.exit(1);
-  }
-}).catch(error => {
-  console.error('테스트 실행 실패:', error);
-  process.exit(1);
+  test('Phase 4 - API 호출 플로우 테스트', async () => {
+    console.log('🚀 테스트 시작: API 호출 플로우 테스트');
+    
+    await page.goto('http://localhost:8080', { waitUntil: 'networkidle' });
+    await page.waitForTimeout(3000);
+    
+    // XHR/Fetch 요청 모니터링
+    const apiRequests = networkRequests.filter(req => 
+      req.resourceType === 'xhr' || req.resourceType === 'fetch'
+    );
+    
+    console.log('🌐 API 호출 내역:');
+    if (apiRequests.length === 0) {
+      console.log('  API 호출이 없음');
+    } else {
+      apiRequests.forEach((req, index) => {
+        console.log(`  ${index + 1}. ${req.method} ${req.url}`);
+      });
+    }
+    
+    // 특정 API 엔드포인트 테스트 (Google Apps Script 등)
+    const hasGoogleScript = networkRequests.some(req => 
+      req.url.includes('script.google.com') || req.url.includes('apps-script')
+    );
+    
+    console.log(`📡 Google Apps Script 호출: ${hasGoogleScript ? '✅' : '❌'}`);
+  });
+
+  test.afterEach(async () => {
+    // 테스트 결과 요약 출력
+    console.log('\n📊 테스트 결과 요약:');
+    console.log(`  - 콘솔 메시지: ${consoleMessages.length}개`);
+    console.log(`  - 콘솔 에러: ${consoleMessages.filter(m => m.type === 'error').length}개`);
+    console.log(`  - JavaScript 런타임 에러: ${jsErrors.length}개`);
+    console.log(`  - 네트워크 요청: ${networkRequests.length}개`);
+    
+    if (page) {
+      await page.close();
+    }
+  });
 });

@@ -1,0 +1,99 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]: 포커 핸드 로거
+    - generic [ref=e6]:
+      - button "⚙️" [ref=e7] [cursor=pointer]
+      - generic [ref=e8]: v3.4.26 (2025-09-22)
+  - main [ref=e9]:
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - generic [ref=e13]: "#185"
+          - button "Load" [ref=e14] [cursor=pointer]
+          - generic [ref=e15]:
+            - checkbox "Smart" [checked] [ref=e16]
+            - generic [ref=e17]: Smart
+        - button "테이블 선택 ▼" [ref=e19] [cursor=pointer]:
+          - generic [ref=e20] [cursor=pointer]: 테이블 선택
+          - generic [ref=e21] [cursor=pointer]: ▼
+        - generic [ref=e22]:
+          - combobox [ref=e23]:
+            - option "한국(KST)" [selected]
+            - option "키프로스(EET)"
+          - generic [ref=e24]: 12:18:57
+        - generic [ref=e25]:
+          - button "관리" [ref=e26] [cursor=pointer]
+          - button "🔄" [ref=e27] [cursor=pointer]
+      - generic [ref=e28]:
+        - generic [ref=e29]:
+          - button "Cam10001" [ref=e30] [cursor=pointer]
+          - button "Cam20001" [ref=e31] [cursor=pointer]
+        - generic [ref=e33]: "IDX rows: 170"
+      - generic [ref=e34]:
+        - paragraph [ref=e36]: 테이블을 먼저 선택해주세요.
+        - generic [ref=e38]: 버튼을 선택하면 SB/BB가 자동으로 설정됩니다
+    - generic [ref=e40]:
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - button "0" [ref=e43] [cursor=pointer]
+          - button "0" [ref=e44] [cursor=pointer]
+          - generic [ref=e45]:
+            - checkbox "Ante" [ref=e46]
+            - generic [ref=e47]: Ante
+        - generic [ref=e48]:
+          - generic [ref=e50] [cursor=pointer]: +
+          - generic [ref=e52] [cursor=pointer]: +
+          - generic [ref=e54] [cursor=pointer]: +
+      - generic [ref=e55]:
+        - generic [ref=e56]:
+          - generic [ref=e57]:
+            - button "PREFLOP" [ref=e58] [cursor=pointer]
+            - generic [ref=e59]:
+              - generic [ref=e60]: "Pot:"
+              - button "⌨️" [ref=e61] [cursor=pointer]
+            - generic [ref=e62]:
+              - button "액션+" [ref=e63] [cursor=pointer]
+              - button "↩" [ref=e64] [cursor=pointer]
+          - generic [ref=e66]: No actions
+        - generic [ref=e67]:
+          - generic [ref=e68]:
+            - button "FLOP" [ref=e69] [cursor=pointer]
+            - generic [ref=e70]:
+              - generic [ref=e71]: "Pot:"
+              - button "⌨️" [ref=e72] [cursor=pointer]
+            - generic [ref=e73]:
+              - button "액션+" [ref=e74] [cursor=pointer]
+              - button "↩" [ref=e75] [cursor=pointer]
+          - generic [ref=e77]: No actions
+        - generic [ref=e78]:
+          - generic [ref=e79]:
+            - button "TURN" [ref=e80] [cursor=pointer]
+            - generic [ref=e81]:
+              - generic [ref=e82]: "Pot:"
+              - button "⌨️" [ref=e83] [cursor=pointer]
+            - generic [ref=e84]:
+              - button "액션+" [ref=e85] [cursor=pointer]
+              - button "↩" [ref=e86] [cursor=pointer]
+          - generic [ref=e88]: No actions
+        - generic [ref=e89]:
+          - generic [ref=e90]:
+            - button "RIVER" [ref=e91] [cursor=pointer]
+            - generic [ref=e92]:
+              - generic [ref=e93]: "Pot:"
+              - button "⌨️" [ref=e94] [cursor=pointer]
+            - generic [ref=e95]:
+              - button "액션+" [ref=e96] [cursor=pointer]
+              - button "↩" [ref=e97] [cursor=pointer]
+          - generic [ref=e99]: No actions
+    - generic [ref=e100]:
+      - generic [ref=e102]: "승자:"
+      - generic [ref=e103]:
+        - button "새 핸드" [ref=e104] [cursor=pointer]
+        - button "시트 전송" [ref=e105] [cursor=pointer]
+      - paragraph [ref=e106]
+  - contentinfo [ref=e107]:
+    - button "로그 보기" [ref=e108] [cursor=pointer]
+```
