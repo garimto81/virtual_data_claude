@@ -475,14 +475,14 @@
               </div>
             </div>
 
-            <!-- Spreadsheet ID 입력 -->
+            <!-- Google Sheets URL 입력 -->
             <input type="text" id="management-spreadsheet-id-input"
                    class="w-full bg-gray-600 text-white rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono"
-                   placeholder="Google Spreadsheet ID를 입력하세요">
+                   placeholder="Google Sheets URL 전체를 입력하세요 (예: https://docs.google.com/spreadsheets/d/...)">
 
             <!-- 저장 버튼 -->
             <button id="save-spreadsheet-id-btn" class="w-full bg-amber-600 hover:bg-amber-700 py-1.5 rounded text-sm font-medium">
-              🔗 Spreadsheet ID 저장
+              💾 Google Sheets URL 저장
             </button>
 
             <!-- 저장 상태 메시지 -->
@@ -1523,17 +1523,79 @@
     const CSV_HAND_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSDY_i4330JANAjIz4sMncdJdRHsOkfUCjQusHTGQk2tykrhA4d09LeIp3XRbLd8hkN6SgSB47k_nux/pub?gid=1906746276&single=true&output=csv"; // Hand 탭 CSV
     const CSV_INDEX_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSDY_i4330JANAjIz4sMncdJdRHsOkfUCjQusHTGQk2tykrhA4d09LeIp3XRbLd8hkN6SgSB47k_nux/pub?gid=1354012271&single=true&output=csv"; // Index 탭 CSV (HandIndex 대신 Index 사용)
     const CSV_TYPE_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSDY_i4330JANAjIz4sMncdJdRHsOkfUCjQusHTGQk2tykrhA4d09LeIp3XRbLd8hkN6SgSB47k_nux/pub?gid=998576925&single=true&output=csv";
+    const CSV_CONFIG_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSDY_i4330JANAjIz4sMncdJdRHsOkfUCjQusHTGQk2tykrhA4d09LeIp3XRbLd8hkN6SgSB47k_nux/pub?gid=0&single=true&output=csv"; // Config 탭 CSV
     
     // 전역 변수로도 설정 (테이블 관리 모듈용)
     window.APPS_SCRIPT_URL = APPS_SCRIPT_URL;
 
-    // Google Sheets API 초기화
-    if (GOOGLE_SHEETS_SPREADSHEET_ID && window.googleSheetsAPI) {
-      window.googleSheetsAPI.setSpreadsheetId(GOOGLE_SHEETS_SPREADSHEET_ID);
-      console.log('✅ Google Sheets API 초기화 완료 - Spreadsheet ID:', GOOGLE_SHEETS_SPREADSHEET_ID);
-    } else if (!GOOGLE_SHEETS_SPREADSHEET_ID) {
-      console.log('⚠️ Google Sheets Spreadsheet ID가 설정되지 않았습니다. 설정 메뉴에서 ID를 입력해주세요.');
+    // Config 시트에서 기본 Spreadsheet URL 로드 함수
+    async function loadDefaultUrlFromConfig() {
+      try {
+        console.log('📄 Config 시트에서 기본 URL 로딩 시도...');
+        const response = await fetch(CSV_CONFIG_URL);
+        const csvText = await response.text();
+        const lines = csvText.trim().split('\n');
+
+        if (lines.length > 0) {
+          const firstRow = lines[0].split(',');
+          const a1Value = firstRow[0]?.trim().replace(/['"]/g, ''); // 따옴표 제거
+
+          if (a1Value && a1Value.includes('docs.google.com/spreadsheets')) {
+            console.log('✅ Config 시트에서 기본 URL 로드 성공:', a1Value);
+            return a1Value;
+          }
+        }
+      } catch (error) {
+        console.log('⚠️ Config 시트 로드 실패:', error.message);
+      }
+      return null;
     }
+
+    // URL에서 Spreadsheet ID 추출 함수
+    function extractSpreadsheetIdFromUrl(url) {
+      if (!url) return null;
+
+      // Google Sheets URL 패턴 매칭: /spreadsheets/d/{ID}/
+      const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)\//);
+      return match ? match[1] : null;
+    }
+
+    // Google Sheets API 초기화 (Config에서 기본값 로드)
+    async function initializeGoogleSheetsAPI() {
+      let spreadsheetId = GOOGLE_SHEETS_SPREADSHEET_ID;
+
+      // localStorage에 ID가 없으면 Config 시트에서 로드
+      if (!spreadsheetId) {
+        console.log('📄 localStorage에 Spreadsheet ID가 없음. Config 시트에서 기본 URL 로딩...');
+        const defaultUrl = await loadDefaultUrlFromConfig();
+        if (defaultUrl) {
+          spreadsheetId = extractSpreadsheetIdFromUrl(defaultUrl);
+          if (spreadsheetId) {
+            localStorage.setItem('googleSheetsSpreadsheetId', spreadsheetId);
+            localStorage.setItem('googleSheetsDefaultUrl', defaultUrl);
+            console.log('✅ Config에서 로드한 Spreadsheet ID:', spreadsheetId);
+            console.log('✅ Config에서 로드한 URL:', defaultUrl);
+
+            // UI에 즉시 반영 (관리 모달이 열려있을 때)
+            const currentUrlSpan = document.getElementById('management-current-url');
+            if (currentUrlSpan) {
+              currentUrlSpan.textContent = defaultUrl;
+              currentUrlSpan.className = 'text-xs text-green-400 break-all font-mono';
+            }
+          }
+        }
+      }
+
+      if (spreadsheetId && window.googleSheetsAPI) {
+        window.googleSheetsAPI.setSpreadsheetId(spreadsheetId);
+        console.log('✅ Google Sheets API 초기화 완료 - Spreadsheet ID:', spreadsheetId);
+      } else if (!spreadsheetId) {
+        console.log('⚠️ Google Sheets Spreadsheet ID가 설정되지 않았습니다. 설정 메뉴에서 URL을 입력해주세요.');
+      }
+    }
+
+    // Google Sheets API 초기화 실행
+    initializeGoogleSheetsAPI();
     
     // Apps Script URL 클라우드 동기화 시스템
     const CLOUD_SYNC_CONFIG = {
@@ -6467,24 +6529,24 @@ async function sendDataToGoogleSheet() {
         document.getElementById('management-menu').classList.remove('hidden');
         document.getElementById('player-management-content').classList.add('hidden');
 
-        // Google Spreadsheet ID 표시
+        // Google Sheets URL 표시
         const currentUrlSpan = document.getElementById('management-current-url');
         const spreadsheetInput = document.getElementById('management-spreadsheet-id-input');
         const urlStatus = document.getElementById('url-save-status');
 
         if (currentUrlSpan) {
-          const currentSpreadsheetId = localStorage.getItem('googleSheetsSpreadsheetId') || '설정되지 않음';
-          currentUrlSpan.textContent = currentSpreadsheetId;
-          // ID가 설정되었는지에 따라 색상 변경
-          const hasId = currentSpreadsheetId !== '설정되지 않음';
-          currentUrlSpan.className = hasId ?
+          const currentUrl = localStorage.getItem('googleSheetsDefaultUrl') || '설정되지 않음';
+          currentUrlSpan.textContent = currentUrl;
+          // URL이 설정되었는지에 따라 색상 변경
+          const hasUrl = currentUrl !== '설정되지 않음';
+          currentUrlSpan.className = hasUrl ?
             'text-xs text-green-400 break-all font-mono' :
             'text-xs text-amber-400 break-all font-mono';
         }
 
-        if (urlInput) {
-          urlInput.value = '';
-          urlInput.placeholder = '새 URL을 입력하세요 (현재와 다른 URL만 저장 가능)';
+        if (spreadsheetInput) {
+          spreadsheetInput.value = '';
+          spreadsheetInput.placeholder = '새 Google Sheets URL을 입력하세요';
         }
 
         if (urlStatus) {
@@ -6493,23 +6555,23 @@ async function sendDataToGoogleSheet() {
       });
     }
 
-    // Apps Script URL 저장 버튼 - 지연 실행으로 DOM 로드 보장
+    // Google Sheets URL 저장 버튼 - 지연 실행으로 DOM 로드 보장
     setTimeout(() => {
       const saveSpreadsheetIdBtn = document.getElementById('save-spreadsheet-id-btn');
-      console.log('🔗 Google Spreadsheet ID 저장 버튼:', saveSpreadsheetIdBtn);
+      console.log('🔗 Google Sheets URL 저장 버튼:', saveSpreadsheetIdBtn);
 
       if (saveSpreadsheetIdBtn) {
         saveSpreadsheetIdBtn.addEventListener('click', (e) => {
           e.preventDefault();
-          console.log('🔗 Spreadsheet ID 저장 버튼 클릭됨');
+          console.log('🔗 Google Sheets URL 저장 버튼 클릭됨');
 
           const spreadsheetInput = document.getElementById('management-spreadsheet-id-input');
           const urlStatus = document.getElementById('url-save-status');
           const currentUrlSpan = document.getElementById('management-current-url');
-          const newSpreadsheetId = spreadsheetInput?.value.trim();
+          const inputUrl = spreadsheetInput?.value.trim();
 
-          console.log('🔗 입력된 Spreadsheet ID:', newSpreadsheetId);
-          console.log('🔗 현재 Spreadsheet ID:', localStorage.getItem('googleSheetsSpreadsheetId'));
+          console.log('🔗 입력된 URL:', inputUrl);
+          console.log('🔗 현재 저장된 URL:', localStorage.getItem('googleSheetsDefaultUrl'));
 
           // 상태 메시지 표시 함수
           function showUrlStatus(message, isSuccess) {
@@ -6527,50 +6589,61 @@ async function sendDataToGoogleSheet() {
             }
           }
 
-          if (newSpreadsheetId) {
-            // Spreadsheet ID 형식 검증 (44글자 영숫자와 언더스코어, 하이픈)
-            const spreadsheetIdRegex = /^[a-zA-Z0-9_-]{44}$/;
-            if (spreadsheetIdRegex.test(newSpreadsheetId)) {
-              // Spreadsheet ID 저장
-              localStorage.setItem('googleSheetsSpreadsheetId', newSpreadsheetId);
-              if (window.googleSheetsAPI) {
-                window.googleSheetsAPI.setSpreadsheetId(newSpreadsheetId);
+          if (inputUrl) {
+            // Google Sheets URL 형식 검증
+            if (inputUrl.includes('docs.google.com/spreadsheets')) {
+              // URL에서 Spreadsheet ID 추출
+              const extractedId = extractSpreadsheetIdFromUrl(inputUrl);
+
+              if (extractedId) {
+                // Spreadsheet ID와 URL 저장
+                localStorage.setItem('googleSheetsSpreadsheetId', extractedId);
+                localStorage.setItem('googleSheetsDefaultUrl', inputUrl);
+
+                if (window.googleSheetsAPI) {
+                  window.googleSheetsAPI.setSpreadsheetId(extractedId);
+                }
+
+                // 성공 시 UI 업데이트
+                if (currentUrlSpan) {
+                  currentUrlSpan.textContent = inputUrl;
+                  currentUrlSpan.className = 'text-xs text-green-400 break-all font-mono';
+                }
+                showUrlStatus('✅ Google Sheets URL이 성공적으로 저장되었습니다!', true);
+                showFeedback('✅ Google Sheets URL이 저장되었습니다 (ID: ' + extractedId + ')');
+
+                console.log('✅ 추출된 Spreadsheet ID:', extractedId);
+
+                // 입력 필드 초기화 및 플레이스홀더 업데이트
+                spreadsheetInput.value = '';
+                spreadsheetInput.placeholder = '저장 완료! 다른 URL을 입력하려면 여기에 입력하세요';
+
+                // 저장 버튼 임시 비활성화 및 텍스트 변경
+                saveSpreadsheetIdBtn.disabled = true;
+                saveSpreadsheetIdBtn.textContent = '✅ 저장 완료';
+                saveSpreadsheetIdBtn.className = 'w-full bg-green-600 py-1.5 rounded text-sm font-medium';
+
+                setTimeout(() => {
+                  saveSpreadsheetIdBtn.disabled = false;
+                  saveSpreadsheetIdBtn.textContent = '💾 새 URL 저장';
+                  saveSpreadsheetIdBtn.className = 'w-full bg-amber-600 hover:bg-amber-700 py-1.5 rounded text-sm font-medium';
+                }, 2000);
+              } else {
+                showUrlStatus('❌ URL에서 Spreadsheet ID를 추출할 수 없습니다', false);
+                showFeedback('❌ 올바른 Google Sheets URL 형식이 아닙니다', true);
               }
-
-              // 성공 시 UI 업데이트
-              if (currentUrlSpan) {
-                currentUrlSpan.textContent = newSpreadsheetId;
-                currentUrlSpan.className = 'text-xs text-green-400 break-all font-mono';
-              }
-              showUrlStatus('✅ Spreadsheet ID가 성공적으로 저장되었습니다!', true);
-              showFeedback('✅ Google Sheets Spreadsheet ID가 저장되었습니다');
-
-              // 입력 필드 초기화 및 플레이스홀더 업데이트
-              spreadsheetInput.value = '';
-              spreadsheetInput.placeholder = '저장 완료! 다른 ID를 입력하려면 여기에 입력하세요';
-
-              // 저장 버튼 임시 비활성화 및 텍스트 변경
-              saveSpreadsheetIdBtn.disabled = true;
-              saveSpreadsheetIdBtn.textContent = '✅ 저장 완료';
-              saveSpreadsheetIdBtn.className = 'w-full bg-green-600 py-1.5 rounded text-sm font-medium';
-
-              setTimeout(() => {
-                saveSpreadsheetIdBtn.disabled = false;
-                saveSpreadsheetIdBtn.textContent = '💾 새 ID 저장';
-                saveSpreadsheetIdBtn.className = 'w-full bg-amber-600 hover:bg-amber-700 py-1.5 rounded text-sm font-medium';
-              }, 2000);
             } else {
-              showUrlStatus('❌ 올바른 Spreadsheet ID 형식이 아닙니다 (44글자)', false);
-              showFeedback('❌ 올바른 Spreadsheet ID 형식이 아닙니다', true);
+              showUrlStatus('❌ 올바른 Google Sheets URL 형식이 아닙니다', false);
+              showFeedback('❌ Google Sheets URL을 올바르게 입력해주세요', true);
             }
           } else {
-            showUrlStatus('⚠️ Spreadsheet ID를 입력해주세요', false);
-            showFeedback('Spreadsheet ID를 입력해주세요', true);
+            showUrlStatus('⚠️ Google Sheets URL을 입력해주세요', false);
+            showFeedback('Google Sheets URL을 입력해주세요', true);
           }
         });
-        console.log('[v3.5.41] Spreadsheet ID 저장 버튼 이벤트 리스너 등록 완료');
+        console.log('[v3.5.42] Google Sheets URL 저장 버튼 이벤트 리스너 등록 완료');
       } else {
-        console.error('[v3.5.41] save-spreadsheet-id-btn 요소를 찾을 수 없습니다');
+        console.error('[v3.5.42] save-spreadsheet-id-btn 요소를 찾을 수 없습니다');
       }
     }, 100);
 
