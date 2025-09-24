@@ -6527,37 +6527,37 @@ async function sendDataToGoogleSheet() {
             }
           }
 
-          if (newUrl) {
+          if (newSpreadsheetId) {
             // Spreadsheet ID 형식 검증 (44글자 영숫자와 언더스코어, 하이픈)
             const spreadsheetIdRegex = /^[a-zA-Z0-9_-]{44}$/;
-            if (spreadsheetIdRegex.test(newUrl)) {
+            if (spreadsheetIdRegex.test(newSpreadsheetId)) {
               // Spreadsheet ID 저장
-              localStorage.setItem('googleSheetsSpreadsheetId', newUrl);
+              localStorage.setItem('googleSheetsSpreadsheetId', newSpreadsheetId);
               if (window.googleSheetsAPI) {
-                window.googleSheetsAPI.setSpreadsheetId(newUrl);
+                window.googleSheetsAPI.setSpreadsheetId(newSpreadsheetId);
               }
 
               // 성공 시 UI 업데이트
               if (currentUrlSpan) {
-                currentUrlSpan.textContent = newUrl;
+                currentUrlSpan.textContent = newSpreadsheetId;
                 currentUrlSpan.className = 'text-xs text-green-400 break-all font-mono';
               }
               showUrlStatus('✅ Spreadsheet ID가 성공적으로 저장되었습니다!', true);
               showFeedback('✅ Google Sheets Spreadsheet ID가 저장되었습니다');
 
               // 입력 필드 초기화 및 플레이스홀더 업데이트
-              urlInput.value = '';
-              urlInput.placeholder = '저장 완료! 다른 ID를 입력하려면 여기에 입력하세요';
+              spreadsheetInput.value = '';
+              spreadsheetInput.placeholder = '저장 완료! 다른 ID를 입력하려면 여기에 입력하세요';
 
               // 저장 버튼 임시 비활성화 및 텍스트 변경
-              saveUrlBtn.disabled = true;
-              saveUrlBtn.textContent = '✅ 저장 완료';
-              saveUrlBtn.className = 'w-full bg-green-600 py-1.5 rounded text-sm font-medium';
+              saveSpreadsheetIdBtn.disabled = true;
+              saveSpreadsheetIdBtn.textContent = '✅ 저장 완료';
+              saveSpreadsheetIdBtn.className = 'w-full bg-green-600 py-1.5 rounded text-sm font-medium';
 
               setTimeout(() => {
-                saveUrlBtn.disabled = false;
-                saveUrlBtn.textContent = '💾 새 ID 저장';
-                saveUrlBtn.className = 'w-full bg-amber-600 hover:bg-amber-700 py-1.5 rounded text-sm font-medium';
+                saveSpreadsheetIdBtn.disabled = false;
+                saveSpreadsheetIdBtn.textContent = '💾 새 ID 저장';
+                saveSpreadsheetIdBtn.className = 'w-full bg-amber-600 hover:bg-amber-700 py-1.5 rounded text-sm font-medium';
               }, 2000);
             } else {
               showUrlStatus('❌ 올바른 Spreadsheet ID 형식이 아닙니다 (44글자)', false);
