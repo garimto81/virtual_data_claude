@@ -151,8 +151,23 @@
   <script src="archive/mobile-optimizer.js?v=3.2.5" defer></script>
   <script src="archive/virtual-scroll.js?v=3.2.5" defer></script>
   <script src="archive/offline-storage.js?v=3.2.5" defer></script>
+  <!-- 🔧 로거 시스템 (먼저 로드) -->
+  <script src="src/js/logger.js?v=1.0.0"></script>
+  <!-- 📦 상수 정의 (로거 다음에 로드) -->
+  <script src="src/js/constants.js?v=1.0.0"></script>
+  <!-- 🛠️ 유틸리티 함수들 -->
+  <script src="src/utils/formatters.js?v=1.0.0"></script>
+  <script src="src/utils/validators.js?v=1.0.0"></script>
+  <script src="src/utils/helpers.js?v=1.0.0"></script>
+  <!-- 🔥 에러 처리 시스템 -->
+  <script src="src/js/errorHandler.js?v=1.0.0"></script>
+  <!-- ⚡ 성능 최적화 모듈 -->
+  <script src="src/js/lazy-loader.js?v=1.0.0"></script>
+  <script src="src/js/cache-manager.js?v=1.0.0"></script>
+  <script src="src/js/performance-monitor.js?v=1.0.0"></script>
   <!-- 모달 자동 닫기 모듈 -->
   <script src="src/js/modal-auto-close.js?v=1.0.0" defer></script>
+
   <!-- Phase 4: API 호출 보호 시스템 -->
   <script src="phase4-functions.js?v=4.0.0" defer></script>
   <!-- 액션 순서 관리자 V2 - 절대 순위 시스템 -->
@@ -6750,11 +6765,13 @@ async function sendDataToGoogleSheet() {
             }
           } else {
             alert('✅ 중복 검사 완료\n\n시트가 깨끗습니다. 중복 플레이어가 없습니다.');
-
+
+
           }
         } else {
           alert('❌ 중복 제거 실패\n\n작업이 실패했습니다.');
-
+
+
         }
         
       } catch (error) {
