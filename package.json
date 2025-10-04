@@ -1,7 +1,7 @@
 {
   "name": "virtual_data",
-  "version": "1.1.0",
-  "description": "> 실시간 포커 핸드 기록 및 분석 시스템 v1.1.0 - Week 1 보안 개선 & Week 2 코드 품질/성능 최적화 완료",
+  "version": "3.5.33",
+  "description": "> 실시간 포커 핸드 기록 및 분석 시스템 v3.5.33 - Phase 7 리팩토링 계획 수립 완료",
   "main": "test_phase4_playwright.js",
   "directories": {
     "doc": "docs"
