@@ -37,32 +37,7 @@
 
 // ==================== 설정 및 상수 ====================
 
-/**
- * 🔐 보안 개선: Spreadsheet ID를 Script Properties에서 가져옵니다
- *
- * 설정 방법:
- * 1. Apps Script 편집기에서 프로젝트 설정 (⚙️) 클릭
- * 2. "스크립트 속성" 섹션으로 이동
- * 3. "스크립트 속성 추가" 클릭
- * 4. 속성: SPREADSHEET_ID
- * 5. 값: 1gZN9S2rP5_U9zdxX1cJHBzBAl-Nup4PD4QXuW44rnSE
- * 6. 저장
- */
-function getSpreadsheetId() {
-  const scriptProperties = PropertiesService.getScriptProperties();
-  const spreadsheetId = scriptProperties.getProperty('SPREADSHEET_ID');
-
-  if (!spreadsheetId) {
-    throw new Error(
-      '❌ SPREADSHEET_ID가 스크립트 속성에 설정되지 않았습니다. ' +
-      '프로젝트 설정 (⚙️) → 스크립트 속성에서 SPREADSHEET_ID를 추가해주세요.'
-    );
-  }
-
-  return spreadsheetId;
-}
-
-const SPREADSHEET_ID = getSpreadsheetId();
+const SPREADSHEET_ID = '1gZN9S2rP5_U9zdxX1cJHBzBAl-Nup4PD4QXuW44rnSE'; // 필요시 변경
 const TYPE_SHEET_NAME = 'Type';
 const INDEX_SHEET_NAME = 'Index';
 const HAND_SHEET_NAME = 'Hand';

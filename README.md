@@ -579,32 +579,6 @@ node server.js  # http://localhost:8080
 python -m http.server 8000  # http://localhost:8000
 ```
 
-## 📚 프로젝트 문서
-
-### 문서 구조
-```
-📁 docs/                           # 📖 프로젝트 문서 센터
-├── 📊 ANALYSIS_REPORT.md           # 프로젝트 분석 보고서
-├── 🚀 APPS_SCRIPT_DEPLOYMENT_GUIDE.md  # Apps Script 배포 가이드
-├── 🔍 APPS_SCRIPT_FLOW_ANALYSIS.md     # Apps Script 플로우 분석
-├── ✅ CHECKLIST.md                 # 개발 체크리스트
-├── 🎯 LOAD_INITIAL_DESIGN_ANALYSIS.md  # 초기 설계 분석
-├── 📋 MIGRATION_PLAN.md            # 마이그레이션 계획
-├── 🐛 RUNTIME_ERROR_ANALYSIS.md    # 런타임 에러 분석
-└── 📖 virtual_data_master_plan.md  # 마스터 플랜
-
-📁 src/js/                         # JavaScript 모듈
-📁 apps-script/                    # Google Apps Script 백엔드
-📁 archive/                        # 백업 및 아카이브 파일
-📁 backups/                        # 자동 백업 파일
-```
-
-### 주요 문서
-- [📊 프로젝트 분석](docs/ANALYSIS_REPORT.md) - 종합 프로젝트 분석 보고서
-- [🚀 Apps Script 가이드](docs/APPS_SCRIPT_DEPLOYMENT_GUIDE.md) - 백엔드 배포 가이드
-- [✅ 개발 체크리스트](docs/CHECKLIST.md) - 단계별 완성 계획
-- [📋 마이그레이션 계획](docs/MIGRATION_PLAN.md) - 시스템 개선 로드맵
-- [📖 마스터 플랜](docs/virtual_data_master_plan.md) - 전체 시스템 설계
 
 ## ⚠️ 주의사항
 
@@ -620,4 +594,37 @@ python -m http.server 8000  # http://localhost:8000
 
 ---
 
-© 2025 Virtual Data - Poker Hand Logger. All rights reserved.
+© 2025 Virtual Data - Poker Hand Logger. All rights reserved.## 📚 프로젝트 문서
+
+### 문서 구조 (3개 핵심 문서)
+```
+📁 docs/                           # 📖 프로젝트 문서 센터
+├── 📋 PRD.md                       # Product Requirements Document
+├── 🏗️ TECHNICAL_DESIGN.md          # Low Level Design (기술 설계)
+└── 🔌 API_REFERENCE.md             # API 레퍼런스 및 개발 가이드
+
+📁 src/js/                         # JavaScript 모듈
+📁 apps-script/                    # Google Apps Script 백엔드
+📁 archive/                        # 백업 및 아카이브 파일
+📁 backups/                        # 자동 백업 파일
+```
+
+### 핵심 문서 가이드
+
+#### 📋 [PRD.md](docs/PRD.md) - 제품 요구사항 문서
+- **대상**: 프로덕트 매니저, 기획자, 비즈니스 담당자
+- **내용**: 제품 비전, 핵심 기능, 사용자 스토리, 성공 지표, 로드맵
+- **용도**: 제품 방향성 이해, 기능 우선순위 파악, 진행 상황 추적
+
+#### 🏗️ [TECHNICAL_DESIGN.md](docs/TECHNICAL_DESIGN.md) - 기술 설계 문서
+- **대상**: 개발자, 아키텍트, 기술 리더
+- **내용**: 시스템 아키텍처, 데이터 모델, 핵심 알고리즘, 성능 최적화 전략
+- **용도**: 구현 방법 이해, 아키텍처 설계, 코드 작성 가이드
+
+#### 🔌 [API_REFERENCE.md](docs/API_REFERENCE.md) - API 레퍼런스
+- **대상**: API 사용자, 프론트엔드 개발자, 통합 담당자
+- **내용**: 전체 API 엔드포인트, 요청/응답 형식, 에러 코드, 사용 예제
+- **용도**: API 호출 방법, 통합 구현, 디버깅
+
+> **문서 관리 원칙**: 향후 모든 업데이트는 위 3개 문서에만 반영하며, 추가 문서를 생성하지 않습니다.
+
