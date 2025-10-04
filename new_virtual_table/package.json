@@ -1,0 +1,16 @@
+{
+  "name": "poker-hand-logger",
+  "version": "0.1.0",
+  "description": "포커 테이블 모니터링 시스템 - 프로토타입",
+  "main": "prototype.html",
+  "scripts": {
+    "dev": "npx serve .",
+    "test": "echo 'Week 1에는 테스트 없음 - YAGNI 원칙'"
+  },
+  "keywords": ["poker", "hand-logger", "casino", "monitoring"],
+  "author": "Casino Data Team",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.2.0"
+  }
+}
