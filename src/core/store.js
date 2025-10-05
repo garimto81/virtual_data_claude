@@ -64,9 +64,11 @@ class AppStore {
     };
 
     // 기존 window.APP_CONFIG 통합
+    const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwEcsF1F_RLLW_qkQIFkrwmut-zN0fHOqsAKs5B8PgHZAz2_O5sA8o2W5zZ3nD-5tjY/exec';
+
     this.config = {
       isInitialized: false,
-      appsScriptUrl: localStorage.getItem('appsScriptUrl') || null,
+      appsScriptUrl: localStorage.getItem('appsScriptUrl') || DEFAULT_APPS_SCRIPT_URL,
       autoInit: false,
       version: typeof APP_VERSION !== 'undefined' ? APP_VERSION : '3.11.0',
       spreadsheetId: localStorage.getItem('googleSheetsSpreadsheetId') || '1J-lf8bYTLPbpdhieUNdb8ckW_uwdQ3MtSBLmyRIwH7U',
