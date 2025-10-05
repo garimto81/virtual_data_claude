@@ -66,16 +66,21 @@ node server.js
 - [x] 문서 정리 완료 (30개 → 5개)
 - [x] 파일 정리 완료 (14개 삭제)
 - [x] 리팩토링 전략 수립
-- [x] **Step 1: 의존성 분석 완료** ✅
+- [x] **Step 1: 의존성 분석 완료** ✅ 2025-10-06 14:23
   - globals.txt: 22개 전역 변수
   - functions.txt: 129개 함수
   - onclick-events.txt: 6개 이벤트
   - DEPENDENCY_MAP.md: 8개 모듈 구조 설계
-- [x] **Step 2: 순수 함수 분리 완료** ✅
+- [x] **Step 2: 순수 함수 분리 완료** ✅ 2025-10-06 15:47
   - src/modules/pure-utils.js 생성 (5개 함수)
-  - index.html 약 35줄 감소
+  - index.html 약 35줄 감소 (7909 → 7874줄)
   - 검증 완료
-- [ ] **Step 3: 전역 스토어 구축** (다음 작업, 3일)
+- [x] **Step 3: 전역 스토어 구축 완료** ✅ 2025-10-06 16:52
+  - src/core/store.js 생성 (AppStore 클래스)
+  - window.state, APP_CONFIG 통합
+  - index.html 약 60줄 감소 (7874 → 7814줄)
+  - 검증 완료
+- [ ] **Step 4: Hand Recorder Facade** (다음 작업, 5일)
 
 **Week 2 (Day 8-14)**
 - [ ] Step 4: Hand Recorder Facade (5일)
@@ -87,98 +92,109 @@ node server.js
 - [ ] Step 8: Player Manager (2일)
 - [ ] 최종 통합 테스트 (1일)
 
-### 🎯 다음 작업: Step 3 - 전역 스토어 구축
+### 📊 최적화 진행 현황
 
-**목표**: `window.state`, `window.APP_CONFIG` 등 전역 변수를 중앙 스토어로 통합
+| Step | 작업 | 예상 감소 | 실제 감소 | 누적 감소 | 현재 줄 수 | 진행률 |
+|------|------|----------|----------|----------|-----------|--------|
+| 초기 | - | - | - | - | 7909 | 0% |
+| Step 1 | 의존성 분석 | 0줄 | 0줄 | 0줄 | 7909 | 0% |
+| Step 2 | 순수 함수 분리 | ~100줄 | 35줄 | 35줄 | 7874 | 0.4% |
+| Step 3 | 전역 스토어 | ~150줄 | 60줄 | 95줄 | 7814 | 1.2% |
+| Step 4 | Hand Recorder | ~400줄 | ? | ? | ? | ? |
+| Step 5 | Data Loader | ~800줄 | ? | ? | ? | ? |
+| Step 6 | Pot Calculator | ~300줄 | ? | ? | ? | ? |
+| Step 7 | Card Selector | ~200줄 | ? | ? | ? | ? |
+| Step 8 | Player Manager | ~300줄 | ? | ? | ? | ? |
+| **목표** | - | **6909줄** | **?** | **6909줄** | **1000** | **87%** |
+
+### 🎯 다음 작업: Step 4 - Hand Recorder Facade
+
+**목표**: 핸드 기록 관련 함수를 모듈화 (예상 400줄 감소)
 
 ```bash
-# 1. core 폴더 생성
-mkdir -p src/core
+# 1. 모듈 및 Facade 생성
+mkdir -p src/facades
 
-# 2. store.js 생성
-cat > src/core/store.js << 'EOF'
-/**
- * 중앙 상태 관리 스토어
- */
-class AppStore {
-  constructor() {
-    this.state = {
-      currentStreet: 'preflop',
-      playerDataByTable: {},
-      indexRows: [],
-      playersInHand: [],
-      actionState: { ... },
-      chipColors: [],
-    };
+# 2. hand-recorder.js (내부 구현)
+cat > src/modules/hand-recorder.js << 'EOF'
+import { store } from '../core/store.js';
 
-    this.config = {
-      appsScriptUrl: localStorage.getItem('appsScriptUrl') || '',
-      spreadsheetId: '1J-lf8bYTLPbpdhieUNdb8ckW_uwdQ3MtSBLmyRIwH7U',
-    };
+export class HandRecorder {
+  async sendToGoogleSheet(handData) {
+    const url = store.getConfig('appsScriptUrl');
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        action: 'saveHand',
+        handData: JSON.stringify(handData)
+      })
+    });
+    return await response.json();
   }
 
-  getState() { return this.state; }
-  setState(newState) { this.state = { ...this.state, ...newState }; }
-  getConfig(key) { return this.config[key]; }
-  setConfig(key, value) { this.config[key] = value; }
+  collectHandData() {
+    return store.getState().actionState;
+  }
 }
-
-export const store = new AppStore();
-window.__store__ = store;  // 디버깅용
 EOF
 
-# 3. Git Commit
-git add src/core/store.js index.html
-git commit -m "Step 3: 전역 스토어 구축"
+# 3. hand-facade.js (외부 인터페이스)
+cat > src/facades/hand-facade.js << 'EOF'
+import { HandRecorder } from '../modules/hand-recorder.js';
+
+const recorder = new HandRecorder();
+
+// ✅ 기존 함수명 유지 (onclick 호환)
+export async function sendHandToGoogleSheet() {
+  const handData = window.state.actionState;
+  return await recorder.sendToGoogleSheet(handData);
+}
+
+export function collectHandData() {
+  return recorder.collectHandData();
+}
+EOF
+
+# 4. Git Commit
+git add src/modules/hand-recorder.js src/facades/hand-facade.js index.html
+git commit -m "Step 4: Hand Recorder Facade 패턴 적용"
 ```
 
 **index.html 수정**:
 ```html
-<!-- Step 2 모듈 아래 추가 -->
 <script type="module">
-  import { store } from './src/core/store.js';
+  import * as HandFacade from './src/facades/hand-facade.js';
 
-  // 기존 코드 호환성 유지
-  window.state = store.state;
-  window.APPS_SCRIPT_URL = store.getConfig('appsScriptUrl');
+  // 전역 노출 (onclick 호환)
+  window.sendHandToGoogleSheet = HandFacade.sendHandToGoogleSheet;
+  window.collectHandData = HandFacade.collectHandData;
 
-  console.log('[Step 3] 중앙 스토어 초기화 완료');
+  console.log('[Step 4] Hand Recorder 모듈 로드 완료');
 </script>
 
-<!-- 기존 state 초기화 제거 -->
-<script>
-  // ❌ 제거됨 (store.js로 이동)
-  // window.state = { ... };
-  // window.APP_CONFIG = { ... };
-</script>
+<!-- index.html에서 기존 함수 제거 (~400줄) -->
 ```
 
 ### ✅ 검증 체크리스트
 
 **A. 콘솔 확인**
-- [ ] "[Step 3] 중앙 스토어 초기화 완료" 메시지
+- [ ] "[Step 4] Hand Recorder 모듈 로드 완료" 메시지
 - [ ] 에러 0개
 
-**B. 스토어 접근 테스트** (F12 Console)
-```javascript
-window.__store__                        // AppStore 객체 확인
-window.state                             // { currentStreet: ... }
-window.state.currentStreet               // 'preflop'
-__store__.getState()                     // 전체 상태 확인
-__store__.getConfig('appsScriptUrl')     // URL 확인
-__store__.setState({ currentStreet: 'flop' })
-window.state.currentStreet               // 'flop' (동기화 확인)
-```
+**B. 핸드 전송 플로우 (핵심!)**
+1. [ ] 플레이어 2명 추가
+2. [ ] 핸드 시작 → 블라인드 입력
+3. [ ] 액션 입력 (Call, Raise 등)
+4. [ ] 카드 입력 (Flop, Turn, River)
+5. [ ] 승자 선택
+6. [ ] **핸드 전송 버튼 클릭** ⭐
+7. [ ] 콘솔: "핸드 저장 성공" 메시지
+8. [ ] Google Sheets 확인: Hand 시트에 데이터 추가됨
 
-**C. 핵심 기능 테스트**
-- [ ] 앱 초기 로딩 정상
-- [ ] 플레이어 데이터 로딩 정상
-- [ ] 핸드 시작 → state 업데이트 정상
-- [ ] 액션 입력 → state 반영 정상
-
-**D. Apps Script 연동**
-- [ ] 설정 모달 → URL 표시 확인
-- [ ] URL 수정 → 저장 → 유지 확인
+**C. onclick 이벤트**
+- [ ] 모든 버튼 클릭 테스트
+- [ ] 에러 없음
 
 ### ❌ 실패 시 롤백
 
@@ -207,234 +223,9 @@ git reset --hard HEAD~1
 3. **onclick 보존**: Facade 패턴으로 HTML 수정 불필요
 4. **검증 필수**: 체크리스트 100% 완료
 
----
+### 📚 상세 가이드
 
-<details>
-<summary>📚 전체 8-Step 리팩토링 가이드 (클릭하여 펼치기)</summary>
-
-## Step 1: 의존성 분석 (1일) ✅ 완료
-
-```bash
-mkdir -p docs/analysis
-grep -o "window\.[a-zA-Z_][a-zA-Z0-9_]*" index.html | sort -u > docs/analysis/globals.txt
-grep -n "function [a-zA-Z_]" index.html > docs/analysis/functions.txt
-grep -o 'onclick="[^"]*"' index.html | sort -u > docs/analysis/onclick-events.txt
-git add docs/analysis && git commit -m "Step 1: 의존성 분석"
-```
-
-**결과**: [docs/analysis/DEPENDENCY_MAP.md](docs/analysis/DEPENDENCY_MAP.md)
-
----
-
-## Step 3: 전역 스토어 구축 (3일)
-
-```bash
-mkdir -p src/core
-cat > src/core/store.js << 'EOF'
-/**
- * 중앙 상태 관리 스토어
- */
-class AppStore {
-  constructor() {
-    this.state = {
-      currentStreet: 'preflop',
-      playerDataByTable: {},
-      indexRows: [],
-      playersInHand: [],
-      actionState: {
-        handNumber: '',
-        smallBlind: '',
-        bigBlind: '',
-        hasBBAnte: false,
-        preflop: [],
-        flop: [],
-        turn: [],
-        river: [],
-      },
-      chipColors: [],
-    };
-
-    this.config = {
-      appsScriptUrl: localStorage.getItem('appsScriptUrl') || '',
-      spreadsheetId: '1J-lf8bYTLPbpdhieUNdb8ckW_uwdQ3MtSBLmyRIwH7U',
-    };
-  }
-
-  getState() {
-    return this.state;
-  }
-
-  setState(newState) {
-    this.state = { ...this.state, ...newState };
-  }
-
-  getConfig(key) {
-    return this.config[key];
-  }
-
-  setConfig(key, value) {
-    this.config[key] = value;
-  }
-}
-
-export const store = new AppStore();
-window.__store__ = store;  // 디버깅용
-EOF
-```
-
-**index.html**:
-```html
-<script type="module">
-  import { store } from './src/core/store.js';
-
-  // 기존 코드 호환성 유지
-  window.state = store.state;
-  window.APPS_SCRIPT_URL = store.getConfig('appsScriptUrl');
-
-  console.log('[Step 3] 중앙 스토어 초기화 완료');
-</script>
-```
-
-**검증**:
-```javascript
-window.__store__.getState()           // { currentStreet: ... }
-window.state.currentStreet            // 'preflop'
-__store__.setState({ currentStreet: 'flop' })
-window.state.currentStreet            // 'flop' (동기화 확인)
-```
-
----
-
-## Step 4: Hand Recorder Facade (5일) ⭐ 핵심
-
-```bash
-# 내부 구현
-cat > src/modules/hand-recorder.js << 'EOF'
-import { store } from '../core/store.js';
-
-export class HandRecorder {
-  async sendToGoogleSheet(handData) {
-    const url = store.getConfig('appsScriptUrl');
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        action: 'saveHand',
-        handData: JSON.stringify(handData)
-      })
-    });
-
-    return await response.json();
-  }
-
-  collectHandData() {
-    return store.getState().actionState;
-  }
-}
-EOF
-
-# 외부 인터페이스 (기존 함수명 유지)
-mkdir -p src/facades
-cat > src/facades/hand-facade.js << 'EOF'
-import { HandRecorder } from '../modules/hand-recorder.js';
-
-const recorder = new HandRecorder();
-
-// ✅ 기존 함수명 그대로 유지 (onclick 호환)
-export async function sendHandToGoogleSheet() {
-  const handData = window.state.actionState;
-  return await recorder.sendToGoogleSheet(handData);
-}
-
-export function collectHandData() {
-  return recorder.collectHandData();
-}
-EOF
-```
-
-**index.html**:
-```html
-<script type="module">
-  import * as HandFacade from './src/facades/hand-facade.js';
-
-  // 전역 노출 (onclick 호환)
-  window.sendHandToGoogleSheet = HandFacade.sendHandToGoogleSheet;
-  window.collectHandData = HandFacade.collectHandData;
-
-  console.log('[Step 4] Hand Recorder 모듈 로드 완료');
-</script>
-
-<!-- ✅ HTML 수정 없음 -->
-<button onclick="sendHandToGoogleSheet()">전송</button>
-```
-
-**검증 (가장 중요!)**:
-1. [ ] 플레이어 2명 추가
-2. [ ] 핸드 시작
-3. [ ] 블라인드 입력 (SB: 500, BB: 1000)
-4. [ ] 액션 입력 (Call, Raise 등)
-5. [ ] 카드 입력 (Flop, Turn, River)
-6. [ ] 승자 선택
-7. [ ] **핸드 전송 버튼 클릭** ⭐
-8. [ ] 콘솔: "핸드 저장 성공"
-9. [ ] Google Sheets 확인: Hand 시트에 데이터 추가됨
-
-**실패 시 디버깅**:
-```javascript
-// hand-facade.js에 로그 추가
-export async function sendHandToGoogleSheet() {
-  const handData = window.state.actionState;
-  console.log('[DEBUG] handData:', handData);
-
-  const url = store.getConfig('appsScriptUrl');
-  console.log('[DEBUG] URL:', url);
-
-  if (!url) {
-    alert('Apps Script URL이 설정되지 않았습니다.');
-    return;
-  }
-
-  return await recorder.sendToGoogleSheet(handData);
-}
-```
-
----
-
-## Step 5: Data Loader (3일)
-
-**모듈**: loadInitial, buildTypeFromCsv, IndexedDB 관련 함수 15개
-
----
-
-## Step 6: Pot Calculator (2일)
-
-**모듈**: calculateAccuratePot, calculatePotWithCorrection 등 12개
-
----
-
-## Step 7: Card Selector (2일)
-
-**모듈**: openCardSelector, Card UI 관련 8개
-
----
-
-## Step 8: Player Manager (2일)
-
-**모듈**: addPlayer, updatePlayerChips, deleteLocalPlayer 등 18개
-
----
-
-## 최종 효과
-
-| 항목 | Before | After |
-|-----|--------|-------|
-| index.html | 7909줄 | 1000줄 (-87%) |
-| 모듈 수 | 0개 | 8개 |
-| 수정 가능 | ❌ | ✅ |
-| 협업 가능 | ❌ | ✅ |
-
-</details>
+각 Step별 상세 코드, 검증 방법, 실패 대응은 [docs/STEP_BY_STEP_REFACTORING.md](docs/STEP_BY_STEP_REFACTORING.md) 참고
 
 ---
 
