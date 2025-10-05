@@ -202,6 +202,19 @@
 
     console.log('[Step 2] 순수 함수 모듈 로드 완료');
   </script>
+  <!-- [Step 3] 중앙 스토어 -->
+  <script type="module">
+    import { store } from './src/core/store.js';
+
+    // 기존 코드 호환성 유지 (임시)
+    window.state = store.state;
+    window.APP_CONFIG = store.config;
+    window.APPS_SCRIPT_URL = store.getConfig('appsScriptUrl');
+
+    console.log('[Step 3] 중앙 스토어 초기화 완료');
+    console.log('  - Apps Script URL:', store.getConfig('appsScriptUrl'));
+    console.log('  - Spreadsheet ID:', store.getConfig('spreadsheetId'));
+  </script>
   <!-- ActionHistory 시스템 - Phase 1 -->
   <script src="archive/action-history.js?v=3.2.5" defer></script>
   <!-- Phase 2: 더블탭 & 배치 처리 -->
@@ -825,50 +838,15 @@
   const VERSION_INFO = `포커 핸드 로거 ${APP_VERSION} (${VERSION_DATE})`;
 
   // ========================================
-  // Phase 1: 전역 상태 관리 시스템 v2.0
+  // ========================================
+  // [Step 3] 전역 상태 제거 (src/core/store.js로 이동)
   // ========================================
 
-  window.APP_CONFIG = {
-    isInitialized: false,
-    appsScriptUrl: null,
-    autoInit: false,
-    version: APP_VERSION,
-    data: {},
-    settings: {
-      debugMode: false,
-      autoSave: true,
-      offlineMode: false
-    },
-    state: {
-      lastConnection: null,
-      connectionAttempts: 0,
-      isOnline: navigator.onLine
-    }
-  };
-
-  // 기본 Spreadsheet ID 상수
-  const DEFAULT_SPREADSHEET_ID = '1J-lf8bYTLPbpdhieUNdb8ckW_uwdQ3MtSBLmyRIwH7U';
-
-  // ⚠️ 중요: 앱 시작 시 localStorage에서 설정값 로드
-  (function initializeSettings() {
-    // Apps Script URL 로드
-    const storedUrl = localStorage.getItem('appsScriptUrl');
-    if (storedUrl) {
-      window.APP_CONFIG.appsScriptUrl = storedUrl;
-      console.log('✅ localStorage에서 Apps Script URL 복원:', storedUrl);
-    } else {
-      console.log('⚠️ localStorage에 Apps Script URL이 없음');
-    }
-
-    // Spreadsheet ID 로드 또는 기본값 설정
-    const storedSpreadsheetId = localStorage.getItem('googleSheetsSpreadsheetId');
-    if (!storedSpreadsheetId) {
-      localStorage.setItem('googleSheetsSpreadsheetId', DEFAULT_SPREADSHEET_ID);
-      console.log('✅ 기본 Spreadsheet ID 설정:', DEFAULT_SPREADSHEET_ID);
-    } else {
-      console.log('✅ localStorage에서 Spreadsheet ID 복원:', storedSpreadsheetId);
-    }
-  })();
+  // ❌ 제거됨: window.APP_CONFIG 초기화 (store.js로 이동)
+  // ❌ 제거됨: initializeSettings() 함수 (store.js에서 자동 처리)
+  //
+  // ✅ 모듈에서 자동 임포트 (라인 205-217)
+  // ✅ window.state, window.APP_CONFIG 호환성 유지
 
   // 네트워크 상태 모니터링
   window.addEventListener('online', () => {
@@ -1825,52 +1803,12 @@
     // - initializeAppConfig()
 
     // ====== STATE ======
-    let timeUpdater;
-    window.state = {
-      currentStreet: 'preflop',  // 현재 진행 중인 스트리트
-      camNumbers: { cam1no:'', cam2no:'' }, // 파일 넘버 입력이 있다면 여기에 저장
-      lastCamNo: null,        // 마지막 입력 추적(연속 증가 기본값 제공용)
+    // ❌ [Step 3] 제거됨: window.state 초기화 (src/core/store.js로 이동)
+    //
+    // ✅ 모듈에서 자동 임포트 (라인 205-217)
+    // ✅ window.state = store.state로 연결 (호환성 유지)
 
-      playerDataByTable: {},     // { [table]: [{name, chips, notable}] }
-      camPreset: { cam1:'', cam2:'' }, // Type!A2/A3
-      allTables: [],
-      indexRows: [],             // [{handNumber, handUpdatedAt, table, ...}]
-      allHandNumbers: [],        // latest numbers (from Index)
-      handCsvCache: null,        // raw rows for on-demand hand parsing
-      allHandData: {},           // { [handNumber]: parsed hand block (latest) }
-      selectedTable: null,
-      playersInHand: [],
-      board: [],
-      playerStatus: {},          // { playerName: 'active' | 'folded' | 'allin' }
-      buttonPosition: null,      // 버튼 위치 (seat 번호)
-      seatMap: {},              // { seat: playerName } 10개 좌석 매핑
-      nextActionSeat: null,      // 다음 액션 플레이어 좌석
-      
-      // 액션 자동 매핑 시스템
-      actionInputMode: localStorage.getItem('actionInputMode') || 'auto', // 'auto' | 'manual'
-      currentActionIndex: 0,     // 현재 액션 순서 인덱스
-      actionQueue: [],          // 액션 순서 대기열
-      nextActionPlayer: null,    // 다음 액션 플레이어
-      smartCheckCall: true,      // 스마트 Check/Call 버튼 사용
-      actionState: {
-        handNumber: '',
-        smallBlind: '', bigBlind: '', hasBBAnte: false,
-        preflop: [], flop: [], turn: [], river: [],
-      },
-      modalState: {
-        cardTarget: null,
-        actionPadStreet: null, actionPadPlayer: null, actionPadCurrentAction: null,
-        keypadTarget: null, keypadOptions: {},
-      },
-      selectedTimezone: 'Asia/Seoul',
-      // 칩 분석 관련 상태
-      chipColors: [], // [{color: '#fff', value: 1000, image: 'base64...'}]
-      maxChips: 5,
-      currentChipSlot: null,
-      playerStacks: {}, // {playerName: {images: [], estimatedStack: 0, analysis: ''}}
-      currentAnalyzingPlayer: null,
-      stackImages: [] // 현재 촬영 중인 스택 이미지들
-    };
+    let timeUpdater;
 
     // 칩 분석 모듈 초기화 (state 객체 생성 후)
     if (typeof initChipAnalyzer === 'function') {
