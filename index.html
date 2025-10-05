@@ -2,10 +2,17 @@
 <!--
   ============================================
   포커 핸드 로거 (Poker Hand Logger)
-  Version: 3.11.0 - Refactoring Phase: Step 1-3 Complete
+  Version: 3.12.0 - Refactoring Phase: Step 3 Fix + Step 4 Complete
   Last Modified: 2025-10-06 KST
 
   Change Log:
+  - v3.12.0 (2025-10-06): Step 3 Fix + Step 4 Complete (-10줄)
+    • Step 3 수정: store.config에 DEFAULT_APPS_SCRIPT_URL 추가
+    • Step 4: Hand Recorder 모듈 생성 (src/modules/hand-recorder.js)
+    • Step 4: Hand Facade 생성 (src/facades/hand-facade.js)
+    • fetch 로직 모듈화 (isSending 상태 관리 포함)
+    • 기존 함수명 유지 (onclick 호환성)
+    • 진행률: 7814줄 → 7804줄 (1.3% 완료)
   - v3.11.0 (2025-10-06): Refactoring Phase - Step 1-3 Complete (95줄 감소)
     • Step 1: 의존성 분석 완료 (globals 22개, functions 129개, onclick 6개)
     • Step 2: 순수 함수 분리 (src/modules/pure-utils.js, -35줄)
@@ -222,6 +229,18 @@
     console.log('[Step 3] 중앙 스토어 초기화 완료');
     console.log('  - Apps Script URL:', store.getConfig('appsScriptUrl'));
     console.log('  - Spreadsheet ID:', store.getConfig('spreadsheetId'));
+  </script>
+
+  <!-- Step 4: Hand Recorder Facade -->
+  <script type="module">
+    import * as HandFacade from './src/facades/hand-facade.js';
+
+    // 전역 노출 (기존 코드 호환)
+    window.sendHandToGoogleSheet = HandFacade.sendHandToGoogleSheet;
+    window.getIsSending = HandFacade.getIsSending;
+    window.setIsSending = HandFacade.setIsSending;
+
+    console.log('[Step 4] Hand Recorder 모듈 로드 완료');
   </script>
   <!-- ActionHistory 시스템 - Phase 1 -->
   <script src="archive/action-history.js?v=3.2.5" defer></script>
@@ -5186,12 +5205,10 @@
       return { rows: out, epochSec, currentDate };
     }
     
-let isSending = false;
-
 // Phase 4: 원본 함수를 내부 함수로 변경
 async function _sendDataToGoogleSheet_internal(){
-  if (isSending) return;     // 중복 전송 가드
-  isSending = true;
+  if (window.getIsSending()) return;     // 중복 전송 가드
+  window.setIsSending(true);
 
   // 승자 체크 제거 - 승자 없어도 전송 가능
   const winners = window.state.playersInHand.filter(p=>p.role==='winner');
@@ -5209,25 +5226,8 @@ async function _sendDataToGoogleSheet_internal(){
     // 노트 기능 제거
     const payload = { rows, indexMeta, typeUpdates };
 
-    // x-www-form-urlencoded로 전송 → 프리플라이트 없음 (CORS 우회)
-    const form = new URLSearchParams();
-    form.append('payload', JSON.stringify(payload));
-
-    const res = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-      body: form.toString(),
-      // mode: 'cors'  // 생략 가능 (기본)
-    });
-
-    if(!res.ok){
-      const text = await res.text().catch(()=> '');
-      console.log(`서버 응답: ${res.status} ${text || ''}`);
-      showFeedback('서버 응답 오류', true);
-      return;
-    }
-
-    const json = await res.json().catch(()=> ({}));
+    // ✅ Step 4: 모듈화된 전송 함수 사용
+    const json = await window.sendHandToGoogleSheet(payload);
 
     if(json.status === 'duplicate'){
       logMessage(`⚠️ 핸드 #${json.handNumber}는 이미 기록되어 있습니다.`);
@@ -5281,7 +5281,7 @@ async function _sendDataToGoogleSheet_internal(){
   }
   }, '시트 전송', '데이터를 Google 시트에 저장하고 있습니다...');
 
-  isSending = false;
+  window.setIsSending(false);
 }
 
 // [Phase 0] Google Sheets API 전송 함수 제거 - Apps Script 방식만 사용
