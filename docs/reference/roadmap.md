@@ -1064,9 +1064,350 @@ window.addEventListener('beforeunload', () => {
 
 ---
 
-**다음 단계:**
-1. 시작할 Phase 선택
-2. Git 브랜치 생성 (`git checkout -b phase0-improvements`)
-3. 작업 시작!
+---
 
-어떻게 진행하시겠습니까?
+## Phase 4: Tournament Field Data (v3.11.0 - v3.15.0) 🚧 준비 중
+
+> **목표**: 토너먼트 현장 데이터 수집 최적화
+> **기간**: 4주 (2025-10-06 시작 예정)
+> **참조**: [PRD_v6.0.md](../PRD_v6.0.md)
+
+### 🎯 Phase 4 목표
+
+**배경**: 사용자는 토너먼트 현장에서 스마트폰으로 키 플레이어 핸드를 기록
+- 15명 키 플레이어 사전 등록 (Type 시트)
+- 대회장 돌아다니며 작업 (Wi-Fi 불안정)
+- 두 손으로 스마트폰 조작 (90%+)
+- 모든 작업 수동 (자동화 없음)
+
+**핵심 불만 (현재 v3.10.0)**:
+- ❌ 테이블 전환 5-10초 (매번 Google Sheets 요청)
+- ❌ 키 플레이어 전용 UI 없음
+- ❌ 오프라인 모드 불완전
+- ❌ 스마트폰 UI 최적화 부족
+
+### Week 1-2: Priority 1 기능 (필수)
+
+#### F1. 키 플레이어 대시보드 ⭐
+**목표**: 15명 사전 등록 키 플레이어 한눈에 관리
+
+**구현**:
+```javascript
+// 1. Type 시트에서 Keyplayer=TRUE 필터링
+async function loadKeyPlayers() {
+  const players = await db.type
+    .where('keyplayer').equals('TRUE')
+    .toArray();
+
+  return players.map(p => ({
+    name: p.players,
+    table: p.tableNo,
+    seat: p.seatNo,
+    chips: p.chips,
+    confirmed: p.confirmed || false  // 새 필드
+  }));
+}
+
+// 2. 대시보드 UI
+function renderKeyPlayerDashboard() {
+  const html = `
+    <div class="key-player-dashboard">
+      <h2>🌟 Key Players (15)</h2>
+      ${keyPlayers.map(p => `
+        <div class="key-player-card">
+          <h3>${p.confirmed ? '✅' : '⚠️'} ${p.name}</h3>
+          <p>Table ${p.table} #${p.seat} ${p.chips}</p>
+          <div class="actions">
+            ${!p.confirmed ? '<button class="btn-confirm">✓ 확인</button>' : ''}
+            <button class="btn-update">Update</button>
+            <button class="btn-record">Record Hand</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+```
+
+**성능 목표**:
+- 대시보드 로드: < 1초 (IndexedDB)
+- 확인 상태 업데이트: < 0.3초
+
+---
+
+#### F2. 빠른 업데이트 워크플로우 ⭐
+**목표**: 칩 카운트 업데이트를 3-4터치로 완료
+
+**구현**:
+```javascript
+// Quick Update 팝업
+function showQuickUpdate(player) {
+  const popup = `
+    <div class="quick-update-popup">
+      <h3>Quick Update - ${player.name}</h3>
+      <form>
+        <label>Table: <input type="text" value="${player.table}" readonly></label>
+        <label>Seat: <input type="text" value="${player.seat}" readonly></label>
+        <label>Chips: <input type="text" value="${player.chips}" id="chips-input"></label>
+        <label>Notes: <textarea></textarea></label>
+        <button type="submit">✓ Save</button>
+        <button type="button" onclick="closePopup()">✗ Cancel</button>
+      </form>
+    </div>
+  `;
+
+  // 저장 시
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const newChips = document.getElementById('chips-input').value;
+
+    // IndexedDB 즉시 업데이트
+    await db.type.update(player.id, { chips: newChips });
+
+    // 백그라운드 동기화
+    syncQueue.add({ type: 'UPDATE_PLAYER', id: player.id, chips: newChips });
+  };
+}
+```
+
+**성능 목표**:
+- 팝업 열기: < 0.3초
+- 저장: < 0.5초 (로컬)
+
+---
+
+#### F3. 테이블 전환 최적화 ⭐
+**목표**: 키 플레이어 추적 시 1초 이내 테이블 이동
+
+**구현** (IndexedDB 3-Tier 캐싱):
+```javascript
+class TableCache {
+  constructor() {
+    this.hotCache = null;      // 현재 테이블
+    this.warmCache = new Map(); // 최근 3개 테이블
+    this.coldCache = null;      // 전체 Type 시트
+  }
+
+  async getTable(tableNo) {
+    // Tier 1: Hot Cache (< 50ms)
+    if (this.hotCache && this.hotCache.tableNo === tableNo) {
+      return this.hotCache.players;
+    }
+
+    // Tier 2: Warm Cache (< 100ms)
+    if (this.warmCache.has(tableNo)) {
+      const cached = this.warmCache.get(tableNo);
+      if (Date.now() - cached.timestamp < 30 * 60 * 1000) {
+        this.hotCache = cached;
+        return cached.players;
+      }
+    }
+
+    // Tier 3: IndexedDB (< 1s)
+    const players = await db.type
+      .where('tableNo').equals(tableNo)
+      .toArray();
+
+    // 캐시 업데이트
+    this.hotCache = { tableNo, players, timestamp: Date.now() };
+    this.warmCache.set(tableNo, this.hotCache);
+
+    return players;
+  }
+
+  // 5분마다 자동 갱신
+  startAutoRefresh() {
+    setInterval(async () => {
+      if (this.hotCache) {
+        const fresh = await fetchTableFromGoogleSheets(this.hotCache.tableNo);
+        this.hotCache.players = fresh;
+        await db.type.bulkPut(fresh);
+      }
+    }, 5 * 60 * 1000);
+  }
+}
+```
+
+**성능 목표**:
+- 캐시 히트: < 50ms (Tier 1), < 100ms (Tier 2)
+- 캐시 미스: < 1초 (IndexedDB)
+- 목표 히트율: > 80%
+
+---
+
+### Week 3-4: Priority 2 기능 (중요)
+
+#### F4. 핸드 번호 자동 증가
+**구현**:
+```javascript
+// Index 시트에서 테이블별 최대 핸드 조회
+async function getNextHandNumber(table) {
+  const lastHand = await db.index
+    .where('table').equals(table)
+    .reverse()
+    .first();
+
+  return lastHand ? lastHand.handNumber + 1 : 1;
+}
+
+// 핸드 시작 시 자동 적용
+async function startHand() {
+  const nextHand = await getNextHandNumber(currentTable);
+  state.actionState.handNumber = nextHand;
+
+  // UI 표시 (수동 수정 가능)
+  document.getElementById('hand-number').value = nextHand;
+}
+```
+
+---
+
+#### F5. 오프라인 모드 완성
+**구현**:
+```javascript
+// 오프라인 큐 관리
+class SyncQueue {
+  async add(task) {
+    await db.syncQueue.add({
+      ...task,
+      timestamp: Date.now(),
+      status: 'pending'
+    });
+  }
+
+  async processQueue() {
+    const tasks = await db.syncQueue
+      .where('status').equals('pending')
+      .toArray();
+
+    for (const task of tasks) {
+      try {
+        await syncToGoogleSheets(task);
+        await db.syncQueue.update(task.id, { status: 'completed' });
+      } catch (err) {
+        console.error('Sync failed:', task, err);
+        // 재시도는 다음 온라인 시
+      }
+    }
+  }
+}
+
+// 온라인 복구 감지
+window.addEventListener('online', async () => {
+  console.log('Online! Syncing...');
+  await syncQueue.processQueue();
+  showToast('✅ Sync completed');
+});
+```
+
+---
+
+#### F6. 스마트폰 UI 최적화
+**CSS**:
+```css
+/* 터치 영역 최소 48px */
+.btn-primary {
+  min-height: 48px;
+  min-width: 48px;
+  font-size: 16px;
+  padding: 12px 20px;
+}
+
+.action-button {
+  min-height: 56px;  /* 더 큼 */
+  min-width: 80px;
+  margin: 8px;
+  font-size: 18px;
+}
+
+/* 두 손 조작 최적화 */
+.key-player-card {
+  padding: 16px;
+  margin: 12px;
+}
+
+.key-player-card .actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.key-player-card button {
+  flex: 1;
+  min-height: 48px;
+}
+
+/* 다크 모드 (배터리 절약) */
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #1a1a1a;
+    color: #e0e0e0;
+  }
+}
+```
+
+**제스처 지원**:
+```javascript
+// 스와이프 제스처
+let touchStartX = 0;
+let touchEndX = 0;
+
+document.addEventListener('touchstart', e => {
+  touchStartX = e.changedTouches[0].screenX;
+});
+
+document.addEventListener('touchend', e => {
+  touchEndX = e.changedTouches[0].screenX;
+  handleSwipe();
+});
+
+function handleSwipe() {
+  const diff = touchEndX - touchStartX;
+
+  if (diff > 100) {
+    // 오른쪽 스와이프: 액션 취소 (Undo)
+    undoLastAction();
+  } else if (diff < -100) {
+    // 왼쪽 스와이프: 다음 스트릿
+    moveToNextStreet();
+  }
+}
+```
+
+---
+
+### Phase 4 성공 지표
+
+| KPI | 현재 (v3.10.0) | Phase 4 목표 |
+|-----|----------------|--------------|
+| 테이블 전환 시간 | 5-10초 | < 1초 (캐시) |
+| 키 플레이어 확인 | N/A | < 15초 (3터치) |
+| 칩 업데이트 | N/A | < 20초 (4터치) |
+| 핸드 기록 시간 | 3-5분 | 2-3분 |
+| 오프라인 사용률 | 20% | > 50% |
+| 캐시 히트율 | 0% | > 80% |
+| 사용자 만족도 | 3.5/5 | > 4.5/5 |
+
+---
+
+### Phase 4 완료 기준
+
+- [ ] F1: 키 플레이어 대시보드 동작
+- [ ] F2: 빠른 업데이트 워크플로우 (3-4터치)
+- [ ] F3: 테이블 전환 < 1초 (캐시 히트율 > 80%)
+- [ ] F4: 핸드 번호 자동 증가
+- [ ] F5: 오프라인 모드 완전 작동 (읽기 + 쓰기)
+- [ ] F6: 스마트폰 UI 최적화 (48px+ 터치 영역)
+- [ ] 성능 테스트 통과 (모든 KPI 달성)
+- [ ] 사용자 인수 테스트 (CSAT > 4.5/5)
+
+---
+
+**다음 Phase 선택:**
+1. ✅ Phase 0: 코드 정리 (완료)
+2. ✅ Phase 1: IndexedDB 캐싱 (완료)
+3. ✅ Phase 2: 팟 계산 문서화 (완료)
+4. 🚧 Phase 4: Tournament Field Data (준비 중)
+5. ⏳ Phase 3: Redis 3-Tier (Phase 4 이후)
+
+**현재 상태**: Phase 4 Week 1 시작 대기 중
