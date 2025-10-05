@@ -80,10 +80,17 @@ node server.js
   - window.state, APP_CONFIG 통합
   - index.html 약 60줄 감소 (7874 → 7814줄)
   - 검증 완료
-- [ ] **Step 4: Hand Recorder Facade** (다음 작업, 5일)
+  - **Fix (2025-10-06 18:30)**: DEFAULT_APPS_SCRIPT_URL 추가 (localStorage 없을 때 기본값 사용)
+- [x] **Step 4: Hand Recorder Facade 완료** ✅ 2025-10-06 18:35
+  - src/modules/hand-recorder.js 생성 (HandRecorder 클래스)
+  - src/facades/hand-facade.js 생성 (onclick 호환)
+  - fetch 로직 모듈화 + isSending 상태 관리
+  - index.html 약 11줄 감소 (7814 → 7803줄)
+  - 검증 완료
+- [ ] **Step 5: Data Loader** (다음 작업, 3일)
 
 **Week 2 (Day 8-14)**
-- [ ] Step 4: Hand Recorder Facade (5일)
+- [x] Step 4: Hand Recorder Facade ✅ 완료
 - [ ] Step 5: Data Loader (3일)
 
 **Week 3 (Day 15-21)**
@@ -100,101 +107,51 @@ node server.js
 | Step 1 | 의존성 분석 | 0줄 | 0줄 | 0줄 | 7909 | 0% |
 | Step 2 | 순수 함수 분리 | ~100줄 | 35줄 | 35줄 | 7874 | 0.4% |
 | Step 3 | 전역 스토어 | ~150줄 | 60줄 | 95줄 | 7814 | 1.2% |
-| Step 4 | Hand Recorder | ~400줄 | ? | ? | ? | ? |
+| Step 4 | Hand Recorder | ~400줄 | 11줄 | 106줄 | 7803 | 1.3% |
 | Step 5 | Data Loader | ~800줄 | ? | ? | ? | ? |
 | Step 6 | Pot Calculator | ~300줄 | ? | ? | ? | ? |
 | Step 7 | Card Selector | ~200줄 | ? | ? | ? | ? |
 | Step 8 | Player Manager | ~300줄 | ? | ? | ? | ? |
 | **목표** | - | **6909줄** | **?** | **6909줄** | **1000** | **87%** |
 
-### 🎯 다음 작업: Step 4 - Hand Recorder Facade
+### 🎯 다음 작업: Step 5 - Data Loader
 
-**목표**: 핸드 기록 관련 함수를 모듈화 (예상 400줄 감소)
+**목표**: 데이터 로딩 관련 함수를 모듈화 (예상 800줄 감소)
 
-```bash
-# 1. 모듈 및 Facade 생성
-mkdir -p src/facades
+**주요 함수**:
+- `loadInitial()` - CSV 데이터 초기 로딩
+- `buildTypeFromCsv()` - Type 시트 파싱
+- `buildIndexFromCsv()` - Index 시트 파싱
+- IndexedDB 캐싱 관련 함수 (15개)
 
-# 2. hand-recorder.js (내부 구현)
-cat > src/modules/hand-recorder.js << 'EOF'
-import { store } from '../core/store.js';
+**작업 순서**:
+1. `src/modules/data-loader.js` 생성
+   - DataLoader 클래스
+   - loadInitial(), buildTypeFromCsv(), buildIndexFromCsv()
+   - IndexedDB 캐싱 로직
+2. `src/facades/data-facade.js` 생성
+   - 기존 함수명 유지
+3. index.html 수정
+   - 모듈 임포트
+   - 기존 함수 제거 (~800줄 예상)
 
-export class HandRecorder {
-  async sendToGoogleSheet(handData) {
-    const url = store.getConfig('appsScriptUrl');
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        action: 'saveHand',
-        handData: JSON.stringify(handData)
-      })
-    });
-    return await response.json();
-  }
-
-  collectHandData() {
-    return store.getState().actionState;
-  }
-}
-EOF
-
-# 3. hand-facade.js (외부 인터페이스)
-cat > src/facades/hand-facade.js << 'EOF'
-import { HandRecorder } from '../modules/hand-recorder.js';
-
-const recorder = new HandRecorder();
-
-// ✅ 기존 함수명 유지 (onclick 호환)
-export async function sendHandToGoogleSheet() {
-  const handData = window.state.actionState;
-  return await recorder.sendToGoogleSheet(handData);
-}
-
-export function collectHandData() {
-  return recorder.collectHandData();
-}
-EOF
-
-# 4. Git Commit
-git add src/modules/hand-recorder.js src/facades/hand-facade.js index.html
-git commit -m "Step 4: Hand Recorder Facade 패턴 적용"
-```
-
-**index.html 수정**:
-```html
-<script type="module">
-  import * as HandFacade from './src/facades/hand-facade.js';
-
-  // 전역 노출 (onclick 호환)
-  window.sendHandToGoogleSheet = HandFacade.sendHandToGoogleSheet;
-  window.collectHandData = HandFacade.collectHandData;
-
-  console.log('[Step 4] Hand Recorder 모듈 로드 완료');
-</script>
-
-<!-- index.html에서 기존 함수 제거 (~400줄) -->
-```
-
-### ✅ 검증 체크리스트
+### ✅ Step 4 검증 완료 사항
 
 **A. 콘솔 확인**
-- [ ] "[Step 4] Hand Recorder 모듈 로드 완료" 메시지
-- [ ] 에러 0개
+- ✅ "[Step 3] 중앙 스토어 초기화 완료" 메시지
+- ✅ "[Step 4] Hand Recorder 모듈 로드 완료" 메시지
+- ✅ Apps Script URL 출력 (기본값)
+- ✅ 에러 0개
 
-**B. 핸드 전송 플로우 (핵심!)**
-1. [ ] 플레이어 2명 추가
-2. [ ] 핸드 시작 → 블라인드 입력
-3. [ ] 액션 입력 (Call, Raise 등)
-4. [ ] 카드 입력 (Flop, Turn, River)
-5. [ ] 승자 선택
-6. [ ] **핸드 전송 버튼 클릭** ⭐
-7. [ ] 콘솔: "핸드 저장 성공" 메시지
-8. [ ] Google Sheets 확인: Hand 시트에 데이터 추가됨
+**B. 핸드 전송 플로우**
+- ✅ 플레이어 추가 → 핸드 시작 → 액션 입력 → 승자 선택
+- ✅ 핸드 전송 버튼 클릭
+- ✅ 콘솔: "[HandRecorder] Apps Script URL: https://..." 확인
+- ✅ 전송 성공 확인
 
-**C. onclick 이벤트**
-- [ ] 모든 버튼 클릭 테스트
-- [ ] 에러 없음
+**C. 주요 이슈 해결**
+- ⚠️ **문제**: localStorage 없을 때 appsScriptUrl null 반환
+- ✅ **해결**: store.js에 DEFAULT_APPS_SCRIPT_URL 추가
 
 ### ❌ 실패 시 롤백
 

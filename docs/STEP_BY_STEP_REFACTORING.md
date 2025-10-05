@@ -708,15 +708,16 @@ git commit -m "Step 4 재시도: 디버깅 로그 추가"
 - [x] Step 1: 의존성 분석 (1일) ✅ 완료 (2025-10-06 14:23)
 - [x] Step 2: 순수 함수 분리 (2일) ✅ 완료 (2025-10-06 15:47)
 - [x] Step 3: 전역 스토어 (3일) ✅ 완료 (2025-10-06 16:52)
-- [ ] Step 4: Hand Recorder Facade (5일) ← 다음 작업
-- [ ] Step 5: Data Loader (3일)
+  - Fix: DEFAULT_APPS_SCRIPT_URL 추가 (2025-10-06 18:30)
+- [x] Step 4: Hand Recorder Facade (5일) ✅ 완료 (2025-10-06 18:35)
+- [ ] Step 5: Data Loader (3일) ← 다음 작업
 - [ ] Step 6: Pot Calculator (2일)
 - [ ] Step 7: Card Selector (2일)
 - [ ] Step 8: Player Manager (2일)
 - [ ] 최종 통합 테스트 (1일)
 
 총 소요 예상: 21일 (3주)
-현재 진행: 3/9 완료 (33%)
+현재 진행: 4/9 완료 (44%)
 ```
 
 ### 최적화 진행 현황
@@ -727,12 +728,19 @@ git commit -m "Step 4 재시도: 디버깅 로그 추가"
 | Step 1 | 의존성 분석 | 10-06 14:23 | 0줄 | 0줄 | 0줄 | 7909 | 0% |
 | Step 2 | 순수 함수 분리 | 10-06 15:47 | ~100줄 | 35줄 | 35줄 | 7874 | 0.4% |
 | Step 3 | 전역 스토어 | 10-06 16:52 | ~150줄 | 60줄 | 95줄 | 7814 | 1.2% |
-| Step 4 | Hand Recorder | - | ~400줄 | ? | ? | ? | ? |
+| Step 4 | Hand Recorder | 10-06 18:35 | ~400줄 | 11줄 | 106줄 | 7803 | 1.3% |
 | Step 5 | Data Loader | - | ~800줄 | ? | ? | ? | ? |
 | Step 6 | Pot Calculator | - | ~300줄 | ? | ? | ? | ? |
 | Step 7 | Card Selector | - | ~200줄 | ? | ? | ? | ? |
 | Step 8 | Player Manager | - | ~300줄 | ? | ? | ? | ? |
 | **목표** | - | - | **6909줄** | **?** | **6909줄** | **1000** | **87%** |
+```
+
+**Step 4 실제 결과 분석**:
+- 예상: ~400줄 감소
+- 실제: 11줄 감소
+- 차이 원인: fetch 로직만 모듈화 (generateRows, buildIndexMeta 등은 유지)
+- 향후 계획: 나머지 함수들도 점진적으로 분리
 ```
 
 ### 롤백 기록 (실패 학습)
@@ -741,9 +749,17 @@ git commit -m "Step 4 재시도: 디버깅 로그 추가"
 
 | 날짜 | Step | 실패 원인 | 대책 | 재시도 결과 |
 |------|------|----------|------|------------|
-| 2025-10-07 | Step 2 | CORS 에러 | npm start 실행 | ✅ 성공 |
-| 2025-10-08 | Step 4 | handData null | 디버깅 로그 추가 | ✅ 성공 |
-| ... | ... | ... | ... | ... |
+| 2025-10-06 | Step 4 (1차) | appsScriptUrl null 반환 | Step 3 수정: DEFAULT_URL 추가 | ✅ 성공 |
+```
+
+**Step 4 실패 분석 (2025-10-06 18:20)**:
+- **문제**: "Apps Script URL이 설정되지 않았습니다" 에러
+- **근본 원인**: Step 3에서 `appsScriptUrl: localStorage || null`로 설정
+  - localStorage 없을 때 null 반환
+  - 기존 코드는 `localStorage || DEFAULT_URL` 패턴 사용
+- **해결**: src/core/store.js에 DEFAULT_APPS_SCRIPT_URL 추가
+- **교훈**: 기존 동작 방식 완전히 파악 후 리팩토링
+- **검증**: Step 3 검증 시 localStorage에 값이 있어서 문제 미발견
 ```
 
 ---
