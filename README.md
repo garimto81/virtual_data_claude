@@ -71,8 +71,11 @@ node server.js
   - functions.txt: 129개 함수
   - onclick-events.txt: 6개 이벤트
   - DEPENDENCY_MAP.md: 8개 모듈 구조 설계
-- [ ] **Step 2: 순수 함수 분리** (다음 작업, 2일)
-- [ ] **Step 3: 전역 스토어 구축** (3일)
+- [x] **Step 2: 순수 함수 분리 완료** ✅
+  - src/modules/pure-utils.js 생성 (5개 함수)
+  - index.html 약 35줄 감소
+  - 검증 완료
+- [ ] **Step 3: 전역 스토어 구축** (다음 작업, 3일)
 
 **Week 2 (Day 8-14)**
 - [ ] Step 4: Hand Recorder Facade (5일)
@@ -84,96 +87,98 @@ node server.js
 - [ ] Step 8: Player Manager (2일)
 - [ ] 최종 통합 테스트 (1일)
 
-### 🎯 다음 작업: Step 2 - 순수 함수 분리
+### 🎯 다음 작업: Step 3 - 전역 스토어 구축
 
-**목표**: 외부 의존성 없는 유틸리티 함수 10개를 별도 모듈로 분리
+**목표**: `window.state`, `window.APP_CONFIG` 등 전역 변수를 중앙 스토어로 통합
 
 ```bash
-# 1. 모듈 폴더 생성
-mkdir -p src/modules
+# 1. core 폴더 생성
+mkdir -p src/core
 
-# 2. 순수 함수 파일 생성
-cat > src/modules/pure-utils.js << 'EOF'
+# 2. store.js 생성
+cat > src/core/store.js << 'EOF'
 /**
- * 순수 함수 모음 (외부 의존성 없음)
+ * 중앙 상태 관리 스토어
  */
+class AppStore {
+  constructor() {
+    this.state = {
+      currentStreet: 'preflop',
+      playerDataByTable: {},
+      indexRows: [],
+      playersInHand: [],
+      actionState: { ... },
+      chipColors: [],
+    };
 
-export function parseSeatNumber(seat) {
-  return parseInt(seat.replace(/[^0-9]/g, '')) || 0;
+    this.config = {
+      appsScriptUrl: localStorage.getItem('appsScriptUrl') || '',
+      spreadsheetId: '1J-lf8bYTLPbpdhieUNdb8ckW_uwdQ3MtSBLmyRIwH7U',
+    };
+  }
+
+  getState() { return this.state; }
+  setState(newState) { this.state = { ...this.state, ...newState }; }
+  getConfig(key) { return this.config[key]; }
+  setConfig(key, value) { this.config[key] = value; }
 }
 
-export function compareSeatNumbers(a, b) {
-  return parseSeatNumber(a) - parseSeatNumber(b);
-}
-
-export function formatChips(chips) {
-  if (!chips) return '0';
-  return chips.toLocaleString();
-}
-
-export function formatCardDisplay(cardId) {
-  if (!cardId) return '';
-  const rank = cardId.slice(0, -1);
-  const suit = cardId.slice(-1);
-  const suitSymbols = { h: '♥️', d: '♦️', c: '♣️', s: '♠️' };
-  return rank + (suitSymbols[suit] || suit);
-}
-
-// ... 기타 순수 함수 6개
+export const store = new AppStore();
+window.__store__ = store;  // 디버깅용
 EOF
 
 # 3. Git Commit
-git add src/modules/pure-utils.js
-git commit -m "Step 2: 순수 함수 분리 (10개)"
+git add src/core/store.js index.html
+git commit -m "Step 3: 전역 스토어 구축"
 ```
 
 **index.html 수정**:
 ```html
-<!-- 기존 외부 스크립트 아래 추가 (라인 220 근처) -->
+<!-- Step 2 모듈 아래 추가 -->
 <script type="module">
-  // 순수 함수 임포트
-  import * as PureUtils from './src/modules/pure-utils.js';
+  import { store } from './src/core/store.js';
 
-  // 전역 노출 (onclick 호환성)
-  Object.assign(window, PureUtils);
+  // 기존 코드 호환성 유지
+  window.state = store.state;
+  window.APPS_SCRIPT_URL = store.getConfig('appsScriptUrl');
 
-  console.log('[Step 2] 순수 함수 모듈 로드 완료');
+  console.log('[Step 3] 중앙 스토어 초기화 완료');
 </script>
 
-<!-- index.html에서 기존 함수 제거 (주석 처리) -->
+<!-- 기존 state 초기화 제거 -->
 <script>
-  // ❌ 제거됨 (pure-utils.js로 이동)
-  // function parseSeatNumber(seat) { ... }
-  // function compareSeatNumbers(a, b) { ... }
-  // function formatChips(chips) { ... }
+  // ❌ 제거됨 (store.js로 이동)
+  // window.state = { ... };
+  // window.APP_CONFIG = { ... };
 </script>
 ```
 
 ### ✅ 검증 체크리스트
 
 **A. 콘솔 확인**
-- [ ] 브라우저: http://localhost:8000 (또는 5000, 8080)
-- [ ] F12 → Console 탭
-- [ ] "[Step 2] 순수 함수 모듈 로드 완료" 메시지 확인
-- [ ] 에러 메시지 0개
+- [ ] "[Step 3] 중앙 스토어 초기화 완료" 메시지
+- [ ] 에러 0개
 
-**B. 함수 호출 테스트** (F12 Console 입력)
+**B. 스토어 접근 테스트** (F12 Console)
 ```javascript
-parseSeatNumber('#5')        // 결과: 5
-parseSeatNumber('Seat 10')   // 결과: 10
-formatChips(1000)            // 결과: "1,000"
-formatChips(500000)          // 결과: "500,000"
-window.parseSeatNumber       // 결과: function
+window.__store__                        // AppStore 객체 확인
+window.state                             // { currentStreet: ... }
+window.state.currentStreet               // 'preflop'
+__store__.getState()                     // 전체 상태 확인
+__store__.getConfig('appsScriptUrl')     // URL 확인
+__store__.setState({ currentStreet: 'flop' })
+window.state.currentStreet               // 'flop' (동기화 확인)
 ```
 
-**C. UI 기능 테스트**
+**C. 핵심 기능 테스트**
 - [ ] 앱 초기 로딩 정상
-- [ ] 플레이어 목록 표시 정상
-- [ ] 좌석 번호 정렬 정상
-- [ ] 칩 포맷 표시 정상
+- [ ] 플레이어 데이터 로딩 정상
+- [ ] 핸드 시작 → state 업데이트 정상
+- [ ] 액션 입력 → state 반영 정상
 
-**D. onclick 이벤트 테스트**
-- [ ] 아무 버튼이나 클릭 → 에러 없음
+**D. Apps Script 연동**
+- [ ] 설정 모달 → URL 표시 확인
+- [ ] URL 수정 → 저장 → 유지 확인
 
 ### ❌ 실패 시 롤백
 
