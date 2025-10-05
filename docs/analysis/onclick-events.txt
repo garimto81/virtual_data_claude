@@ -1,0 +1,6 @@
+onclick="addAutoAction('Checks')"
+onclick="addAutoAction('Folds')"
+onclick="deleteLocalPlayer(${index})"
+onclick="handleAllIn()"
+onclick="handleSmartCall()"
+onclick="openQuickBetRaise()"

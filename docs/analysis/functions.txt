@@ -1,0 +1,129 @@
+843:  (function initializeSettings() {
+883:  function parseSeatNumber(seat) {
+900:  function compareSeatNumbers(a, b) {
+911:  function getPlayerSeatNumber(player) {
+919:  function conditionalInit() {
+1499:  function updateAllVersionDisplays() {
+1569:    async function loadDefaultUrlFromConfig() {
+1592:    function extractSpreadsheetIdFromUrl(url) {
+1601:    async function initializeGoogleSheetsAPI() {
+1640:    async function updateAppsScriptUrl(newUrl) {
+1681:    async function safeIndexedDBOperation(operation, fallbackValue = null, operationName = 'IndexedDB 작업') {
+1716:    async function savePlayersToIndexedDB(players) {
+1731:    async function loadPlayersFromIndexedDB() {
+1748:    async function saveTablesToIndexedDB(tables) {
+1762:    async function loadTablesFromIndexedDB() {
+1773:    function lockUI(title = '처리 중...', message = '잠시만 기다려주세요') {
+1801:    function unlockUI() {
+1827:    async function executeWithLock(asyncFunction, title = '처리 중...', message = '잠시만 기다려주세요') {
+1956:    function openLogModal(){
+1960:    function closeLogModal(){ el.logModal.classList.add('opacity-0', 'hidden'); }
+1961:    function logMessage(msg,isError=false){
+1974:    function getFormattedTimeInTimezone(date, tz){
+1982:    function populateTimezones(){
+1990:    function updateTimeDisplay(){ el.timeDisplay.textContent=getFormattedTimeInTimezone(new Date(),window.state.selectedTimezone); }
+2001:    function parseCSV(text){
+2009:    function formatCardDisplay(cardId){
+2016:    function renderTableSelection(){
+2029:    function updateSelectedTableDisplay() {
+2044:    function getFilteredTables() {
+2075:    function renderTableGrid() {
+2140:    function openTableSelectorModal() {
+2146:    function closeTableSelectorModal() {
+2151:    function renderPlayerSelection(){
+2264:    function renderPlayerDetails(){
+2297:    function renderBoard(){
+2304:    function calculateFinalPot(){
+2309:    function renderWinnerSelection(){
+2318:    function renderActionStreets(){
+2393:    function renderAll(){ 
+2402:    function openModal(node, html){ node.innerHTML=html; node.classList.remove('hidden', 'opacity-0'); }
+2403:    function closeModal(node){ node.classList.add('hidden', 'opacity-0'); }
+2406:    function getBoardCardRules(currentStreet) {
+2448:    function getBoardCardStatus(cardId, currentStreet) {
+2500:    function openCardSelector(){
+2721:    function openPlayerHandSelector(player, count) {
+2791:    function openGenericCardSelector(target, count) {
+2808:    function openActionPad(street){
+2996:    async function executePlayerAction(playerName, action, btn) {
+3067:    function openChipInput(player, isInitial = false) {
+3123:    function openKeypad(targetInput, options={}){
+3192:    function togglePlayerInHand(name){
+3283:    function setPlayerRole(name){
+3324:    function assignCard(cards){
+3378:    function addActionToLog(action, amount=null, player=null){
+3464:    function undoLastAction(street){
+3485:    function initializeSeatGrid() {
+3503:    function updateSeatDisplay() {
+3509:    function getPositionsForSeat(seatNum) {
+3528:    function getOccupiedSeats() {
+3536:    function getAllPlayerSeats() {
+3546:    function getNextPlayerSeat(currentSeat, allSeats) {
+3559:    function getNextOccupiedSeat(currentSeat, occupiedSeats) {
+3572:    function updateButtonPositionDisplay() {
+3611:    function updatePositionIndicators() {
+3637:    function getActionOrder(street) {
+3683:    function getNextActionPlayer(street) {
+3712:    function calculateNextActionPlayer(street) {
+3748:    function updateNextActionDisplay() {
+3782:    function addAutoAction(actionType, amount = '') {
+3814:    function handleSmartCall() {
+3832:    function handleAllIn() {
+3847:    function openQuickBetRaise() {
+3871:    function saveActionState(){ localStorage.setItem('phl_v46_state', JSON.stringify(window.state.actionState)); }
+3872:    function loadActionState(){
+3882:    function updateBlindButtons() {
+3895:    function syncAnteCheckbox() {
+3906:    function getSmartCheckCallAction(player, street) {
+3957:    function checkStreetComplete(street) {
+4011:    function getNextStreet(current) {
+4019:    function calculatePlayerContributions() {
+4104:    function calculateActualPot() {
+4151:    function calculateAccuratePot() {
+4228:    function calculatePotWithCorrection() {
+4273:    function calculateUncalledBet() {
+4305:    function calculatePotSize(){
+4360:    async function fetchCsv(url, retries = 3, delay = 1000){
+4407:    function buildTypeFromCsv(rows){
+4427:      function detectSheetStructure(headerRow, dataRows) {
+4505:      function validateRowData(r, rowIndex) {
+4602:    function buildIndexFromCsv(rows){
+4623:    function parseHandBlock(rows, handNumber, preferDate){
+4742:    async function loadInitial(){
+4877:    function openLoadHandModal(){
+4944:    async function ensureHandCsv(){
+4953:    async function loadHandData(handNumber, preferDate){
+5119:    function formatISODateInTZ(date, tz){
+5127:    function generateRows_v46(){
+5264:async function _sendDataToGoogleSheet_internal(){
+5363:    function nowIso() {
+5367:    function buildIndexMeta(){
+5390:      function determineWorkStatus() {
+5423:    function buildTypeUpdates(){
+5441:    function computeCamPrefill(which){
+5474:    function getCamNumber(which) {
+5521:    function calculateSidePots() {
+5586:    async function resetApp(reloadIndex = true, autoIncrement = false){
+5702:    function showFeedback(msg, isErr = false, duration = 5000) {
+5750:    function setupEventListeners(){
+6285:      function handleKeypadDown(e) {
+6330:      function handleKeypadUp(e) {
+6343:      function processKeypadInputImmediate(btn) {
+6608:    function openRegistrationModal() {
+6616:    function closeRegistrationModal() {
+6665:    function initPlayerManagement() {
+6683:    function onManagementTableSelected(tableName) {
+6711:    function renderManagementPlayersList() {
+6852:    function addPlayerToSeat(name, seatNumber) {
+6902:    function updateLocalPlayerSeat(index, newSeat) {
+6926:    function updateLocalPlayerChips(index, newChips) {
+6998:    function updateChangesSummary() {
+7279:    function loadPlayersList() {
+7374:    async function _addNewPlayer_internal(name, seat, chips) {
+7472:    async function addNewPlayer(name, seat, chips) {
+7522:    async function _updatePlayerSeat_internal(playerName, newSeat) {
+7552:    async function updatePlayerSeat(playerName, newSeat) {
+7601:    async function _updatePlayerChips_internal(playerName, newChips) {
+7626:    async function updatePlayerChips(playerName, newChips) {
+7678:    async function deletePlayer(playerName) {
+7856:    async function initializeApp(){
