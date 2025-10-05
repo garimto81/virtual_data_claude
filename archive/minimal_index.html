@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimal Test - Phase 4 Functions</title>
+</head>
+<body>
+    <h1>Minimal Phase 4 Test</h1>
+    <div id="test-result"></div>
+    <button onclick="testPhase4Functions()">Test Phase 4 Functions</button>
+
+    <script>
+        console.log('🚀 Minimal test script started');
+
+        // APP_CONFIG 정의
+        window.APP_CONFIG = {
+            isInitialized: false,
+            appsScriptUrl: null,
+            autoInit: false,
+            version: '3.4.26',
+            data: {},
+            settings: { debugMode: false, autoSave: true, offlineMode: false },
+            state: { lastConnection: null, connectionAttempts: 0, isOnline: navigator.onLine }
+        };
+
+        // validateAppsScriptUrl 함수
+        function validateAppsScriptUrl(url) {
+            if (!url || typeof url !== 'string') return false;
+            return /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(url);
+        }
+
+        // Phase 4 함수들 정의
+        window.ensureAppsScriptUrl = function() {
+            console.log('ensureAppsScriptUrl called');
+            if (!window.APP_CONFIG.appsScriptUrl) {
+                throw new Error('Apps Script URL이 설정되지 않았습니다.');
+            }
+            if (!validateAppsScriptUrl(window.APP_CONFIG.appsScriptUrl)) {
+                throw new Error('올바르지 않은 Apps Script URL입니다.');
+            }
+            if (!window.APP_CONFIG.isInitialized) {
+                throw new Error('앱이 초기화되지 않았습니다.');
+            }
+            if (!window.APP_CONFIG.state.isOnline) {
+                throw new Error('인터넷 연결이 끊어졌습니다.');
+            }
+            return window.APP_CONFIG.appsScriptUrl;
+        };
+
+        window.protectedApiCall = async function(action, data = {}, options = {}) {
+            console.log('protectedApiCall called:', action, data, options);
+            // 테스트용 더미 구현
+            return { success: true, action, data, options };
+        };
+
+        window.ApiCallManager = {
+            calls: [],
+            addCall: function(call) {
+                this.calls.push(call);
+                console.log('ApiCallManager.addCall:', call);
+            },
+            getStats: function() {
+                return {
+                    totalCalls: this.calls.length,
+                    successCalls: this.calls.filter(c => c.success).length,
+                    failedCalls: this.calls.filter(c => !c.success).length,
+                    averageResponseTime: 100
+                };
+            },
+            reset: function() {
+                this.calls = [];
+                console.log('ApiCallManager.reset');
+            }
+        };
+
+        window.getUserFriendlyErrorMessage = function(error, action) {
+            console.log('getUserFriendlyErrorMessage called:', error, action);
+            const message = typeof error === 'string' ? error :
+                           error && error.message ? error.message :
+                           error ? error.toString() : 'Unknown error';
+
+            if (message.includes('URL이 설정되지 않았습니다')) {
+                return '⚠️ Apps Script URL을 먼저 설정해주세요.';
+            }
+            if (message.includes('올바르지 않은 Apps Script URL')) {
+                return '⚠️ 올바른 Apps Script URL을 입력해주세요.';
+            }
+            if (message.includes('앱이 초기화되지 않았습니다')) {
+                return '⚠️ 앱 초기화를 먼저 완료해주세요.';
+            }
+            if (message.includes('인터넷 연결이 끊어졌습니다')) {
+                return '⚠️ 인터넷 연결을 확인해주세요.';
+            }
+
+            return `❌ ${action || '작업'} 실패: ${message}`;
+        };
+
+        // 추가 보호된 함수들
+        window.protectedSendToSheets = async function() {
+            console.log('protectedSendToSheets called');
+            return await window.protectedApiCall('submitHand', {}, {
+                showProgress: true,
+                progressMessage: '데이터 전송 중...',
+                retryCount: 2
+            });
+        };
+
+        window.protectedBulkRegister = async function(payload) {
+            console.log('protectedBulkRegister called:', payload);
+            return await window.protectedApiCall('batchUpdate', payload, {
+                showProgress: true,
+                progressMessage: '일괄 등록 중...',
+                retryCount: 2
+            });
+        };
+
+        window.protectedAddPlayer = async function(playerData) {
+            console.log('protectedAddPlayer called:', playerData);
+            return await window.protectedApiCall('addPlayer', playerData, {
+                showProgress: true,
+                progressMessage: '플레이어 추가 중...',
+                retryCount: 2
+            });
+        };
+
+        // 테스트 함수
+        function testPhase4Functions() {
+            console.log('🧪 Phase 4 함수 테스트 시작...');
+
+            const results = {
+                APP_CONFIG: typeof window.APP_CONFIG,
+                ensureAppsScriptUrl: typeof window.ensureAppsScriptUrl,
+                protectedApiCall: typeof window.protectedApiCall,
+                ApiCallManager: typeof window.ApiCallManager,
+                getUserFriendlyErrorMessage: typeof window.getUserFriendlyErrorMessage,
+                protectedSendToSheets: typeof window.protectedSendToSheets,
+                protectedBulkRegister: typeof window.protectedBulkRegister,
+                protectedAddPlayer: typeof window.protectedAddPlayer
+            };
+
+            console.log('📊 함수 정의 상태:', results);
+
+            const resultDiv = document.getElementById('test-result');
+            const allDefined = Object.values(results).every(type =>
+                type === 'function' || type === 'object'
+            );
+
+            resultDiv.innerHTML = `
+                <h3>테스트 결과: ${allDefined ? '✅ 성공' : '❌ 실패'}</h3>
+                <ul>
+                    ${Object.entries(results).map(([name, type]) =>
+                        `<li>${name}: ${type} ${type === 'function' || type === 'object' ? '✅' : '❌'}</li>`
+                    ).join('')}
+                </ul>
+            `;
+
+            // 실제 함수 호출 테스트
+            if (allDefined) {
+                console.log('🎯 함수 호출 테스트...');
+
+                // URL 검증 테스트 (에러 예상)
+                try {
+                    window.ensureAppsScriptUrl();
+                } catch (error) {
+                    console.log('✅ URL 검증 에러 정상 동작:', error.message);
+                }
+
+                // 에러 메시지 테스트
+                const errorMsg = window.getUserFriendlyErrorMessage('URL_VALIDATION_ERROR', 'testAction');
+                console.log('✅ 에러 메시지 생성:', errorMsg);
+
+                // API Call Manager 테스트
+                window.ApiCallManager.addCall({ action: 'test', success: true });
+                const stats = window.ApiCallManager.getStats();
+                console.log('✅ API Call Manager 통계:', stats);
+            }
+
+            return allDefined;
+        }
+
+        // 페이지 로드 후 자동 테스트
+        window.addEventListener('load', function() {
+            console.log('✅ 페이지 로드 완료');
+            setTimeout(testPhase4Functions, 100);
+        });
+
+        console.log('✅ Minimal test script completed');
+    </script>
+</body>
+</html>
