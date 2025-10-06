@@ -84,7 +84,7 @@ let indexContent = fs.readFileSync(indexPath, 'utf8');
 // 2-1. APP_VERSION 업데이트
 const before4 = indexContent;
 indexContent = indexContent.replace(
-  /(const APP_VERSION = )'v[\d.]+ - [^']+'/,
+  /(const APP_VERSION = )'v[\d.]+'/,
   `$1'${versionTag}'`
 );
 if (before4 !== indexContent) {

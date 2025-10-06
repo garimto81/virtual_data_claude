@@ -1,7 +1,7 @@
 {
   "name": "virtual_data",
-  "version": "3.14.0",
-  "description": "> 실시간 포커 핸드 기록 및 분석 시스템 v3.14.0 - 버전 관리 시스템 안정화",
+  "version": "3.14.1",
+  "description": "> 실시간 포커 핸드 기록 및 분석 시스템 v3.14.1 - 버전 관리 시스템 완성",
   "main": "test_phase4_playwright.js",
   "directories": {
     "doc": "docs"
