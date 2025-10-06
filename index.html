@@ -243,16 +243,19 @@
     console.log('  - Spreadsheet ID:', store.getConfig('spreadsheetId'));
   </script>
 
-  <!-- Step 4: Hand Recorder Facade -->
+  <!-- Step 4 확장: Hand Recorder Facade -->
   <script type="module">
     import * as HandFacade from './src/facades/hand-facade.js';
 
     // 전역 노출 (기존 코드 호환)
+    window.generateRows_v46 = HandFacade.generateRows_v46;
+    window.buildIndexMeta = HandFacade.buildIndexMeta;
+    window.buildTypeUpdates = HandFacade.buildTypeUpdates;
     window.sendHandToGoogleSheet = HandFacade.sendHandToGoogleSheet;
     window.getIsSending = HandFacade.getIsSending;
     window.setIsSending = HandFacade.setIsSending;
 
-    console.log('[Step 4] Hand Recorder 모듈 로드 완료');
+    console.log('[Step 4 확장] Hand Recorder 모듈 로드 완료 (6개 함수)');
   </script>
   <!-- ActionHistory 시스템 - Phase 1 -->
   <script src="archive/action-history.js?v=3.2.5" defer></script>
@@ -867,7 +870,7 @@
   // ========================================
   // 중앙 버전 관리 시스템
   // ========================================
-  const APP_VERSION = 'v3.14.1';
+  const APP_VERSION = 'v3.15.0';
   const VERSION_DATE = '2025-10-06';
   const VERSION_INFO = `포커 핸드 로거 ${APP_VERSION} (${VERSION_DATE})`;
 
@@ -5070,147 +5073,8 @@
     }
 
     // ====== GENERATE & SEND ======
-    function formatISODateInTZ(date, tz){
-      // yyyy-MM-dd
-      const y = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year:'numeric' }).format(date);
-      const m = new Intl.DateTimeFormat('en-CA', { timeZone: tz, month:'2-digit' }).format(date);
-      const d = new Intl.DateTimeFormat('en-CA', { timeZone: tz, day:'2-digit' }).format(date);
-      return `${y}-${m}-${d}`;
-    }
-
-    function generateRows_v46(){
-      const out=[]; let no=1;
-      const push=(arr)=>{ const a=[no, ...arr]; while(a.length<18) a.push(''); out.push(a); no++; };
-
-      const epochSec = Math.floor(Date.now()/1000);
-      const sb = unformatNumber(window.state.actionState.smallBlind)||'0';
-      const bb = unformatNumber(window.state.actionState.bigBlind)||'0';
-      const ante = window.state.actionState.hasBBAnte ? bb : '0';
-      const table = window.state.selectedTable || '';
-      const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 형식
-
-      // GAME / PAYOUTS - E열(인덱스 4)에 날짜 추가
-      const gameRow = ['GAME','GGProd Hand Logger','Virtual Table', currentDate];
-      push(gameRow);
-      push(['PAYOUTS']);
-
-      // HAND: C no, D code, G ante, I SB, J BB, R table
-      const handDate = formatISODateInTZ(new Date(), window.state.selectedTimezone); // yyyy-MM-dd
-      
-      // HAND: C no, D code, G ante, I SB, J BB, R table
-      push(['HAND',
-        String(window.state.actionState.handNumber),
-        epochSec,
-        'HOLDEM',
-        window.state.actionState.hasBBAnte ? 'BB_ANTE':'NO_ANTE',
-        ante,
-        handDate, // ★ 여기(H) 칸에 날짜를 넣도록 약속 (Apps Script도 이 칸은 날짜로 쓰게)
-        sb,       // I
-        bb,       // J
-        0,1,2,3,0,0,1,
-        table     // R
-      ]);
-
-      // PLAYERS
-      const players = window.state.playersInHand.map((p,i)=>({
-        ...p, 
-        seat: p.seat || (i+1)  // Type에서 가져온 seat 정보가 있으면 사용, 없으면 인덱스+1
-      }));
-      
-      console.log(`%c=== PLAYER 행 생성 [${APP_VERSION}] ===`, 'color: #3b82f6; font-weight: bold');
-      console.log(`현재 행번호(no): ${no}`);
-      console.log(`플레이어 수: ${players.length}`);
-      console.log('%c형식: A=행번호, B=PLAYER, C=이름, D=좌석, E=0(고정), F=시작칩, G=종료칩, H=핸드, I=포지션', 'color: #9ca3af');
-      
-      players.forEach(p=>{
-        console.log(`\n--- ${p.name} 처리 시작 ---`);
-        console.log(`  원본 데이터:`, p);
-        
-        // 칩 값 확인 - initialChips가 없으면 chips 값을 사용
-        let initialChips;
-        let finalChips = parseInt(unformatNumber(p.chips)||0,10);
-        
-        // initialChips가 undefined이거나 빈 문자열인 경우 처리
-        if(p.initialChips === undefined || p.initialChips === '' || p.initialChips === null) {
-          console.warn(`  ⚠️ initialChips가 없음. chips 값 사용: ${p.chips}`);
-          initialChips = finalChips; // 시작칩이 없으면 현재 칩을 시작칩으로 사용
-        } else {
-          const unformattedInitial = unformatNumber(p.initialChips);
-          console.log(`  unformatNumber(p.initialChips) = "${unformattedInitial}"`);
-          initialChips = parseInt(unformattedInitial || '0', 10);
-          if(isNaN(initialChips)) {
-            console.error(`  ❌ parseInt가 NaN 반환! 원본: "${p.initialChips}"`);
-            initialChips = 0;
-          }
-        }
-        
-        // 디버깅: 실제 값 확인
-        console.log(`  초기칩(raw): "${p.initialChips}" → ${initialChips}`);
-        console.log(`  최종칩(raw): "${p.chips}" → ${finalChips}`);
-        console.log(`  핸드: ${p.hand?.join(' ') || '(없음)'}`);
-        
-        // 배열 생성 전 값 타입 확인
-        console.log(`  initialChips 타입: ${typeof initialChips}, 값: ${initialChips}`);
-        console.log(`  finalChips 타입: ${typeof finalChips}, 값: ${finalChips}`);
-        
-        // 포지션 정보 계산 (BTN/SB/BB)
-        const positions = getPositionsForSeat(parseSeatNumber(p.seat) || 1);
-        const positionStr = positions.length > 0 ? positions.join(',') : '';
-        
-        // PLAYER 형식: B=PLAYER, C=name, D=seat, E=0, F=시작칩, G=종료칩, H=핸드, I=포지션
-        // push 함수가 자동으로 행번호를 A열에 추가하므로 8개 요소 필요
-        const playerRow = ['PLAYER', p.name, parseSeatNumber(p.seat) || 1, 0, initialChips, finalChips, p.hand?.length? p.hand.join(' ') : '', positionStr];
-        
-        console.log(`  ===== PLAYER 행 생성 =====`);
-        console.log(`  playerRow 배열:`, playerRow);
-        console.log(`  playerRow.length: ${playerRow.length}`);
-        
-        // 각 요소 검증
-        console.log(`  [0] = '${playerRow[0]}' (PLAYER 문자열)`);
-        console.log(`  [1] = '${playerRow[1]}' (이름: ${p.name})`);
-        console.log(`  [2] = ${playerRow[2]} (좌석: ${p.seat})`);
-        console.log(`  [3] = ${playerRow[3]} (0 고정값)`);
-        console.log(`  [4] = ${playerRow[4]} (시작칩: ${initialChips})`);
-        console.log(`  [5] = ${playerRow[5]} (종료칩: ${finalChips})`);
-        console.log(`  [6] = '${playerRow[6]}' (핸드)`);
-        console.log(`  [7] = '${playerRow[7]}' (포지션: ${positionStr})`);
-        
-        // push 전 현재 행번호
-        const currentNo = no;
-        console.log(`  push 전 행번호: ${currentNo}`);
-        
-        push(playerRow);
-        
-        // push 후 실제 저장된 데이터 확인
-        const pushedRow = out[out.length - 1];
-        console.log(`  push 후 저장된 행:`, pushedRow);
-        console.log(`  최종 CSV 형식:`);
-        console.log(`    A=${pushedRow[0]} (행번호), B=${pushedRow[1]} (PLAYER), C=${pushedRow[2]} (이름), D=${pushedRow[3]} (좌석),`);
-        console.log(`    E=${pushedRow[4]} (0 고정값), F=${pushedRow[5]} (시작칩), G=${pushedRow[6]} (종료칩), H=${pushedRow[7]} (핸드), I=${pushedRow[8]} (포지션)`);
-        console.log(`--- ${p.name} 처리 완료 ---\n`);
-      });
-
-      // EVENTS
-      const addEv=(log)=>{
-        const p=players.find(x=>x.name===log.player);
-        const seat=p?p.seat:'';
-        const amt=log.amount? unformatNumber(log.amount):'';
-        let t=(log.action||'').toUpperCase().replace(/S$/,'');
-        if(t==='BET/RAISES') t='RAISE TO';
-        push(['EVENT', t, seat, amt, '' ]);
-      };
-      window.state.actionState.preflop.forEach(addEv);
-      if(window.state.board.length>=3){ push(['EVENT','BOARD',1,window.state.board[0],'' ]); push(['EVENT','BOARD',1,window.state.board[1],'' ]); push(['EVENT','BOARD',1,window.state.board[2],'' ]); }
-      window.state.actionState.flop.forEach(addEv);
-      if(window.state.board.length>=4){ push(['EVENT','BOARD',1,window.state.board[3],'' ]); }
-      window.state.actionState.turn.forEach(addEv);
-      if(window.state.board.length>=5){ push(['EVENT','BOARD',1,window.state.board[4],'' ]); }
-      window.state.actionState.river.forEach(addEv);
-
-      // 마지막 번호행(선택)
-      out.push([no]); 
-      return { rows: out, epochSec, currentDate };
-    }
+    // ✅ Step 4 확장: generateRows_v46, buildIndexMeta, buildTypeUpdates는
+    // hand-recorder.js로 이동, hand-facade.js를 통해 window 전역 노출됨
     
 // Phase 4: 원본 함수를 내부 함수로 변경
 async function _sendDataToGoogleSheet_internal(){
@@ -5298,76 +5162,6 @@ async function _sendDataToGoogleSheet_internal(){
     function nowIso() {
       // 서버에서 timezone 변환하므로 UTC ISO로 보냄
       return new Date().toISOString();
-    }
-    function buildIndexMeta(){
-      const handNumber = String(window.state.actionState.handNumber);
-      const handUpdatedAt = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 형식
-      const table = window.state.selectedTable || '';
-      
-      // 카메라 정보 로깅
-      console.log('📦 Index 메타데이터 빌드:');
-      console.log(`  cam1: ${window.state.camPreset.cam1} / 번호: ${window.state.camNumbers.cam1no}`);
-      console.log(`  cam2: ${window.state.camPreset.cam2} / 번호: ${window.state.camNumbers.cam2no}`);
-      
-      // 마지막 액션 찾기
-      let lastActionDesc = '';
-      const streets = ['river', 'turn', 'flop', 'preflop'];
-      for(const st of streets) {
-        const actions = window.state.actionState[st];
-        if(actions.length > 0) {
-          const last = actions[actions.length - 1];
-          lastActionDesc = `${last.player} ${last.action} ${last.amount || ''}`.trim();
-          break;
-        }
-      }
-      
-      // 작업 상태 판단
-      function determineWorkStatus() {
-        // 승자가 선택되었으면 '완료'
-        if(window.state.playersInHand.some(p => p.role === 'winner')) {
-          return '완료';
-        }
-        // 리버까지 갔으면 '검토필요'
-        if(window.state.currentStreet === 'river' && window.state.actionState.river.length > 0) {
-          return '검토필요';
-        }
-        return '진행중';
-      }
-      
-      // Index 시트의 전체 열 구조에 맞게 데이터 준비
-      return {
-        handNumber,                                           // A열
-        // startRow, endRow는 서버에서 계산                    // B,C열
-        handUpdatedAt,                                        // D열 (YYYY-MM-DD)
-        // handEdit는 비워둠                                  // E열
-        // handEditTime은 서버에서 처리                        // F열
-        label: 'HOLDEM',                                      // G열
-        table,                                                 // H열
-        tableUpdatedAt: handUpdatedAt,                        // I열 (YYYY-MM-DD)
-        cam: `${window.state.camPreset.cam1 || ''}+${window.state.camPreset.cam2 || ''}`, // J열
-        camFile01name: window.state.camPreset.cam1 || '',            // K열
-        camFile01number: getCamNumber('cam1'), // L열 - 자동 계산된 번호
-        camFile02name: window.state.camPreset.cam2 || '',            // M열
-        camFile02number: getCamNumber('cam2'), // N열 - 자동 계산된 번호
-        lastStreet: window.state.currentStreet,                      // O열
-        lastAction: lastActionDesc,                           // P열
-        workStatus: determineWorkStatus()                     // Q열
-      };
-    }
-
-    function buildTypeUpdates(){
-      // 이번 핸드 동안 칩이 수정된 플레이어만 추려서 Type에 updatedAt 기록
-      const table = window.state.selectedTable || '';
-      return window.state.playersInHand
-        .filter(p => p.chipsUpdatedAt) // 수정된 케이스만
-        .map((p, index) => ({
-          player: p.name,
-          table,
-          notable: p.notable || false, // Notable 정보 추가
-          chips: String(p.chips || ''),
-          updatedAt: p.chipsUpdatedAt, // ISO. 앱 스크립트에서 Date로 set
-          seat: String(p.seat || index + 1) // Seat 정보 추가 (좌석 번호 또는 인덱스+1)
-        }));
     }
 
 
