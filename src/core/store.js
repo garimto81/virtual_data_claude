@@ -70,7 +70,7 @@ class AppStore {
       isInitialized: false,
       appsScriptUrl: localStorage.getItem('appsScriptUrl') || DEFAULT_APPS_SCRIPT_URL,
       autoInit: false,
-      version: typeof APP_VERSION !== 'undefined' ? APP_VERSION : '3.13.0',
+      version: typeof APP_VERSION !== 'undefined' ? APP_VERSION : '3.14.0',
       spreadsheetId: localStorage.getItem('googleSheetsSpreadsheetId') || '1J-lf8bYTLPbpdhieUNdb8ckW_uwdQ3MtSBLmyRIwH7U',
       data: {},
       settings: {
@@ -88,7 +88,7 @@ class AppStore {
     // Constants (from constants.js integration)
     this.constants = {
       APP: {
-        VERSION: 'v3.13.0',
+        VERSION: 'v3.14.0',
         VERSION_DATE: '2025-10-06',
         NAME: '포커 핸드 로거',
         GEMINI_API_PROXY: '/api/gemini/analyze',
