@@ -2,10 +2,15 @@
 <!--
   ============================================
   포커 핸드 로거 (Poker Hand Logger)
-  Version: 3.13.0 - File Optimization Phase 1-2 Complete
+  Version: 3.14.0 - File Optimization Phase 2-2 Complete
   Last Modified: 2025-10-06 KST
 
   Change Log:
+  - v3.14.0 (2025-10-06): File Optimization Phase 2-2 Complete (-236줄 감소)
+    • constants.js → store.js 통합 (236줄)
+    • store.constants 속성으로 모든 상수 통합
+    • getConstant(category, key) 메서드 추가
+    • index.html 참조 제거
   - v3.13.0 (2025-10-06): File Optimization Phase 1-2 Complete (-494줄 감소)
     • 문서 최적화: 중복 문서 3개 아카이브 (2171줄)
     • 파일 정리: lazy-loader.js, performance-monitor.js 제거
@@ -260,8 +265,6 @@
   <script src="archive/offline-storage.js?v=3.2.5" defer></script>
   <!-- 🔧 로거 시스템 (먼저 로드) -->
   <script src="src/js/logger.js?v=1.0.0"></script>
-  <!-- 📦 상수 정의 (로거 다음에 로드) -->
-  <script src="src/js/constants.js?v=1.0.0"></script>
   <!-- 🛠️ 유틸리티 함수들 -->
   <script src="src/utils/validators.js?v=1.0.0"></script>
   <script src="src/utils/helpers.js?v=1.0.0"></script>
