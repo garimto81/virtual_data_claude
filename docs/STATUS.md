@@ -6,13 +6,13 @@
 
 ## 📍 현재 위치
 
-**Phase 1: 급진적 리팩토링 - Step 4 확장 완료 → Step 5 대기**
+**Phase 1: 급진적 리팩토링 - Step 5 진행 중 (50% 완료)**
 
 ---
 
 ## 🚦 상태
 
-🟢 **정상** - 진행률 4.0% (Step 4 확장 완료, 가속 중)
+🟡 **진행 중** - Step 5 작업 중 (data-loader.js 생성 완료, facade 생성 대기)
 
 ---
 
@@ -26,7 +26,16 @@
 
 ## 🚧 진행 중
 
-**없음** - 다음 작업 대기 중
+**Step 5: Data Loader 모듈화 (50% 완료)**
+- [x] 함수 위치 파악 완료 (542줄)
+- [x] data-loader.js 생성 완료
+- [ ] data-facade.js 생성 (다음 작업)
+- [ ] index.html import 추가
+- [ ] index.html 원본 함수 제거 (542줄)
+- [ ] 버전 v3.16.0 업데이트
+- [ ] 검증: 데이터 로드 플로우 테스트
+
+**현재 커밋**: wip: Step 5 진행 중 - data-loader.js 생성 (v3.15.2)
 
 ---
 
@@ -69,40 +78,52 @@
 
 ## 🎯 다음 할 일 (최우선)
 
-### Step 5 - Data Loader 모듈화
+### Step 5 - Data Loader 모듈화 (계속)
 
-**작업 순서**:
-1. [ ] index.html에서 Google Sheets 관련 함수 찾기
-   - `loadPlayersFromGoogleSheet()` (~200줄)
-   - `loadTablesFromGoogleSheet()` (~150줄)
-   - `loadHandFromGoogleSheet()` (~100줄)
-   - 기타 로더 함수들
-2. [ ] src/modules/data-loader.js 생성 (DataLoader 클래스)
-3. [ ] src/facades/data-facade.js 생성 (window 전역 노출)
-4. [ ] index.html에서 원본 함수 제거
-5. [ ] Git Commit: "Step 5: Data Loader 모듈화 (-800줄)"
-6. [ ] 검증: 데이터 로드 플로우 테스트
-   - Players 로드 → Tables 로드 → Hand 로드
+**이미 완료**:
+- [x] 함수 위치 파악 (542줄: buildTypeFromCsv 194줄 + buildIndexFromCsv 19줄 + parseHandBlock 115줄 + loadInitial 135줄 + IndexedDB 5개 함수 79줄)
+- [x] src/modules/data-loader.js 생성 (DataLoader 클래스)
 
-**예상 시간**: 6-8시간
-**예상 효과**: 7602줄 → 6802줄 (-800줄, 3.9% → 14.0%)
+**다음 작업 순서** (즉시 시작):
+1. [ ] src/facades/data-facade.js 생성
+   - `loadInitial()` → window.loadInitial
+   - `buildTypeFromCsv()` → window.buildTypeFromCsv
+   - `buildIndexFromCsv()` → window.buildIndexFromCsv
+   - `parseHandBlock()` → window.parseHandBlock
+   - IndexedDB 함수들 전역 노출
+2. [ ] index.html에 import 추가 (script type="module")
+3. [ ] index.html에서 원본 함수 제거 (542줄)
+   - buildTypeFromCsv (4364-4557, 194줄)
+   - buildIndexFromCsv (4559-4577, 19줄)
+   - parseHandBlock (4580-4694, 115줄)
+   - loadInitial (4699-4833, 135줄)
+   - IndexedDB 함수들 (1678-1764, 79줄)
+4. [ ] 버전 v3.16.0 업데이트: "Step 5 완료 - Data Loader 모듈화"
+5. [ ] Git Commit
+6. [ ] 검증: 페이지 새로고침 → 데이터 로드 → 플레이어/테이블 표시 확인
+
+**예상 남은 시간**: 2-3시간
+**예상 효과**: 7602줄 → 7060줄 (-542줄, 3.9% → 10.7%)
 
 ---
 
 ## 🤖 AI 메모리
 
 ### 마지막 작업
-- **파일**: [index.html](../index.html) - Step 4 확장 완료 (-201줄)
-- **버전**: v3.15.0
-- **커밋**: feat: Step 4 확장 완료 - Hand Recorder 완전 분리
+- **파일**: [src/modules/data-loader.js](../src/modules/data-loader.js) - 생성 완료
+- **버전**: v3.15.2
+- **커밋**: wip: Step 5 진행 중 - data-loader.js 생성
+- **진행률**: Step 5 - 50% 완료
 
-### 다음 할 일
-1. **즉시**: Step 5 시작 - Data Loader 모듈화
-   - loadPlayersFromGoogleSheet() 분리
-   - loadTablesFromGoogleSheet() 분리
-   - loadHandFromGoogleSheet() 분리
-2. **검증**: 데이터 로드 플로우 전체 테스트
-3. **목표**: -800줄 감소
+### 다음 할 일 (즉시 재개)
+1. **Step 5 계속**: data-facade.js 생성
+   - DataLoader 메서드들을 window 전역으로 노출
+   - loadInitial, buildTypeFromCsv, buildIndexFromCsv, parseHandBlock
+   - IndexedDB 함수들 (5개)
+2. **index.html 수정**: import 추가 및 원본 함수 제거 (542줄)
+3. **버전 업데이트**: v3.16.0
+4. **검증**: 데이터 로드 플로우 테스트
+5. **목표**: -542줄 감소 (실제, PRD 800줄에서 수정)
 
 ### 중요 결정
 - ✅ **Facade 패턴**: HTML onclick 이벤트 100% 호환
@@ -120,16 +141,18 @@
 
 ## 📁 프로젝트 구조
 
-### 완료된 파일 (Step 1-4 확장)
+### 완료된 파일 (Step 1-5 진행 중)
 ```
 src/
 ├── core/
 │   └── store.js (141줄) ✅ Step 3
 ├── modules/
 │   ├── pure-utils.js (186줄) ✅ Step 2 + Phase 2-2
-│   └── hand-recorder.js (284줄) ✅ Step 4 확장
+│   ├── hand-recorder.js (284줄) ✅ Step 4 확장
+│   └── data-loader.js (609줄) ⏳ Step 5 (진행 중)
 └── facades/
-    └── hand-facade.js (55줄) ✅ Step 4 확장
+    ├── hand-facade.js (55줄) ✅ Step 4 확장
+    └── data-facade.js ⏳ Step 5 (다음 작업)
 
 docs/
 ├── PLAN.md ✅ 비전
@@ -181,6 +204,12 @@ docs/
 
 ---
 
-**다음 세션 시작 시**: 이 파일(STATUS.md)을 먼저 읽고 Step 5를 즉시 시작!
+**다음 세션 시작 시**:
+1. STATUS.md 읽기 (현재 상태 확인)
+2. **즉시 재개**: Step 5 - data-facade.js 생성
+3. index.html 수정 (import + 542줄 제거)
+4. 버전 v3.16.0 업데이트 및 커밋
 
-**긴급도**: 🟡 Medium (진행률 3.9% → 목표 87%, 가속 필요)
+**긴급도**: 🟡 Medium (Step 5 50% 완료, 남은 작업 2-3시간)
+**현재 브랜치**: main
+**마지막 커밋**: 1a83793 (wip: Step 5 진행 중 - data-loader.js 생성)
